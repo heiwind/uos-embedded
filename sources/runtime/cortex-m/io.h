@@ -154,7 +154,9 @@ static void inline __attribute__ ((always_inline))
 arm_intr_restore (unsigned long x)
 {
 #ifdef ARM_CORTEX_M1
-    ARM_NVIC_ISER(0) = x;
+    extern unsigned __cortex_m1_iser0;
+    if (x)
+        ARM_NVIC_ISER(0) = __cortex_m1_iser0;
 #else
 	asm volatile (
 	"msr	basepri, %0"		/* Cortex-M3 mode */

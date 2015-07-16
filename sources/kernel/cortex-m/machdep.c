@@ -22,6 +22,10 @@
 #include "kernel/uos.h"
 #include "kernel/internal.h"
 
+#ifdef ARM_CORTEX_M1
+unsigned __cortex_m1_iser0;
+#endif
+
 /*
  * Task switch.
  */
@@ -127,6 +131,7 @@ _irq_handler_ (void)
     } else {
         irq = ipsr - 16;
         ARM_NVIC_ICER(irq >> 5) = 1 << (irq & 0x1F);
+        __cortex_m1_iser0 &= ~(1 << (irq & 0x1F));
 	}
 
 //debug_printf ("<%d> ", irq);
@@ -211,6 +216,7 @@ void arch_intr_allow (int irq)
 		ARM_SYSTICK->CTRL |= ARM_SYSTICK_CTRL_TICKINT;
 	} else {
 		ARM_NVIC_ISER(irq >> 5) = 1 << (irq & 0x1F);
+		__cortex_m1_iser0 |= 1 << (irq & 0x1F);
 	}
 }
 
@@ -278,9 +284,8 @@ arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg,
  * Save interrupt mask created by user initialization (uos_init)
  * into initial context of each task.
  */
-#ifdef ARM_CORTEX_M1
-unsigned __cortex_m1_iser0;
 
+#ifdef ARM_CORTEX_M1
 void
 uos_post_init ()
 {
