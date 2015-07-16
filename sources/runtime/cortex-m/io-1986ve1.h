@@ -1785,11 +1785,17 @@ typedef struct
 /* Структура слова ARINC-429 */
 typedef struct
 {
-    unsigned int label :  8;
-    unsigned int sdi   :  2;
-    unsigned int data  : 19;
-    unsigned int ssm   :  2;
-    unsigned int par   :  1;
+    union {
+        unsigned raw;
+        struct 
+        {
+            unsigned int label :  8;
+            unsigned int sdi   :  2;
+            unsigned int data  : 19;
+            unsigned int ssm   :  2;
+            unsigned int par   :  1;
+        };
+    };
 } ARINC_msg_t;
 
 /*

@@ -124,7 +124,7 @@ int arinc_write(arinc_t *u, ARINC_msg_t msg)
 	if (ARM_ARINC429T->STATUS & ARM_ARINC429T_STATUS_FFT(u->chan))
 		return 0;
 		
-	ARM_ARINC429T->DATA_T[u->chan] = *((unsigned *) &msg);
+	ARM_ARINC429T->DATA_T[u->chan] = msg.raw;
 	
 	u->labels++;
 
@@ -142,7 +142,7 @@ int arinc_read(arinc_t *u, ARINC_msg_t *msg)
     if (!(ARM_ARINC429R->STATUS1 & ARM_ARINC429R_STATUS1_DR(u->chan)))
 		return 0;
 
-	*msg = *(ARINC_msg_t *)&ARM_ARINC429R->DATA_R;
+	msg->raw = ARM_ARINC429R->DATA_R;
 	
 	u->labels++;
 
@@ -166,12 +166,12 @@ void arinc_poll(arinc_t *u)
 
 		// Приём и "раскладка" принятых меток по адресам
 		while ((ARM_ARINC429R->STATUS1 & ARM_ARINC429R_STATUS1_DR(u->chan)) != 0) {
-			msg = *(ARINC_msg_t *)&ARM_ARINC429R->DATA_R;
+			msg.raw = ARM_ARINC429R->DATA_R;
 			//!!! Метки хранятся в перевёрнутом виде?
 			if (msg.label >= (u->size >> 2))
 				u->rx_errors++;
 			else {
-				u->buf[msg.label] = *((unsigned *) &msg);
+				u->buf[msg.label] = msg.raw;
 				u->labels++;
 			}
 		}

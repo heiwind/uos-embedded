@@ -131,7 +131,9 @@ _irq_handler_ (void)
     } else {
         irq = ipsr - 16;
         ARM_NVIC_ICER(irq >> 5) = 1 << (irq & 0x1F);
+#ifdef ARM_CORTEX_M1
         __cortex_m1_iser0 &= ~(1 << (irq & 0x1F));
+#endif
 	}
 
 //debug_printf ("<%d> ", irq);
@@ -216,7 +218,9 @@ void arch_intr_allow (int irq)
 		ARM_SYSTICK->CTRL |= ARM_SYSTICK_CTRL_TICKINT;
 	} else {
 		ARM_NVIC_ISER(irq >> 5) = 1 << (irq & 0x1F);
+#ifdef ARM_CORTEX_M1
 		__cortex_m1_iser0 |= 1 << (irq & 0x1F);
+#endif
 	}
 }
 
