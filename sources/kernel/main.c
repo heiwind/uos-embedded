@@ -104,6 +104,10 @@ main (void)
 	task_idle = (task_t*) task_idle_data;
 	memset (task_idle->stack, STACK_MAGIC, ALIGNED_IDLE_TASK_STACKSZ);
 	assert (STACK_GUARD (task_idle));
+	
+	/* Move stack pointer to task_idle stack area */
+	set_stack_pointer (&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
+
 	task_idle->name = "idle";
 	list_init (&task_idle->item);
 	list_init (&task_idle->slaves);
@@ -122,9 +126,6 @@ main (void)
 	
 	/* Additional machine-dependent initialization */
 	uos_post_init ();
-
-	/* Move stack pointer to task_idle stack area */
-	set_stack_pointer (&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
 
 	/* Switch to the most priority task. */
 	assert (task_current == task_idle);
