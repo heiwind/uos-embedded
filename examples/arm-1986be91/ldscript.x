@@ -9,11 +9,11 @@ ENTRY(_start_)
 MEMORY
 {
   text   (rx)   : ORIGIN = 0x08000000,	LENGTH = 128k
-  data   (rw!x) : ORIGIN = 0x20000000,	LENGTH = 32k
+  data   (rw!x) : ORIGIN = 0x20000000,	LENGTH = 32768-64
 }
 
 /* higher address of the user mode stack */
-_estack = ORIGIN(data) + LENGTH(data);
+_estack = 0x20008000;
 
 SECTIONS
 {
