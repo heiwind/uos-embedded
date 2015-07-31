@@ -1,5 +1,5 @@
 /*
- * Linker script for Milandr ARM Cortex-M3
+ * Linker script for Milandr ARM Cortex-M1
  */
 /* Default linker script, for normal executables */
 OUTPUT_FORMAT("elf32-littlearm", "elf32-bigarm",

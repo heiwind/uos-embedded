@@ -3,29 +3,25 @@
  */
 #include <runtime/lib.h>
 
-#define LED_ON(n) (ARM_GPIOD->DATA |= (1 << (7 + n)))
-#define LED_OFF(n) (ARM_GPIOD->DATA &= ~(1 << (7 + n)))
-
 void init_leds ()
 {
-	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOD;
+	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOB;
 	
-	ARM_GPIOD->FUNC &= ~0x3FFFC000;
-	ARM_GPIOD->DATA = 0x0000;
-	ARM_GPIOD->OE = 0x7F80;
-	ARM_GPIOD->ANALOG = 0x7F80;
-	ARM_GPIOD->PWR = 0x3FFFC000;	
+	ARM_GPIOB->FUNC = 0;
+	ARM_GPIOB->DATA = 0;
+	ARM_GPIOB->OE = 7;
+	ARM_GPIOB->ANALOG = 7;
+	ARM_GPIOB->PWR = 0x3F;	
 }
 
 int main (void)
 {
 	init_leds ();
-
-	int i = 7;	
+	
 	for (;;) {
-		LED_OFF(i);
-		i = (i + 1) % 8;
-		LED_ON(i);
+	    ARM_GPIOB->DATA = 0;
 		mdelay (500);
+	    ARM_GPIOB->DATA = 1;
+		mdelay (500);		
 	}	
 }

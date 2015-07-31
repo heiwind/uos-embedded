@@ -67,7 +67,8 @@ void mem_queue_get (mem_queue_t *q, void **block)
 	assert (q->tail < q->queue + q->msg_num);
 	if (q->count > 0) {
 		/* Get the first packet from queue. */
-		*block = *q->tail;
+		if (block != 0)
+    		*block = *q->tail;
 
 		/* Advance head pointer. */
 		if (--q->tail < q->queue)
@@ -75,6 +76,19 @@ void mem_queue_get (mem_queue_t *q, void **block)
 		--q->count;
 	}
 }
+
+/*
+ * Returns the first element from queue
+ * It must be checked that the queue is not empty before calling this.
+ */
+static inline __attribute__((always_inline))
+void *mem_queue_current (mem_queue_t *q)
+{
+	assert (q->tail >= q->queue);
+	assert (q->tail < q->queue + q->msg_num);
+	return *q->tail;
+}
+
 
 /*
  * Check that queue is full.
