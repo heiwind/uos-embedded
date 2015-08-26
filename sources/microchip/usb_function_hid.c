@@ -41,6 +41,8 @@ void HIDSetReportHandler (void);
 volatile unsigned char hid_report_out[HID_INT_OUT_EP_SIZE];
 volatile unsigned char hid_report_in[HID_INT_IN_EP_SIZE];
 
+volatile unsigned char hid_report_feature[HID_FEATURE_REPORT_BYTES];
+
 /*
  * This routine handles HID specific request that happen on EP0.  These
  * include, but are not limited to, requests for the HID report
