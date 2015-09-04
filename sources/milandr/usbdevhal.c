@@ -120,7 +120,7 @@ static void mldr_usb_reset ()
         ARM_USB->SEPF[i].RXFC = 1;
     }
     ARM_USB->SEPS[0].CTRL = ARM_USB_EPEN | ARM_USB_EPRDY;
-    ARM_USB->SIM = ARM_USB_SC_TDONE /*| ARM_USB_SC_RESUME*/ | ARM_USB_SC_RESET_EV /*| ARM_USB_SC_SOF_REC*/ | ARM_USB_SC_NAK_SENT;
+    ARM_USB->SIM = ARM_USB_SC_TDONE /*| ARM_USB_SC_RESUME*/ | ARM_USB_SC_RESET_EV /*| ARM_USB_SC_SOF_REC*/ /* | ARM_USB_SC_NAK_SENT */;
     ARM_USB->HSCR |= ARM_USB_EN_TX | ARM_USB_EN_RX;
 }
 
@@ -165,10 +165,11 @@ static void usb_interrupt (void *arg)
             mldr_usb_reset ();
         }
         if (ARM_USB->SIS & ARM_USB->SIM & ARM_USB_SC_SOF_REC) {
-//debug_printf ("usb_interrupt: start of frame, SIS = %02X, SIM = %02X, SFN = %d\n", ARM_USB->SIS, ARM_USB->SIM, ARM_USB->SFN_L);
+//debug_printf ("usb_interrupt: start of frame, SIS = %02X, SIM = %02X, SFN = %d.%d\n", ARM_USB->SIS, ARM_USB->SIM, ARM_USB->SFN_L, ARM_USB->SFN_H);
             ARM_USB->SIS = ARM_USB_SC_SOF_REC;
         }
         if (ARM_USB->SIS & ARM_USB->SIM & ARM_USB_SC_TDONE) {
+            ARM_USB->SIS = ARM_USB_SC_TDONE;
 //debug_printf ("usb_interrupt: tx done, RXFDC = %d, CTRL = %X, STS = %X, TS = %X\n", ARM_USB->SEPF[0].RXFDC_H, ARM_USB->SEPS[0].CTRL, ARM_USB->SEPS[0].STS, ARM_USB->SEPS[0].TS);
             for (ep = 0; ep < USBDEV_MAX_EP_NB; ++ep) {
                 if (ARM_USB->SEPS[ep].STS & ARM_USB_SC_STALL_SENT) {
@@ -179,7 +180,6 @@ static void usb_interrupt (void *arg)
                     do_usbdev (ep);
                 }
             }
-            ARM_USB->SIS = ARM_USB_SC_TDONE;
         }
         if (ARM_USB->SIS & ARM_USB->SIM & ARM_USB_SC_RESUME) {
 //debug_printf ("usb_interrupt: resume\n");

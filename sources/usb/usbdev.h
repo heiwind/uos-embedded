@@ -274,6 +274,7 @@ void usbdev_set_ep_specific_handler (usbdev_t *u, unsigned ep_n, int dir, usbdev
 void usbdev_set_ack_handler (usbdev_t *u, unsigned ep_n, int dir, usbdev_ack_t handler, void *tag);
 void usbdev_remove_ack_handler (usbdev_t *u, unsigned ep_n, int dir);
 void usbdev_ack_in (usbdev_t *u, unsigned ep_n, const void *data, int size);
+void usbdev_set_ack (usbdev_t *u, unsigned ep_n);
 int  usbdev_recv (usbdev_t *u, unsigned ep_n, void *data, int size);
 
 #endif
