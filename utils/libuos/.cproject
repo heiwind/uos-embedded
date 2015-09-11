@@ -5,6 +5,7 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.1754137162" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Debug">
 				<macros>
 					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg\"/>
+					<stringMacro name="TARGET" type="VALUE_TEXT" value="ELVEES_NVCOM02T"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
 				<externalSettings/>
@@ -29,7 +30,7 @@
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.symbols.def.209128709" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="MIPS32"/>
 									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
-									<listOptionValue builtIn="false" value="ELVEES_NVCOM02"/>
+									<listOptionValue builtIn="false" value="${TARGET}"/>
 									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
 									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
 									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
@@ -98,7 +99,7 @@
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.symbols.def.518324290" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="MIPS32"/>
 									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
-									<listOptionValue builtIn="false" value="ELVEES_NVCOM02"/>
+									<listOptionValue builtIn="false" value="${TARGET}"/>
 									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
 									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
 									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
@@ -114,7 +115,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|net/udp-example.c|net/tcp-example.c|runtime/mips/startup.S|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|uart/uart-msp430.c|uart/uart-linux.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="regexp/try.c|regexp9|regexp9/test.c|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|net/udp-example.c|net/tcp-example.c|runtime/mips/startup.S|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|uart/uart-msp430.c|uart/uart-linux.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -124,6 +125,7 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.release.archiver.960542148" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Release">
 				<macros>
 					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg\"/>
+					<stringMacro name="TARGET" type="VALUE_TEXT" value="ELVEES_NVCOM02T"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
 				<externalSettings/>
@@ -235,7 +237,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|net/udp-example.c|net/tcp-example.c|runtime/mips/startup.S|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|uart/uart-msp430.c|uart/uart-linux.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="regexp/try.c|regexp9|regexp9/test.c|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|net/udp-example.c|net/tcp-example.c|runtime/mips/startup.S|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|uart/uart-msp430.c|uart/uart-linux.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

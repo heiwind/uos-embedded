@@ -91,6 +91,11 @@
 			<locationURI>uOS_SRC/flash</locationURI>
 		</link>
 		<link>
+			<name>fs</name>
+			<type>2</type>
+			<locationURI>uOS_SRC/fs</locationURI>
+		</link>
+		<link>
 			<name>iic</name>
 			<type>2</type>
 			<locationURI>uOS_SRC/iic</locationURI>
@@ -121,6 +126,16 @@
 			<locationURI>uOS_SRC/random</locationURI>
 		</link>
 		<link>
+			<name>regexp</name>
+			<type>2</type>
+			<locationURI>uOS_SRC/regexp</locationURI>
+		</link>
+		<link>
+			<name>regexp9</name>
+			<type>2</type>
+			<locationURI>uOS_SRC/regexp9</locationURI>
+		</link>
+		<link>
 			<name>runtime</name>
 			<type>2</type>
 			<locationURI>uOS_SRC/runtime</locationURI>
@@ -139,6 +154,11 @@
 			<name>stream</name>
 			<type>2</type>
 			<locationURI>uOS_SRC/stream</locationURI>
+		</link>
+		<link>
+			<name>tcl</name>
+			<type>2</type>
+			<locationURI>uOS_SRC/tcl</locationURI>
 		</link>
 		<link>
 			<name>timer</name>
