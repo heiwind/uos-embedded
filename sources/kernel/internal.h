@@ -20,7 +20,7 @@
 #ifndef __KERNEL_INTERNAL_H_
 #define	__KERNEL_INTERNAL_H_ 1
 
-#if __AVR__
+#ifdef __AVR__
 #	include <kernel/avr/machdep.h>
 #endif
 #if defined (__arm__) || defined (__thumb__)
@@ -31,16 +31,16 @@
 #	    include <kernel/arm/machdep.h>
 #   endif
 #endif
-#if I386
+#ifdef I386
 #	include <kernel/i386/machdep.h>
 #endif
-#if MIPS32
+#ifdef MIPS32
 #	include <kernel/mips/machdep.h>
 #endif
-#if MSP430
+#ifdef MSP430
 #	include <kernel/msp430/machdep.h>
 #endif
-#if LINUX386
+#ifdef LINUX386
 #	include <kernel/linux386/machdep.h>
 #endif
 
