@@ -1,6 +1,15 @@
 #ifndef __ROUTE_H_
 #define	__ROUTE_H_ 1
 
+#include <net/netif.h>
+#include <net/ip.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 struct _netif_t;
 struct _ip_t;
 
@@ -29,5 +38,11 @@ bool_t route_add_gateway (struct _ip_t *ip, struct _route_t *r,
 
 void route_setup (struct _ip_t *ip, struct _route_t *r, unsigned char *ipaddr,
 	unsigned char masklen, unsigned char *gateway);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__ROUTE_H_ */
