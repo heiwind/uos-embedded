@@ -5,7 +5,6 @@
   <ProjectProperty id="MultiCoreProject.HeapSize" value="0x0800"/>
   <ProjectProperty id="MultiCoreProject.StackSize" value="0x1000"/>
   <ProjectProperty id="MultiCoreProject.Align" value="8"/>
-  <ProjectProperty id="MultiCoreProject.Template" value="org.elvees.mcs4.projmanager.uOSStaticLib_template"/>
   <ProjectLayout>
     <Section>
       <File_Path>buf/buf-chksum.c</File_Path>
