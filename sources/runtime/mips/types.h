@@ -46,7 +46,7 @@ typedef unsigned long size_t;
 
 typedef long jmp_buf [10];
 
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 #include <float.h>
 #endif
 

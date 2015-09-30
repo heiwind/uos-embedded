@@ -1,3 +1,7 @@
+#ifndef __UOS_MACHDEP_H_
+#define __UOS_MACHDEP_H_
+
+
 /*
  * Machine-dependent uOS declarations for MIPS32.
  *
@@ -126,6 +130,11 @@
 #endif
 
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Type for saving task stack context.
  */
@@ -245,3 +254,12 @@ typedef unsigned arch_fpu_t;
  * Change/query a mode of float-point coprocessor.
  */
 unsigned int arch_fpu_control (task_t *t, unsigned int mode, unsigned int mask);
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__UOS_MACHDEP_H_
+
