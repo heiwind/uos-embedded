@@ -4,8 +4,8 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Debug">
 				<macros>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="${MCS4_HOME}/ToolsMGCC"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
 				<externalSettings/>
@@ -29,7 +29,7 @@
 							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.1188122901" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.float" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.hard" valueType="enumerated"/>
 							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ.863539759" name="CPU clock (DKHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ" value="250000" valueType="string"/>
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform.1106799943" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform"/>
-							<builder autoBuildTarget="" buildPath="${workspace_loc:/libuos/MultiCore_Configuration_Debug}" cleanBuildTarget="clean" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.elvees.mcs4.projmanager.ToolsUGCC.builder.1645133802" incrementalBuildTarget="-j2 all " keepEnvironmentInBuildfile="false" managedBuildOn="true" name="MultiCore Builder" parallelizationNumber="1" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.builder"/>
+							<builder autoBuildTarget="" buildPath="${workspace_loc:/libuos/MultiCore_Configuration_Debug}" cleanBuildTarget="clean" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.elvees.mcs4.projmanager.ToolsUGCC.builder.1645133802" incrementalBuildTarget="all " keepEnvironmentInBuildfile="false" managedBuildOn="true" name="MultiCore Builder" parallelizationNumber="1" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.builder"/>
 							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.397851885" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c">
 								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths.1713264880" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
@@ -127,7 +127,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -136,8 +136,8 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Release">
 				<macros>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="${MCS4_HOME}/ToolsMGCC"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
 				<externalSettings/>
@@ -249,7 +249,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
