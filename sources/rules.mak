@@ -70,9 +70,9 @@ always:
 .c.i:
 		$(CC) $(CFLAGS) -E $< > $@
 
-%.elf:	%.c
-		[ -d .deps ] || mkdir .deps
-		$(CC) $(LDFLAGS) $(CFLAGS) $(DEPFLAGS) $< $(LIBS) -o $@
+#%.elf:	%.c
+#		[ -d .deps ] || mkdir .deps
+#		$(CC) $(LDFLAGS) $(CFLAGS) $(DEPFLAGS) $< $(LIBS) -o $@
 
 %.elf:	%.o
 		$(CC) $(LDFLAGS) $< $(LIBS) -o $@
