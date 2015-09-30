@@ -9,8 +9,8 @@ OUTPUT_ARCH(mips)
 MEMORY
 {
   /*flash  (rx)   : ORIGIN = 0x9fc00000,	LENGTH = 16M*/
-  ccode	 (rx)   : ORIGIN = 0x98000000,  LENGTH = 64K
-  cdata	 (rw!x) : ORIGIN = 0x98010000,  LENGTH = 64K
+  ccode	 (rx)   : ORIGIN = 0x98000000,  LENGTH = 68K
+  cdata	 (rw!x) : ORIGIN = 0x98011000,  LENGTH = 60K
   xyram0 (rw!x) : ORIGIN = 0xb8400000,	LENGTH = 128K
   pram0  (rw!x) : ORIGIN = 0xb8440000,	LENGTH = 32K
   xyram1 (rw!x) : ORIGIN = 0x98800000,	LENGTH = 128K
