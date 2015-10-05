@@ -1,6 +1,12 @@
 #ifndef __ARP_H_
 #define	__ARP_H_ 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 typedef struct _arp_entry_t {
 	struct _netif_t	*netif;
 	unsigned char	ipaddr [4];
@@ -66,5 +72,11 @@ bool_t arp_add_header (struct _netif_t *netif, struct _buf_t *p,
 	unsigned char *ipdest, unsigned char *ethdest);
 unsigned char *arp_lookup (struct _netif_t *netif, unsigned char *ipaddr);
 void arp_timer (arp_t *arp);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__ARP_H_ */

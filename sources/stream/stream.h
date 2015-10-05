@@ -1,6 +1,12 @@
 #ifndef __STREAM_H_
 #define __STREAM_H_ 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 /*
  * Поток данных.
  * Имеет интерфейс, состоящий из четырех процедур:
@@ -77,5 +83,11 @@ void strclose (stream_buf_t *u);
  */
 int vprintf_getlen (const char *fmt, va_list args);
 extern stream_t null_stream;
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __STREAM_H_ */
