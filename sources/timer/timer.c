@@ -149,15 +149,23 @@
  * Проверка, прошло ли указанное количество миллисекунд `msec'.
  * Параметр `interval' содержит интервал времени, возможно, переходящий границу суток.
  */
-small_int_t
+bool_t
 interval_greater_or_equal (long interval, long msec)
 {
+#ifndef TIMER_NO_DAYS
     if (interval < 0)
         interval += TIMER_MSEC_PER_DAY;
     else if (interval >= TIMER_MSEC_PER_DAY)
         interval -= TIMER_MSEC_PER_DAY;
     return (interval >= msec);
+#else
+    if (interval < 0)
+        interval = -interval;
+    return (interval >= msec);
+#endif
 }
+
+
 
 /*
  * Timer update function.
@@ -203,12 +211,15 @@ void timer_update (timer_t *t)
     t->milliseconds += t->msec_per_tick;
 #endif
 
+#ifndef TIMER_NO_DAYS
     if (t->milliseconds >= TIMER_MSEC_PER_DAY) {
         ++t->days;
         t->milliseconds -= TIMER_MSEC_PER_DAY;
         t->next_decisec -= TIMER_MSEC_PER_DAY;
     }
+#endif
 
+#ifndef TIMER_NO_DECISEC
     /* Send signal every 100 msec. */
 #ifdef USEC_TIMER
     if (t->usec_per_tick / 1000 <= 100 &&
@@ -224,6 +235,7 @@ void timer_update (timer_t *t)
                 (void*) (size_t) t->milliseconds);
         }
     }
+#endif
 
 #ifdef USER_TIMERS
     if (! list_is_empty (&t->user_timers)) {
@@ -268,40 +280,31 @@ timer_handler (timer_t *t)
 }
 
 /**\~english
- * Return the (real) time in milliseconds since uOS start.
- *
- * \~russian
- * Запрос времени в миллисекундах.
- */
-unsigned long
-timer_milliseconds (timer_t *t)
-{
-    unsigned long val;
-
-    mutex_lock (&t->lock);
-    val = t->milliseconds;
-    mutex_unlock (&t->lock);
-    return val;
-}
-
-/**\~english
  * Return the (real) time in days and milliseconds since uOS start.
  *
  * \~russian
  * Запрос времени в сутках и миллисекундах.
  */
+#ifndef TIMER_NO_DAYS
 unsigned int
 timer_days (timer_t *t, unsigned long *milliseconds)
 {
     unsigned short val;
 
-    mutex_lock (&t->lock);
-    if (milliseconds)
+    if (!milliseconds){
+        val = t->days;
+    }
+    else{
         *milliseconds = t->milliseconds;
-    val = t->days;
-    mutex_unlock (&t->lock);
+        val = t->days;
+        while (*milliseconds != t->milliseconds){
+            *milliseconds = t->milliseconds;
+            val = t->days;
+        } 
+    }
     return val;
 }
+#endif
 
 /**\~english
  * Delay the current task by the given time in milliseconds.
@@ -314,12 +317,21 @@ timer_delay (timer_t *t, unsigned long msec)
 {
     unsigned long t0;
 
-    mutex_lock (&t->lock);
     t0 = t->milliseconds;
     while (! interval_greater_or_equal (t->milliseconds - t0, msec)) {
         mutex_wait (&t->lock);
     }
-    mutex_unlock (&t->lock);
+}
+
+void
+timer_delay_ticks (timer_t *t, clock_time_t ticks)
+{
+    unsigned long t0;
+
+    t0 = t->tick;
+    while ((t->tick - t0) < ticks) {
+        mutex_wait (&t->lock);
+    }
 }
 
 /**\~english
@@ -331,12 +343,7 @@ timer_delay (timer_t *t, unsigned long msec)
 bool_t
 timer_passed (timer_t *t, unsigned long t0, unsigned int msec)
 {
-    unsigned long now;
-
-    mutex_lock (&t->lock);
-    now = t->milliseconds;
-    mutex_unlock (&t->lock);
-
+    unsigned long now = timer_milliseconds(t);
     return interval_greater_or_equal (now - t0, msec);
 }
 
