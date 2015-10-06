@@ -1,6 +1,10 @@
 #ifndef __LIST_H_
 #define __LIST_H_ 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Extra fast implementation of doubly linked list, by LY.
  * Some ideas coming from Linux's source code.
@@ -9,6 +13,11 @@ typedef struct _list_t {
 	struct _list_t *next;
 	struct _list_t *prev;
 } list_t;
+
+#ifdef __cplusplus
+}
+#endif
+
 
 /*
  * Initialize an empty list, or an unlinked element.

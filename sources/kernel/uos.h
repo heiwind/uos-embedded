@@ -17,10 +17,19 @@
 #ifndef __KERNEL_UOS_H_
 #define	__KERNEL_UOS_H_ 1
 
+#include <runtime/list.h>
+#include <uos-conf.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**\~russian
+ * RECURSIVE_LOCKS задает стиль мутекса
+ *  = 0 - ближайший unlock освобождает мутекс
+ *  = 1 - мутекс отслеживает количество блокировок в текущей задаче и 
+ *          на каждый вызов lock должен быть произведен unlock  
+ * */
 #ifndef RECURSIVE_LOCKS
 #   define RECURSIVE_LOCKS	1
 #endif
