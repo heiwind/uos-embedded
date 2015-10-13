@@ -792,24 +792,21 @@ void user_timer_wait (user_timer_t *ut)
  * при этом теряются его параметры - точка старта, период  
  * */
 void user_timer_stop (user_timer_t *ut){
-    arch_state_t x;
-    arch_intr_disable (&x);
-    ut->cur_time = 0;
-    arch_intr_restore (x);
+    while (ut->cur_time != 0)
+        ut->cur_time = 0;
 }
 
 /**\~russian
  * перезапускает периодический таймер с текущего момента.
  * */
 void user_timer_restart (user_timer_t *ut){
-    arch_state_t x;
-    arch_intr_disable (&x);
 #ifdef USEC_TIMER
-    ut->cur_time = ut->usec_per_tick;
+    while (ut->cur_time != ut->usec_per_tick)
+        ut->cur_time = ut->usec_per_tick;
 #else
-    ut->cur_time = ut->msec_per_tick;
+    while (ut->cur_time != ut->msec_per_tick)
+        ut->cur_time = ut->msec_per_tick;
 #endif
-    arch_intr_restore (x);
 }
 
 #endif // USER_TIMERS
