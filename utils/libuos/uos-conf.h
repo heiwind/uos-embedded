@@ -50,12 +50,12 @@
  * макро USER_TIMERS включает функционал множественных пользовательских таймеров на общем системном таймере.
  * см. функции user_timer_XXX
  * */
-//#define USER_TIMERS 1
+#define USER_TIMERS 1
 
 /**\~russian
  * макро USEC_TIMER дает возможность использовать прецизионный таймер сразрешением в [us]. см. timer_init_us
  * */
-//#define USEC_TIMER 1
+#define USEC_TIMER 1
 
 /**\~russian
  * макро TIMER_NO_DAYS опускает реализацию _timer_t.days - экономит время обработчика прерывания

@@ -4,8 +4,8 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Debug">
 				<macros>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
 				<externalSettings/>
@@ -130,7 +130,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="timer/etimer.c|crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -139,8 +139,8 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Release">
 				<macros>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
 				<externalSettings/>
@@ -253,7 +253,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="timer/etimer.c|crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
