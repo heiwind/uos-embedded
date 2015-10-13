@@ -1,9 +1,18 @@
+#ifndef __UOS_LIB_CTYPE_H_
+#define __UOS_LIB_CTYPE_H_
 /*
  * Процедуры классификации символов.
  *
  * Возвращаются ненулевые значения, если проверяемый символ попадает
  * в соответствующий класс символов, в противном случае возвращается ноль.
  */
+
+#include "runtime/lib.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const unsigned char _ctype_ [257];
 
 #define	_U	0x01
@@ -152,3 +161,10 @@ isgraph (int c)
 #undef	_C
 #undef	_X
 #undef	_E
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__UOS_LIB_CTYPE_H_

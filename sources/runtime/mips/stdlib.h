@@ -1,3 +1,5 @@
+#ifndef UOS_STDLIB_H
+#define UOS_STDLIB_H
 /*
  * Standard numeric routines for MIPS architecture.
  *
@@ -16,6 +18,13 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
+
+#include "types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline int
 abs (int __x)
 {
@@ -50,3 +59,9 @@ atol (const unsigned char *__p)
 
 extern const unsigned char *strmatch (const unsigned char*, const unsigned char*);
 extern void watchdog_alive (void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //UOS_STDLIB_H
