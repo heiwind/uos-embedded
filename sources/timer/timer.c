@@ -179,6 +179,13 @@ interval_greater_or_equal (long interval, long msec)
  * Timer update function.
  */
 #ifndef SW_TIMER
+
+inline void timer_mutex_note(mutex_t* t, unsigned long message){
+    if (list_is_empty (&t->waiters)) return;
+    if (list_is_empty (&t->groups)) return;
+    mutex_activate (t, (void*) message);
+}
+
 static inline
 #endif
 void timer_update (timer_t *t)
@@ -215,64 +222,73 @@ void timer_update (timer_t *t)
 #   endif
 #endif
 
+#ifdef USEC_TIMER
+    const unsigned long interval = t->usec_per_tick;
+#else
+    const unsigned long interval = t->msec_per_tick;
+#endif
+    unsigned long msec = t->milliseconds;
+#ifndef TIMER_NO_DECISEC
+    unsigned long nextdec = t->next_decisec;
+#else
+    unsigned long nextdec = msec;
+#endif
+
     /* Increment current time. */
 #ifdef USEC_TIMER
-    t->usec_in_msec += t->usec_per_tick;
-    while (t->usec_in_msec > TIMER_USEC_PER_MSEC) {
-        t->milliseconds++;
-        t->usec_in_msec -= TIMER_USEC_PER_MSEC;
+    unsigned long usec = t->usec_in_msec;
+    usec += interval;
+    while (usec > TIMER_USEC_PER_MSEC) {
+        msec++;
+        usec -= TIMER_USEC_PER_MSEC;
     }
+    t->usec_in_msec = usec;
 #else
-    t->milliseconds += t->msec_per_tick;
+    msec += interval;
 #endif
 
 #ifndef TIMER_NO_DAYS
-    if (t->milliseconds >= TIMER_MSEC_PER_DAY) {
+    if (msec >= TIMER_MSEC_PER_DAY) {
         ++t->days;
-        t->milliseconds -= TIMER_MSEC_PER_DAY;
-        t->next_decisec -= TIMER_MSEC_PER_DAY;
+        msec -= TIMER_MSEC_PER_DAY;
+        nextdec -= TIMER_MSEC_PER_DAY;
     }
 #endif
+
+    t->milliseconds = msec;
 
 #ifndef TIMER_NO_DECISEC
     /* Send signal every 100 msec. */
 #ifdef USEC_TIMER
-    if (t->usec_per_tick <= (100ul*1000) &&
+    if ((interval >= (TIMER_DECISEC_MS*1000ul)) ||
 #else
-    if (t->msec_per_tick <= 100 &&
+    if ((interval >= TIMER_DECISEC_MS) ||
 #endif
-        t->milliseconds >= t->next_decisec) {
-        t->next_decisec += 100;
+        (msec >= nextdec)) 
+    {
+        nextdec += TIMER_DECISEC_MS;
 /*debug_printf ("<ms=%lu,nxt=%lu> ", t->milliseconds, t->next_decisec);*/
-        if (! list_is_empty (&t->decisec.waiters) ||
-            ! list_is_empty (&t->decisec.groups)) {
-            mutex_activate (&t->decisec,
-                (void*) (size_t) t->milliseconds);
-        }
+        timer_mutex_note(&t->decisec, msec);
     }
+    t->next_decisec = nextdec;
 #endif
 
 #ifdef USER_TIMERS
     if (! list_is_empty (&t->user_timers)) {
         user_timer_t *ut;
         list_iterate (ut, &t->user_timers) {
+            long now = ut->cur_time;
+            if (now < 0) continue;
+            now  -= interval;
+            if (now <= 0)
+                timer_mutex_note(&ut->lock, msec);
 #ifdef USEC_TIMER
-            ut->cur_time -= t->usec_per_tick;
+                    now += ut->usec_per_tick;
 #else
-            ut->cur_time -= t->msec_per_tick;
+                    now += ut->msec_per_tick;
 #endif
-            if (ut->cur_time <= 0) {
-                if (! list_is_empty (&ut->lock.waiters) ||
-                        ! list_is_empty (&t->decisec.groups)) {
-                    mutex_activate (&ut->lock,
-                        (void*) (size_t) t->milliseconds);
-#ifdef USEC_TIMER
-                    ut->cur_time += ut->usec_per_tick;
-#else
-                    ut->cur_time += ut->msec_per_tick;
-#endif
-                }
             }
+            ut->cur_time = now;
         }
     }
 #endif

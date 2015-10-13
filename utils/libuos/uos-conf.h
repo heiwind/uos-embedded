@@ -69,6 +69,12 @@
  * */
 //#define TIMER_NO_DECISEC 1 
 
+/**\~russian
+ * макро TIMER_DECISEC_MS задает период редкого таймера _timer_t.decisec
+ * */
+//#ifndef TIMER_DECISEC_MS
+//#define TIMER_DECISEC_MS 100
+//#endif
 
 /**************************************************************************
  *                              time.h

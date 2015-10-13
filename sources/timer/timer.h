@@ -50,6 +50,12 @@ extern "C" {
  * */
 //#define TIMER_NO_DECISEC 1 
 
+/**\~russian
+ * макро TIMER_DECISEC_MS задает период редкого таймера _timer_t.decisec
+ * */
+#ifndef TIMER_DECISEC_MS
+#define TIMER_DECISEC_MS 100
+#endif
 
 
 typedef small_uint_t clock_time_t;
@@ -98,7 +104,7 @@ struct _user_timer_t {
 #else
     small_uint_t msec_per_tick;
 #endif
-    long int cur_time;
+    volatile long int cur_time;
 };
 #endif
 
