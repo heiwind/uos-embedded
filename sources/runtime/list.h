@@ -1,6 +1,17 @@
 #ifndef __LIST_H_
 #define __LIST_H_ 1
 
+#ifndef INLINE
+#include <uos-conf.h>
+#ifndef INLINE
+#   ifdef __cplusplus
+#       define INLINE inline
+#   else
+#       define INLINE static inline
+#   endif
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,7 +34,7 @@ typedef struct _list_t {
  * Initialize an empty list, or an unlinked element.
  * Both pointers are linked to the list header itself.
  */
-static inline void list_init (list_t *l)
+INLINE void list_init (list_t *l)
 {
 	l->next = l;
 	l->prev = l;
@@ -33,7 +44,7 @@ static inline void list_init (list_t *l)
  * Insert a new element between the two neigbour elements 'prev' and 'next'.
  * Internal function.
  */
-static inline void __list_put_in_between (list_t *elem, list_t *left, list_t *right)
+INLINE void __list_put_in_between (list_t *elem, list_t *left, list_t *right)
 {
 	right->prev = elem;
 	elem->next = right;
@@ -45,7 +56,7 @@ static inline void __list_put_in_between (list_t *elem, list_t *left, list_t *ri
  * Connect two elements together, thus removing all in between.
  * Internal function.
  */
-static inline void __list_connect_together (list_t *left, list_t *right)
+INLINE void __list_connect_together (list_t *left, list_t *right)
 {
 	right->prev = left;
 	left->next = right;
@@ -54,7 +65,7 @@ static inline void __list_connect_together (list_t *left, list_t *right)
 /*
  * Insert an element at the begginning of the list.
  */
-static inline void list_prepend (list_t *l, list_t *elem)
+INLINE void list_prepend (list_t *l, list_t *elem)
 {
 	__list_connect_together (elem->prev, elem->next);
 	__list_put_in_between (elem, l, l->next);
@@ -63,7 +74,7 @@ static inline void list_prepend (list_t *l, list_t *elem)
 /*
  * Insert an element at the end of the list.
  */
-static inline void list_append (list_t *l, list_t *elem)
+INLINE void list_append (list_t *l, list_t *elem)
 {
 	__list_connect_together (elem->prev, elem->next);
 	__list_put_in_between (elem, l->prev, l);
@@ -72,7 +83,7 @@ static inline void list_append (list_t *l, list_t *elem)
 /*
  * Remove an element from any list.
  */
-static inline void list_unlink (list_t *elem)
+INLINE void list_unlink (list_t *elem)
 {
 	__list_connect_together (elem->prev, elem->next);
 	list_init (elem);
@@ -81,7 +92,7 @@ static inline void list_unlink (list_t *elem)
 /*
  * Check that list is empty.
  */
-static inline bool_t list_is_empty (const list_t *l)
+INLINE bool_t list_is_empty (const list_t *l)
 {
 	return l->next == l;
 }
@@ -89,7 +100,7 @@ static inline bool_t list_is_empty (const list_t *l)
 /*
  * Get the first list item.
  */
-static inline list_t *list_first (const list_t *l)
+INLINE list_t *list_first (const list_t *l)
 {
 	return l->next;
 }

@@ -17,8 +17,8 @@
 #ifndef __KERNEL_UOS_H_
 #define	__KERNEL_UOS_H_ 1
 
-#include <runtime/list.h>
 #include <uos-conf.h>
+#include <runtime/list.h>
 
 #ifdef __cplusplus
 extern "C" {
