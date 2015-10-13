@@ -237,7 +237,7 @@ void timer_update (timer_t *t)
 #ifndef TIMER_NO_DECISEC
     /* Send signal every 100 msec. */
 #ifdef USEC_TIMER
-    if (t->usec_per_tick / 1000 <= 100 &&
+    if (t->usec_per_tick <= (100ul*1000) &&
 #else
     if (t->msec_per_tick <= 100 &&
 #endif
@@ -363,6 +363,16 @@ timer_passed (timer_t *t, unsigned long t0, unsigned int msec)
 }
 
 #ifdef USEC_TIMER
+
+static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
+    //res = khz*usec_per_tick /1000
+    unsigned long long res = khz*usec_per_tick;
+    res = khz>>3;
+    const long Nmod = 128*128; 
+    res = khz*(Nmod/125);
+    return res/Nmod; 
+} 
+
 /**\~english
  * Nanosecond Timer initialization.
  *
@@ -383,13 +393,13 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 #if ARM_1986BE9
     ARM_SYSTICK->CTRL = 0;
     ARM_SYSTICK->VAL = 0;
-    ARM_SYSTICK->LOAD = t->khz / 1000 * t->usec_per_tick - 1;
+    ARM_SYSTICK->LOAD = timer_period_byus(khz, usec_per_tick) - 1;
     ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_ENABLE |
                 ARM_SYSTICK_CTRL_TICKINT |
                 ARM_SYSTICK_CTRL_HCLK;
-#endif // ARM_1986BE9
+//#endif // ARM_1986BE9
 
-#if ARM_1986BE1
+#elif ARM_1986BE1
     ARM_RSTCLK->PER_CLOCK |= PER_CLOCK_EN;
 #if (ARM_SYS_TIMER==4)
     ARM_RSTCLK->UART_CLOCK |= TIM_CLK_EN;
@@ -398,9 +408,21 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 #endif
     SYS_TIMER->TIM_CNT = 0;
     SYS_TIMER->TIM_PSG = 0;
-    SYS_TIMER->TIM_ARR = t->khz / 1000 * t->usec_per_tick - 1;
+    SYS_TIMER->TIM_ARR = timer_period_byus(khz, usec_per_tick) - 1;
     SYS_TIMER->TIM_IE = ARM_TIM_CNT_ARR_EVENT_IE;
     SYS_TIMER->TIM_CNTRL = ARM_TIM_CNT_EN;
+//#endif
+
+#elif defined (ELVEES)
+    /* Use interval timer with prescale 1:1. */
+    MC_ITCSR = 0;
+    MC_ITSCALE = 0;
+    MC_ITPERIOD = timer_period_byus(khz, usec_per_tick) - 1;
+    MC_ITCSR = MC_ITCSR_EN;
+//#endif
+
+#else
+#   error "TIMER cant initialise unsupported chip\n"
 #endif
 
 
