@@ -78,6 +78,18 @@ void *mutex_wait (mutex_t *lock);
 
 /* Interrupt management. */
 void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);
+/**\~english
+ *  this allows instead IRQ_EVT use desired isr-fast-handler routine for signaling
+       to ordinar mutexes, and so realize Software Interrupt similar to system 
+       Hardware Interrupts. 
+   Fast handler of swi (mutex_irq_t.handler(arg)) executes in context of 
+       signaling thread, and cause task scheduling only if handler gives !=0 message
+   \~rusian
+   вместо железного события, здесь используется обработчик софтверного прерывания
+       при этом быстрый обработчик выполняется в контексте сигналящей нитки,
+       и сигнал к мутексу проникнет если он возвратит сообщение != 0 
+ */
+void mutex_lock_swi (mutex_t*, mutex_irq_t* swi, handler_t func, void *arg);
 void mutex_unlock_irq (mutex_t*);
 void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg);
 
@@ -113,6 +125,14 @@ struct _mutex_t {
 #if RECURSIVE_LOCKS
 	small_int_t	deep;		/* recursive locking deep */
 #endif
+};
+
+struct _mutex_irq_t {
+    mutex_t *   lock;       /* lock, associated with this irq */
+    handler_t   handler;    /* fast interrupt handler */
+    void *      arg;        /* argument for fast handler */
+    small_int_t irq;        /* irq number */
+    bool_t      pending;    /* interrupt is pending */
 };
 
 /*

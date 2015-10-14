@@ -81,14 +81,6 @@ struct _task_t {
 		__attribute__((aligned(sizeof(void*))));
 };
 
-struct _mutex_irq_t {
-	mutex_t *	lock;		/* lock, associated with this irq */
-	handler_t	handler;	/* fast interrupt handler */
-	void *		arg;		/* argument for fast handler */
-	small_int_t	irq;		/* irq number */
-	bool_t		pending;	/* interrupt is pending */
-};
-
 /* The table of interrupt handlers. */
 extern mutex_irq_t mutex_irq [];
 
