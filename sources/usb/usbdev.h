@@ -192,8 +192,8 @@ typedef struct _ep_in_t {
 
 
 typedef struct _iface_ctrl_t {
-    usbdev_specific_t   specific_handler;
-    void *              specific_tag;
+    usbdev_specific_t   if_specific_handler;
+    void *              if_specific_tag;
 } iface_ctrl_t;
 
 //
