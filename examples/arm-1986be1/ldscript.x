@@ -71,7 +71,6 @@ SECTIONS
     *(.glue_7t) *(.glue_7)
     __rodata_start = . ;
     *(.rodata .rodata.* .gnu.linkonce.r.*)
-    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     /* Align here to ensure that the .data section start on word boundary. */
     . = ALIGN (32 / 8);
     _etext = .;
