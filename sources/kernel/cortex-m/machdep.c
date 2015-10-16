@@ -141,19 +141,16 @@ _irq_handler_ (void)
        arm_set_primask(0);
 #else
        ARM_NVIC_ICER(irq >> 5) = 1 << (irq & 0x1F); 	// запрещаем прерывание
-       arm_set_primask(1);
-        __cortex_m1_iser0 &= ~(1 << (irq & 0x1F)); // очищаем запрещенное прерывание в переменной
-       arm_set_primask(0);
 #endif
 	}
 
 //debug_printf ("<%d> ", irq);
 	mutex_irq_t *h = &mutex_irq [irq];
-//	if (! h->lock) {
+	if (! h->lock) {
 		/* Cannot happen. */
 //debug_printf ("<unexpected interrupt> ");
-//		goto done;
-//	}
+		goto done;
+	}
 
 	if (h->handler) {
 		/* If the lock is free -- call fast handler. */
