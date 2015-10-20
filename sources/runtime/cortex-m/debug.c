@@ -186,7 +186,7 @@ debug_peekchar (void)
 #endif /* ARM_1986BE1 || ARM_1986BE9 */
 
 
-#ifdef ARM_STM32F4
+#if defined(ARM_STM32F4) || defined(ARM_STM32L152RC)
 void
 debug_putchar (void *arg, short c)
 {
@@ -263,7 +263,7 @@ debug_peekchar (void)
 	debug_char = c;
 	return c;
 }
-#endif /* ARM_STM32F4 */
+#endif /* ARM_STM32F4 || ARM_STM32L152RC */
 
 
 void

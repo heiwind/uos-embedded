@@ -23,3 +23,4 @@ void uos_init (void)
 	timer_init (&timer, KHZ, 10);
 	task_create (hello, "Timer", "hello", 1, task, sizeof (task));
 }
+

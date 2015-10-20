@@ -22,6 +22,96 @@
 extern unsigned long _etext, __data_start, _edata, __bss_start, __bss_end;
 extern void main (void);
 
+#ifdef ARM_STM32L152RC
+void disable_bor()
+{
+    if ((FLASH->OBR & FLASH_BOR_OFF_MASK) == 0) {
+        return;
+    }
+        
+    /* Unlocks the option bytes block access */
+    FLASH->PEKEYR = FLASH_PEKEY1;
+    FLASH->PEKEYR = FLASH_PEKEY2;
+    FLASH->OPTKEYR = FLASH_OPTKEY1;
+    FLASH->OPTKEYR = FLASH_OPTKEY2;
+
+    /* Clears the FLASH pending flags */
+    FLASH->SR = FLASH_EOP | FLASH_WRPERR | FLASH_PGAERR | FLASH_SIZERR | FLASH_OPTVERR;
+    
+    /* Set BOR OFF */
+    uint32_t tmp = 0, tmp1 = 0;
+    tmp1 = (FLASH->OBR & 0x00F00000) >> 16;
+    tmp = (uint32_t)~(0 | tmp1) << 16;
+    tmp |= (0 | tmp1);
+    
+    uint32_t timeout = 0x8000;
+    while (FLASH->SR & FLASH_BSY)
+        if (--timeout == 0)
+            break;
+            
+    if (FLASH->SR & FLASH_ERR_MASK)
+        return;
+        
+    OB->USER = tmp; 
+    
+    timeout = 0x8000;
+    while (FLASH->SR & FLASH_BSY)
+        if (--timeout == 0)
+            break;
+            
+    if (FLASH->SR & FLASH_ERR_MASK)
+        return;
+
+    /* Launch the option byte loading */
+    FLASH->PECR |= FLASH_OBL_LAUNCH;
+}
+
+void stm32l_low_power()
+{
+	RCC->AHBENR |= RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN | RCC_GPIODEN |
+        RCC_GPIOEEN | RCC_GPIOHEN;  
+    RCC->APB1ENR = RCC_PWREN;
+    asm volatile ("dsb");
+    
+    RCC->CSR &= ~RCC_LSION;
+    
+    GPIOA->MODER = 0xFFFFFFFF;
+    GPIOB->MODER = 0xFFFFFFFF;
+    GPIOC->MODER = 0xFFFFFFFF;
+    GPIOD->MODER = 0xFFFFFFFF;
+    GPIOE->MODER = 0xFFFFFFFF;
+    GPIOH->MODER = 0xFFFFFFFF;
+    
+    GPIOA->OTYPER = 0;
+    GPIOB->OTYPER = 0;
+    GPIOC->OTYPER = 0;
+    GPIOD->OTYPER = 0;
+    GPIOE->OTYPER = 0;
+    GPIOH->OTYPER = 0;
+
+    GPIOA->PUPDR = 0;
+    GPIOB->PUPDR = 0;
+    GPIOC->PUPDR = 0;
+    GPIOD->PUPDR = 0;
+    GPIOE->PUPDR = 0;
+    GPIOH->PUPDR = 0;
+
+    GPIOA->OSPEEDR = 0;
+    GPIOB->OSPEEDR = 0;
+    GPIOC->OSPEEDR = 0;
+    GPIOD->OSPEEDR = 0;
+    GPIOE->OSPEEDR = 0;
+    GPIOH->OSPEEDR = 0;
+    
+	//RCC->AHBENR &= ~(RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN | RCC_GPIODEN |
+    //    RCC_GPIOEEN | RCC_GPIOHEN);
+    
+    while (PWR->CSR & PWR_VOSF);
+    PWR->CR = (PWR->CR & ~PWR_VOS_MASK) | PWR_VOS_1_2 | PWR_ULP | PWR_LPSDSR;
+    while (PWR->CSR & PWR_VOSF);
+}
+#endif
+
 /*
  * Initialize the system configuration, cache, intermal SRAM,
  * and set up the stack. Then call main().
@@ -164,6 +254,7 @@ generator will not work properly
         RCC_PPRE2_DIV2;
     while (RCC->CFGR & RCC_SWS_MASK != RCC_SWS_PLL);
 
+#ifndef NDEBUG
     // Init debug UART
     RCC->AHB1ENR |= RCC_GPIOCEN;
     GPIOC->MODER |= GPIO_ALT(10) | GPIO_ALT(11);
@@ -176,8 +267,33 @@ generator will not work properly
     USART3->CR2 |= USART_STOP_1;
     USART3->BRR = USART_DIV_MANTISSA(mant) | USART_DIV_FRACTION(frac);
     USART3->CR1 |= USART_TE | USART_RE;
-#endif
+#endif // NDEBUG
+#endif // ARM_STM32F4
 
+#ifdef ARM_STM32L152RC
+    // Возможно, нужно вручную выставить 1 цикл задержки (1 WS) Flash
+    // при определённых частотах.
+#ifdef POWER_SAVE
+	stm32l_low_power();
+	disable_bor();
+#endif
+    
+#ifndef NDEBUG
+    // Init debug UART
+    RCC->AHBENR |= RCC_GPIOCEN;
+    GPIOC->MODER = (GPIOC->MODER & ~(GPIO_MODE_MASK(10) | GPIO_MODE_MASK(11))) |
+		GPIO_ALT(10) | GPIO_ALT(11);
+    GPIOC->AFRH |= GPIO_AF_USART3(10) | GPIO_AF_USART3(11);
+    
+    unsigned mant = (unsigned)(KHZ / (115.2 * 16));
+    unsigned frac = (KHZ / (115.2 * 16) - mant) * 16;
+    RCC->APB1ENR |= RCC_USART3EN;
+    USART3->CR1 |= USART_UE;
+    USART3->CR2 |= USART_STOP_1;
+    USART3->BRR = USART_DIV_MANTISSA(mant) | USART_DIV_FRACTION(frac);
+    USART3->CR1 |= USART_TE | USART_RE;
+#endif // NDEBUG
+#endif // ARM_STM32L152RC
 
 #ifndef EMULATOR /* not needed on emulator */
 	/* Copy the .data image from flash to ram.

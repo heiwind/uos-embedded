@@ -17,6 +17,7 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
+ 
 #ifdef ARM_1986BE9
 #   include <runtime/cortex-m/io-1986ve9x.h>
 #endif
@@ -25,6 +26,9 @@
 #endif
 #ifdef ARM_STM32F4
 #   include <runtime/cortex-m/io-stm32f4.h>
+#endif
+#ifdef ARM_STM32L152RC
+#   include <runtime/cortex-m/io-stm32l.h>
 #endif
 
 /*

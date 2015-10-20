@@ -31,6 +31,9 @@
 #elif defined (ARM_STM32F4)
 #   define ARCH_INTERRUPTS      83
 #   define ARCH_TIMER_IRQ       82
+//#elif defined (ARM_STM32L152RC)
+//#   define ARCH_INTERRUPTS      83
+//#   define ARCH_TIMER_IRQ       82
 #endif
 
 /*
@@ -118,10 +121,11 @@ arch_idle ()
 {
 	arm_intr_enable ();
 	for (;;) {
-#if defined (ARM_1986BE1) || defined (ARM_1986BE9)
-		asm volatile ("nop;");
-#else
+#ifdef POWER_SAVE
+		ARM_SCB->SCR |= ARM_SCR_SLEEPDEEP;
 		arm_bus_yield ();
+#else
+		asm volatile ("nop;");
 #endif
 	}
 }

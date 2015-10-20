@@ -90,6 +90,14 @@
 #   define TIMER_IRQ        82  /* Systick */
 #endif
 
+#if ARM_STM32L152RC
+#   if defined(RTC_TIMER)
+#       define TIMER_IRQ        IRQ_RTC_WKUP    /* RTC */
+#   else
+#       define TIMER_IRQ        ARCH_TIMER_IRQ  /* Systick */
+#   endif
+#endif
+
 #if ARM_1986BE9
 #   define TIMER_IRQ        32  /* Systick */
 #endif
@@ -190,6 +198,13 @@ void timer_update (timer_t *t)
         compare += t->compare_step;
         mips_write_c0_register (C0_COMPARE, compare);
     } while ((int) (compare - mips_read_c0_register (C0_COUNT)) < 0);
+#endif
+#if defined (RTC_TIMER)
+#   if defined (ARM_STM32L152RC)
+        RTC->ISR &= ~RTC_WUTF;
+        PWR->CR |= PWR_CWUF;
+        EXTI->PR = EXTI_RTC_WKUP;
+#   endif
 #endif
 
     /* Increment current time. */
@@ -365,7 +380,7 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
     ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_ENABLE |
                 ARM_SYSTICK_CTRL_TICKINT |
                 ARM_SYSTICK_CTRL_HCLK;
-#endif // (ARM_1986BE9 || ARM_1986BE1)
+#endif // ARM_1986BE9
 
 #if ARM_1986BE1
     ARM_RSTCLK->PER_CLOCK |= PER_CLOCK_EN;
@@ -454,18 +469,41 @@ timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick)
     MC_ITCSR = MC_ITCSR_EN;
 #endif
 #if ARM_CORTEX_M3 || ARM_CORTEX_M4
-    ARM_SYSTICK->CTRL = 0;
-    ARM_SYSTICK->VAL = 0;
-#ifdef SETUP_HCLK_HSI
-    /* Max 2130 msec/tick at 8 MHz. */
-    ARM_SYSTICK->LOAD = 8000 * t->msec_per_tick - 1;
-#else
-    /* Max 213 msec/tick at 80 MHz. */
-    ARM_SYSTICK->LOAD = t->khz * t->msec_per_tick - 1;
-#endif
-    ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_ENABLE |
-                ARM_SYSTICK_CTRL_TICKINT |
-                ARM_SYSTICK_CTRL_HCLK;
+#   if defined (RTC_TIMER)
+#       if defined (ARM_STM32L152RC)
+            /* Clear write protection for RTC registers */
+            RCC->APB1ENR |= RCC_PWREN;
+            PWR->CR |= PWR_DBP;
+            RTC->WPR = 0xCA;
+            RTC->WPR = 0x53;
+            /* Enable LSE and set it as clock source for RTC */
+            RCC->CSR |= RCC_LSEON;
+            while (! (RCC->CSR & RCC_LSERDY));
+            RCC->CSR |= RCC_RTCEN | RCC_RTCSEL_LSE;
+            /* Enable RTC Wakeup interrupt in the EXTI */
+            EXTI->PR = EXTI_RTC_WKUP;
+            EXTI->RTSR |= EXTI_RTC_WKUP;
+            EXTI->IMR |= EXTI_RTC_WKUP;
+            /* HZ_CLKIN_RTC is divided by 2 by WUT Prescaler */
+            RTC->CR = 0;
+            while (! (RTC->ISR & RTC_WUTWF));
+            RTC->WUTR = (HZ_CLKIN_RTC / 2) * t->msec_per_tick / 1000 - 1;
+            RTC->CR = RTC_WUCKSEL_DIV2 | RTC_WUTE | RTC_WUTIE;
+#       endif
+#   else
+        ARM_SYSTICK->CTRL = 0;
+        ARM_SYSTICK->VAL = 0;
+#       ifdef SETUP_HCLK_HSI
+            /* Max 2130 msec/tick at 8 MHz. */
+            ARM_SYSTICK->LOAD = 8000 * t->msec_per_tick - 1;
+#       else
+            /* Max 213 msec/tick at 80 MHz. */
+            ARM_SYSTICK->LOAD = t->khz * t->msec_per_tick - 1;
+#       endif
+            ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_ENABLE |
+                        ARM_SYSTICK_CTRL_TICKINT |
+                        ARM_SYSTICK_CTRL_HCLK;
+#   endif
 #endif
 #if ARM_1986BE1
     ARM_RSTCLK->PER_CLOCK |= PER_CLOCK_EN;
