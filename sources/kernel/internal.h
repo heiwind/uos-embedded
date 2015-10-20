@@ -44,6 +44,12 @@
 #	include <kernel/linux386/machdep.h>
 #endif
 
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * ----------
  * | Task   |
@@ -144,5 +150,11 @@ inline static task_t *task_policy (void)
 #define STACK_MAGIC		0xaau
 
 #define STACK_GUARD(x)		((x)->stack[0] == STACK_MAGIC)
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__KERNEL_INTERNAL_H_ */

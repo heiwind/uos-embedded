@@ -1,6 +1,17 @@
 #ifndef __UDP_H_
 #define __UDP_H_ 1
 
+#include <kernel/uos.h>
+#include <buf/buf.h>
+#include <net/netif.h>
+#include <net/ip.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #define UDP_SOCKET_QUEUE_SIZE	8
 
 typedef struct _udp_socket_queue_t {
@@ -107,5 +118,11 @@ udp_peek (udp_socket_t *s)
 {
 	return udp_peekfrom (s, 0, 0);
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __UDP_H_ */

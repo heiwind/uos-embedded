@@ -1,6 +1,8 @@
 #ifndef _TIME_H_
 #define _TIME_H_
 
+#include <uos-conf.h>
+
 #ifndef UOS_LEAP_SECONDS
 #	define UOS_LEAP_SECONDS 1
 #endif

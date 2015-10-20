@@ -1,3 +1,5 @@
+#ifndef UOS_STDLIB_H
+#define UOS_STDLIB_H
 /*
  * Standard numeric routines for MIPS architecture.
  *
@@ -16,13 +18,24 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
-static inline int
+
+#ifndef INLINE
+#include <runtime/lib.h>
+#endif
+
+#include "types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+INLINE int
 abs (int __x)
 {
 	return (__x < 0) ? -__x : __x;
 }
 
-static inline long
+INLINE long
 labs (long __x)
 {
 	return (__x < 0) ? -__x : __x;
@@ -30,19 +43,19 @@ labs (long __x)
 
 extern unsigned long strtoul (const unsigned char *, unsigned char **, int);
 
-static inline long
+INLINE long
 strtol (const unsigned char *__p, unsigned char **__ep, int b)
 {
 	return (long) strtoul (__p, __ep, b);
 }
 
-static inline int
+INLINE int
 atoi (const unsigned char *__p)
 {
 	return (int) strtol (__p, (unsigned char **) 0, 10);
 }
 
-static inline long
+INLINE long
 atol (const unsigned char *__p)
 {
 	return strtol (__p, (unsigned char **) 0, 10);
@@ -50,3 +63,9 @@ atol (const unsigned char *__p)
 
 extern const unsigned char *strmatch (const unsigned char*, const unsigned char*);
 extern void watchdog_alive (void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //UOS_STDLIB_H

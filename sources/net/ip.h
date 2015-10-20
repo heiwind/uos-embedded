@@ -1,6 +1,12 @@
 #ifndef __IP_H_
 #define __IP_H_ 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #ifndef IP_STACKSZ
 #   if __AVR__
 #      define IP_STACKSZ	0x400
@@ -215,5 +221,11 @@ bool_t ip_output_netif (ip_t *ip, struct _buf_t *p, unsigned char *dest,
 void icmp_echo_request (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
 void icmp_dest_unreach (ip_t *ip, struct _buf_t *p, small_uint_t op);
 void icmp_time_exceeded (ip_t *ip, struct _buf_t *p);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __IP_H_ */

@@ -2,19 +2,19 @@
 #include <kernel/uos.h>
 #include <uart/uart.h>
 
-#if __AVR__
+#if defined(__AVR__)
 #   include "avr.h"
 #endif
 
-#if ARM_S3C4530
+#if defined(ARM_S3C4530)
 #   include "samsung.h"
 #endif
 
-#if ARM_AT91SAM
+#if defined(ARM_AT91SAM)
 #   include "at91sam.h"
 #endif
 
-#if PIC32MX
+#if defined(PIC32MX)
 #   include "pic32.h"
 #endif
 
@@ -22,11 +22,11 @@
 #   include "elvees.h"
 #endif
 
-#if MSP430
+#if defined(MSP430)
 #   include "msp430.h"
 #endif
 
-#if LINUX386
+#if defined(LINUX386)
 #   include "linux.h"
 #endif
 
@@ -263,7 +263,7 @@ uart_init (uart_t *u, small_uint_t port, int prio, unsigned int khz,
 	u->out_first = u->out_last = u->out_buf;
 	u->khz = khz;
 	u->onlcr = 1;
-#if (ARM_1986BE9 || ARM_1986BE1)
+#if (defined(ARM_1986BE9) || defined(ARM_1986BE1))
 	u->port = (port == 0) ? ARM_UART1_BASE : ARM_UART2_BASE;
 #else
 	u->port = port;

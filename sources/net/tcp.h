@@ -210,19 +210,65 @@ struct _tcp_socket_t {
 };
 typedef struct _tcp_socket_t tcp_socket_t;
 
+
+
+/***************************************************************************
+ * Application program's interface (API):
+ ***************************************************************************/
+
 /*
- * Application program's interface:
+ * Connect to another host. Wait until connection established.
+ * Return 1 on success, 0 on error.
  */
 tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr,
 	unsigned short port);
+
+/*
+ * Set the state of the connection to be LISTEN, which means that it
+ * is able to accept incoming connections. The protocol control block
+ * is reallocated in order to consume less memory. Setting the
+ * connection to LISTEN is an irreversible process.
+ */
 tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	unsigned short port);
 tcp_socket_t *tcp_accept (tcp_socket_t *s);
+
+/*
+ * Closes the connection held by the PCB.
+ * Return 1 on success, 0 on error.
+ */
 int tcp_close (tcp_socket_t *s);
+
+/*
+ * Aborts a connection by sending a RST to the remote host and deletes
+ * the local protocol control block. This is done when a connection is
+ * killed because of shortage of memory.
+ */
 void tcp_abort (tcp_socket_t *s);
+
+/*
+ * Blocking receive.
+ * Return a number of received bytes >0.
+ * Return <0 on error.
+ */
 int tcp_read (tcp_socket_t *s, void *dataptr, unsigned short len);
+
+/*
+ * Receive len>0 bytes. Return <0 on error.
+ * When nonblock flag is zero, blocks until data get available (never returns 0).
+ * When nonblock flag is nonzero, returns 0 if no data is available.
+ */
 int tcp_read_poll (tcp_socket_t *s, void *dataptr, unsigned short len, int nonblock);
+
+/*
+ * Send len>0 bytes.
+ * Return a number ob transmitted bytes, or -1 on error.
+ */
 int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len);
+
+/*
+ * Return the period of socket inactivity, in seconds.
+ */
 unsigned long tcp_inactivity (tcp_socket_t *s);
 
 #ifdef to_stream
@@ -244,9 +290,11 @@ typedef struct _tcp_stream_t {
 stream_t *tcp_stream_init (tcp_stream_t *u, tcp_socket_t *sock);
 #endif /* to_stream */
 
-/*
- * Lower layer interface to TCP:
- */
+
+
+/*********************************************************************
+ * Lower layer interface (LLI) to TCP:
+ **********************************************************************/
 void tcp_slowtmr (ip_t *ip) __attribute__((weak));
 void tcp_fasttmr (ip_t *ip) __attribute__((weak));
 void tcp_input (struct _ip_t *ip, struct _buf_t *p, struct _netif_t *inp,
@@ -275,9 +323,11 @@ tcp_queue_is_empty (tcp_socket_t *q)
 	return (q->count == 0);
 }
 
-/*
+
+
+/***********************************************************************************
  * Internal functions and global variables:
- */
+ ************************************************************************************/
 tcp_socket_t *tcp_socket_copy (tcp_socket_t *s);
 void tcp_socket_purge (tcp_socket_t *s);
 void tcp_socket_remove (tcp_socket_t **socklist, tcp_socket_t *s);

@@ -4,6 +4,16 @@
 extern "C" {
 #endif
 
+
+#include <uos-conf.h>
+#ifndef INLINE
+#   ifdef __cplusplus
+#       define INLINE inline
+#   else
+#       define INLINE static inline
+#   endif
+#endif
+
 /*
  * Reading a byte from flash memory.
  * By default - handle it like a simple pointer.
@@ -94,32 +104,32 @@ bool_t uos_valid_memory_address (void*);
 void uos_halt (int);
 
 #ifndef __AVR__
-static inline unsigned
+INLINE unsigned
 strlen_flash (const char *str)
 {
 	return (unsigned) strlen ((const unsigned char*) str);
 }
 
-static inline void
+INLINE void
 memcpy_flash (void *dest, const char *src, unsigned char len)
 {
 	memcpy (dest, src, len);
 }
 
-static inline void
+INLINE void
 strcpy_flash (unsigned char *dest, const char *str)
 {
 	strcpy (dest, (const unsigned char*) str);
 }
 
-static inline void
+INLINE void
 strncpy_flash (unsigned char *dest, const char *str, unsigned char maxlen)
 {
 	strncpy (dest, (const unsigned char*) str, maxlen);
 }
 #endif /* __AVR__ */
 
-static inline unsigned char
+INLINE unsigned char
 flash_fetch (const unsigned char *p)
 {
 	return FETCH_BYTE (p);

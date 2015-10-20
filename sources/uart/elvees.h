@@ -1,3 +1,6 @@
+#ifndef __UOS_ELVEES_H_
+#define __UOS_ELVEES_H_
+
 /*
  * Elvees Multicore-specific defines for UART driver.
  */
@@ -113,3 +116,7 @@ static unsigned __uart1_lsr;
 static unsigned __uart_lsr;
 
 #endif /* MC_IER1 */
+
+
+
+#endif //__UOS_ELVEES_H_

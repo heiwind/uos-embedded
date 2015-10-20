@@ -1,6 +1,15 @@
 #ifndef __NETIF_H_
 #define	__NETIF_H_ 1
 
+
+#include <net/arp.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 struct _buf_t;
 
 /*
@@ -91,5 +100,11 @@ bool_t netif_output_prio (netif_t *netif, struct _buf_t *p,
 	unsigned char *ipdest, unsigned char *ipsrc, small_uint_t prio);
 struct _buf_t *netif_input (netif_t *netif);
 void netif_set_address (netif_t *netif, unsigned char *ethaddr);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__NETIF_H_ */
