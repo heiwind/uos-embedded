@@ -209,9 +209,9 @@ static void process_setup (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup, voi
     case USB_REQ_RCV_IFACE:
         num = setup->wIndex & 0xFF;
         if (num >= USBDEV_NB_INTERFACES) break;
-        if (u->iface_ctrl[num].specific_handler)
-            req_state = u->iface_ctrl[num].specific_handler (
-                u, u->iface_ctrl[num].specific_tag, setup, &res_data, &res_size);
+        if (u->iface_ctrl[num].if_specific_handler)
+            req_state = u->iface_ctrl[num].if_specific_handler (
+                u, u->iface_ctrl[num].if_specific_tag, setup, &res_data, &res_size);
         break;
     case USB_REQ_RCV_ENDPOINT:
         num = setup->wIndex & 0xF;
@@ -516,8 +516,8 @@ void usbdev_set_dev_specific_handler (usbdev_t *u, usbdev_specific_t handler, vo
 void usbdev_set_iface_specific_handler (usbdev_t *u, unsigned if_n, usbdev_specific_t handler, void *tag)
 {
     assert (if_n < USBDEV_NB_INTERFACES);
-    u->iface_ctrl[if_n].specific_handler = handler;
-    u->iface_ctrl[if_n].specific_tag     = tag;
+    u->iface_ctrl[if_n].if_specific_handler = handler;
+    u->iface_ctrl[if_n].if_specific_tag     = tag;
 }
 
 void usbdev_set_ep_specific_handler (usbdev_t *u, unsigned ep_n, int dir, usbdev_specific_t handler, void *tag)

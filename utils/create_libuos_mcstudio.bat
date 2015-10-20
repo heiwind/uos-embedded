@@ -227,6 +227,7 @@ copy /Y %CUR_SRC_DIR%\io-mc0226.h %CUR_DST_DIR%\io-mc0226.h
 copy /Y %CUR_SRC_DIR%\io-mc0428.h %CUR_DST_DIR%\io-mc0428.h
 copy /Y %CUR_SRC_DIR%\io-mc24.h %CUR_DST_DIR%\io-mc24.h
 copy /Y %CUR_SRC_DIR%\io-mc24r2.h %CUR_DST_DIR%\io-mc24r2.h
+copy /Y %CUR_SRC_DIR%\io-mc30sf6.h %CUR_DST_DIR%\io-mc30sf6.h
 copy /Y %CUR_SRC_DIR%\io-mct02.h %CUR_DST_DIR%\io-mct02.h
 copy /Y %CUR_SRC_DIR%\io-nvcom01.h %CUR_DST_DIR%\io-nvcom01.h
 copy /Y %CUR_SRC_DIR%\io-nvcom02.h %CUR_DST_DIR%\io-nvcom02.h

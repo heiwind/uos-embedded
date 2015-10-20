@@ -24,6 +24,7 @@
 
 #ifdef ARM_CORTEX_M1
 unsigned __cortex_m1_iser0;
+uint32_t mask_intr_disabled = 0xffffffff;
 #endif
 
 /*
@@ -36,13 +37,15 @@ _svc_ (task_t *target)
 	/* Save registers R4-R11 and ISER0 in stack. */
 	asm volatile (
 	"push   {r4-r7} \n\t"
-	"ldr    r6, =0xE000E100 \n\t"
-	"ldr    r5, [r6, #0] \n\t"
-	"mov    r1, r8 \n\t"
-	"mov    r2, r9 \n\t"
-	"mov    r3, r10 \n\t"
-	"mov    r4, r11 \n\t"
-	"push   {r1-r5} \n\t");
+	"ldr    r7, =0xE000E100 \n\t"
+	"ldr    r6, [r7, #0] \n\t"
+	"mov    r2, r8 \n\t"
+	"mov    r3, r9 \n\t"
+	"mov    r4, r10 \n\t"
+	"mov    r5, r11 \n\t"
+	"push   {r2-r6} \n\t"
+	"push   {lr} \n\t");
+
 #else
 	/* Save registers R4-R11 and BASEPRI in stack. */
 	asm volatile (
@@ -63,9 +66,8 @@ _svc_ (task_t *target)
 	/* Load registers R4-R11 and ISER0.
 	 * Return from exception. */
 	asm volatile (
-	"mov    r0, #6 \n\t"
-	"mvn    r1, r0 \n\t"
-	"mov    lr, r1 \n\t"
+	"pop    {r4} \n\t"
+	"mov    lr, r4 \n\t"
 	"pop    {r1-r5} \n\t"
 	"mov    r8, r1 \n\t"
 	"mov    r9, r2 \n\t"
@@ -109,8 +111,8 @@ _irq_handler_ (void)
 	"mov    r2, r9 \n\t"
 	"mov    r3, r10 \n\t"
 	"mov    r4, r11 \n\t"
-	"push	{r1-r5} \n\t");
-	//"push	{r1-r4} \n\t");
+	"push	{r1-r5} \n\t"
+	"push   {lr} \n\t");
 
 #else
 	/* Save registers R4-R11 and BASEPRI in stack.
@@ -130,9 +132,15 @@ _irq_handler_ (void)
 		ARM_SYSTICK->CTRL &= ~ARM_SYSTICK_CTRL_TICKINT;
     } else {
         irq = ipsr - 16;
-        ARM_NVIC_ICER(irq >> 5) = 1 << (irq & 0x1F);
+
 #ifdef ARM_CORTEX_M1
-        __cortex_m1_iser0 &= ~(1 << (irq & 0x1F));
+       ipsr = 1 << (irq & 0x1F);
+       ARM_NVIC_ICER(0) = ipsr; 	// запрещаем прерывание
+       arm_set_primask(1);
+        __cortex_m1_iser0 &= ~ipsr; // очищаем запрещенное прерывание в переменной
+       arm_set_primask(0);
+#else
+       ARM_NVIC_ICER(irq >> 5) = 1 << (irq & 0x1F); 	// запрещаем прерывание
 #endif
 	}
 
@@ -183,9 +191,8 @@ done:
 	/* Load registers R4-R11. ISER0 saved value is thrown away.
 	 * Return from exception. */
 	asm volatile (
-	"mov    r0, #6 \n\t"
-	"mvn    r1, r0 \n\t"
-	"mov    lr, r1 \n\t"
+	"pop    {r4} \n\t"
+	"mov    lr, r4 \n\t"
 	"pop    {r1-r5} \n\t"
 	"mov    r8, r1 \n\t"
 	"mov    r9, r2 \n\t"
@@ -194,7 +201,7 @@ done:
 	"pop    {r4-r7} \n\t"
 	"bx     lr \n\t"
 	);
-	
+
 #else
 	/* Load registers R4-R11 and BASEPRI.
 	 * Return from exception. */
@@ -255,7 +262,9 @@ arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg,
 	*--sp = 0;			/* r6      (cortex-m1: r10) */
 	*--sp = 0;			/* r5      (cortex-m1: r9) */
 	*--sp = 0;			/* r4      (cortex-m1: r8) */
-
+#ifdef ARM_CORTEX_M1
+	*--sp = 0xFFFFFFF9;	/* lr      (cortex-m1: lr) */
+#endif
 	t->stack_context = (void*) sp;
 	
 #ifdef ARM_CORTEX_M1

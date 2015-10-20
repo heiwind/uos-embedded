@@ -70,19 +70,21 @@ SECTIONS
     *(.glue_7t) *(.glue_7)
     __rodata_start = . ;
     *(.rodata .rodata.* .gnu.linkonce.r.*)
+    . = ALIGN (32 / 8);
   } > text
-  
-  .ARM.exidx             : AT (ADDR (.text) + SIZEOF (.text))
+
+  .ARM.exidx      : AT (ADDR (.text) + SIZEOF (.text))
   {
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+    /* Align here to ensure that the .data section start on word boundary. */
+    . = ALIGN (32 / 8);
+    _etext = .;
   } > text
   
-  /* Align here to ensure that the .data section start on word boundary. */
   . = ALIGN (32 / 8);
-  _etext = .;
 
   /* Start data (internal SRAM).  */
-  .data		  : AT (ADDR (.ARM.exidx) + SIZEOF (.ARM.exidx))
+  .data		      : AT (ADDR (.text) + SIZEOF (.text) + SIZEOF (.ARM.exidx))
   {
     __data_start = . ;
     *(.data .data.* .gnu.linkonce.d.*)
@@ -94,7 +96,7 @@ SECTIONS
   } > data
 
   .bss  SIZEOF(.data) + ADDR(.data) :
-       AT (ADDR (.data) + SIZEOF (.data))
+       AT (ADDR (.text) + SIZEOF (.text) + SIZEOF (.ARM.exidx) + SIZEOF (.data))
   {
    __bss_start = .;
    *(.dynbss)

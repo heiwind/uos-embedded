@@ -138,10 +138,11 @@ static void inline __attribute__ ((always_inline))
 arm_intr_disable (unsigned long *x)
 {
 #ifdef ARM_CORTEX_M1
+	extern uint32_t mask_intr_disabled;
 	register int primask = arm_get_primask();
 	arm_set_primask(1);
     *x = ARM_NVIC_ISER(0);
-    ARM_NVIC_ICER(0) = 0xFFFFFFFF;
+    ARM_NVIC_ICER(0) = mask_intr_disabled;
 	arm_set_primask(primask);
 #else
 	unsigned long temp;
