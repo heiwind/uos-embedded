@@ -17,6 +17,8 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 /*
  * Initialize the group data structure.
@@ -100,6 +102,31 @@ mutex_group_unlisten (mutex_group_t *g)
 	arch_intr_restore (x);
 }
 
+struct mg_signal_ctx {
+    mutex_group_t *g;
+    mutex_t **lock_ptr;
+    void **msg_ptr;
+};
+
+bool_t mutex_group_signaled(struct mg_signal_ctx* ctx)
+{
+    mutex_slot_t *s;
+    mutex_group_t *g = ctx->g;
+    /* Find an active slot. */
+    for (s = g->slot + g->num; --s >= g->slot; ) {
+        if (s->active) {
+            if (ctx->lock_ptr)
+                *(ctx->lock_ptr) = s->lock;
+            if (ctx->msg_ptr)
+                *(ctx->msg_ptr) = s->message;
+            s->active = 0;
+            return true;
+        }
+    }
+    g->waiter = task_current;
+    return false;
+}
+
 /*
  * Wait for the signal on any lock in the group.
  * The calling task is blocked until the mutex_signal().
@@ -109,7 +136,7 @@ void
 mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 {
 	arch_state_t x;
-	mutex_slot_t *s;
+	struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
 
 	arch_intr_disable (&x);
 	assert (STACK_GUARD (task_current));
@@ -117,17 +144,9 @@ mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 	assert (g->num > 0);
 
 	for (;;) {
-		/* Find an active slot. */
-		for (s = g->slot + g->num; --s >= g->slot; ) {
-			if (s->active) {
-				if (lock_ptr)
-					*lock_ptr = s->lock;
-				if (msg_ptr)
-					*msg_ptr = s->message;
-				s->active = 0;
+	    if (mutex_group_signaled(&signaler)){
 				arch_intr_restore (x);
 				return;
-			}
 		}
 
 		/* Suspend the task. */
@@ -135,4 +154,40 @@ mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 		g->waiter = task_current;
 		task_schedule ();
 	}
+}
+
+bool_t 
+mutex_group_lockwaiting (mutex_t *m, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
+{
+    arch_state_t x;
+    struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
+
+    arch_intr_disable (&x);
+    assert (STACK_GUARD (task_current));
+    assert (task_current->wait == 0);
+    assert (g->num > 0);
+    if (m != NULL)
+    if (! m->item.next)
+        mutex_init (m);
+
+    
+    for (;;) {
+        if (m != NULL)
+        if (mutex_trylock_in(m)) {
+            arch_intr_restore (x);
+            return true;
+        }
+        if (mutex_group_signaled(&signaler)){
+                arch_intr_restore (x);
+                return false;
+        }
+
+        if (m != NULL)
+            mutex_slaved_yield(m);
+        else {
+            /* Suspend the task. */
+            list_unlink (&task_current->item);
+            task_schedule ();
+        }
+    }
 }

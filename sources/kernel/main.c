@@ -75,7 +75,9 @@ mutex_activate (mutex_t *m, void *message)
 		s->active = 1;
 		t = s->group->waiter;
 		if (t) {
-			assert (list_is_empty (&t->item));
+		    //group_lockwait - use groun in paralel with 
+		    //  lock operation
+			//assert (list_is_empty (&t->item));
 			s->group->waiter = 0;
 			task_activate (t);
 		}

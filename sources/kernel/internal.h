@@ -45,6 +45,9 @@
 #endif
 
 
+#ifndef INLINE
+#define INLINE inline static 
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +108,51 @@ void mutex_init (mutex_t *);
 /* Activate all waiters of the lock. */
 void mutex_activate (mutex_t *m, void *message);
 
+// assign current task to m->slaves and schdule. priority adjusted
+void mutex_slaved_yield(mutex_t *m);
+// assign current task to m->master
+INLINE void mutex_do_lock(mutex_t *m)
+{
+    assert (list_is_empty (&m->slaves));
+#if RECURSIVE_LOCKS
+    assert (m->deep == 0);
+#endif
+    m->master = task_current;
+
+    /* Put this lock into the list of task slaves. */
+    list_append (&task_current->slaves, &m->item);
+
+    /* Update the value of task priority.
+     * It must be the maximum of base priority,
+     * and all slave lock priorities. */
+    if (task_current->prio < m->prio)
+        task_current->prio = m->prio;
+}
+
+//just lock mutex if it is free. not MT-safe, must call in sheduler-locked context
+INLINE bool_t mutex_trylock_in (mutex_t *m){
+    if (! m->master)
+        mutex_do_lock(m);
+    if (m->master == task_current){
+#if RECURSIVE_LOCKS
+    ++m->deep;
+#endif
+        return 1;
+    }
+    else
+        return 0;
+}
+
+//wait mutex free and lock
+INLINE bool_t mutex_lock_yiedling(mutex_t *m)
+{
+    while (m->master && m->master != task_current) {
+        /* Monitor is locked, block the task. */
+        mutex_slaved_yield(m);
+    }
+    return mutex_trylock_in(m);
+}
+
 /* Recalculate task priority, based on priorities of acquired locks. */
 void task_recalculate_prio (task_t *t);
 
@@ -112,11 +160,11 @@ void task_recalculate_prio (task_t *t);
 void mutex_recalculate_prio (mutex_t *m);
 
 /* Utility functions. */
-inline static bool_t task_is_waiting (task_t *task) {
+INLINE bool_t task_is_waiting (task_t *task) {
 	return (task->lock || task->wait);
 }
 
-inline static void task_activate (task_t *task) {
+INLINE void task_activate (task_t *task) {
 	assert (! task_is_waiting (task));
 	list_append (&task_active, &task->item);
 	if (task_current->prio < task->prio)
@@ -127,7 +175,7 @@ inline static void task_activate (task_t *task) {
  * Task_active contains a list of all tasks, which are ready to run.
  * Find a task with the biggest priority. */
 	__attribute__ ((always_inline))
-inline static task_t *task_policy (void)
+INLINE task_t *task_policy (void)
 {
 	task_t *t, *r;
 

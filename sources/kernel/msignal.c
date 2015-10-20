@@ -108,44 +108,7 @@ mutex_wait (mutex_t *m)
 	m->prio = 0;
 	task_schedule ();
 
-	/* Acquire the lock again. */
-	while (m->master) {
-		/* Monitor is locked, block the task. */
-		assert (task_current->lock == 0);
-#if RECURSIVE_LOCKS
-		assert (m->deep > 0);
-#endif
-		task_current->lock = m;
-
-		/* Put this task into the list of lock slaves. */
-		list_append (&m->slaves, &task_current->item);
-
-		/* Update the value of lock priority.
-		 * It must be the maximum of all slave task priorities. */
-		if (m->prio < task_current->prio) {
-			m->prio = task_current->prio;
-
-			/* Increase the priority of master task. */
-			if (m->master->prio < m->prio)
-				m->master->prio = m->prio;
-		}
-
-		task_schedule ();
-	}
-
-	/* Put this lock into the list of task slaves. */
-	m->master = task_current;
-#if RECURSIVE_LOCKS
-	assert (m->deep == 0);
-	m->deep = deep;
-#endif
-	list_append (&task_current->slaves, &m->item);
-
-	/* Update the value of task priority.
-	 * It must be the maximum of base priority,
-	 * and all slave lock priorities. */
-	if (task_current->prio < m->prio)
-		task_current->prio = m->prio;
+	mutex_lock_yiedling(m);
 
 	arch_intr_restore (x);
 	return task_current->message;

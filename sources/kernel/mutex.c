@@ -17,6 +17,9 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
+// here declared NULL
+#include <stddef.h>
+#include <stdbool.h>
 
 void mutex_init (mutex_t *lock)
 {
@@ -49,52 +52,89 @@ mutex_lock (mutex_t *m)
 	if (! m->item.next)
 		mutex_init (m);
 
-	while (m->master && m->master != task_current) {
-		/* Monitor is locked, block the task. */
-		assert (task_current->lock == 0);
-#if RECURSIVE_LOCKS
-		assert (m->deep > 0);
-#endif
-		task_current->lock = m;
-
-		/* Put this task into the list of lock slaves. */
-		list_append (&m->slaves, &task_current->item);
-
-		/* Update the value of lock priority.
-		 * It must be the maximum of all slave task priorities. */
-		if (m->prio < task_current->prio) {
-			m->prio = task_current->prio;
-
-			/* Increase the priority of master task. */
-			if (m->master->prio < m->prio) {
-				m->master->prio = m->prio;
-				/* No need to set task_need_schedule here. */
-			}
-		}
-
-		task_schedule ();
-	}
-
-	if (! m->master) {
-		assert (list_is_empty (&m->slaves));
-#if RECURSIVE_LOCKS
-		assert (m->deep == 0);
-#endif
-		m->master = task_current;
-
-		/* Put this lock into the list of task slaves. */
-		list_append (&task_current->slaves, &m->item);
-
-		/* Update the value of task priority.
-		 * It must be the maximum of base priority,
-		 * and all slave lock priorities. */
-		if (task_current->prio < m->prio)
-			task_current->prio = m->prio;
-	}
-#if RECURSIVE_LOCKS
-	++m->deep;
-#endif
+	mutex_lock_yiedling(m);
 	arch_intr_restore (x);
+}
+
+/** this lock is blocks until <waitfor> return true, or mutex locked.
+ * \return true - mutex succesfuly locked
+ * \return false - if mutex not locked due to <waitfor> signalled
+ * */
+bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg)
+{
+    arch_state_t x;
+
+    arch_intr_disable (&x);
+    assert (STACK_GUARD (task_current));
+    assert (task_current != m->master);
+    if (! m->item.next)
+        mutex_init (m);
+
+    while (m->master && m->master != task_current) {
+        /* Monitor is locked, block the task. */
+        if (waitfor != NULL)
+        if ((*waitfor)(waitarg)) {
+            arch_intr_restore (x);
+            return false;
+        }
+        mutex_slaved_yield(m);
+    }
+    mutex_trylock_in(m);
+    arch_intr_restore (x);
+    return true;
+}
+
+void mutex_slaved_yield(mutex_t *m){
+    assert (task_current->lock == 0);
+#if RECURSIVE_LOCKS
+    assert (m->deep > 0);
+#endif
+    task_current->lock = m;
+
+    /* Put this task into the list of lock slaves. */
+    list_append (&m->slaves, &task_current->item);
+
+    /* Update the value of lock priority.
+     * It must be the maximum of all slave task priorities. */
+    if (m->prio < task_current->prio) {
+        m->prio = task_current->prio;
+
+        /* Increase the priority of master task. */
+        if (m->master->prio < m->prio) {
+            m->master->prio = m->prio;
+            /* No need to set task_need_schedule here. */
+        }
+    }
+    task_schedule ();
+}
+
+/*
+ * Try to get the lock. Return 1 on success, 0 on failure.
+ * The calling task does not block.
+ * In the case the lock has associated IRQ number,
+ * after acquiring the lock the IRQ will be disabled.
+ */
+bool_t 
+mutex_trylock (mutex_t *m)
+{
+    if (! m->item.next)
+        mutex_init (m);
+
+    if (m->master == task_current){
+#if RECURSIVE_LOCKS
+    ++m->deep;
+#endif
+        return 1;
+    }
+    if ((m->master != NULL) && (m->master != task_current))
+        return 0;
+
+    arch_state_t x;
+    arch_intr_disable (&x);
+    assert (STACK_GUARD (task_current));
+    bool_t res = mutex_trylock_in(m);
+    arch_intr_restore (x);
+    return res;
 }
 
 /*

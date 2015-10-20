@@ -69,12 +69,34 @@ void task_print (struct _stream_t *stream, task_t *t);
 #endif
 unsigned int task_fpu_control (task_t *t, unsigned int mode, unsigned int mask);
 
+//****************************************************************************
 /* Lock management. */
 void mutex_lock (mutex_t *lock);
 void mutex_unlock (mutex_t *lock);
+
+/**\~english
+ * Try to get the lock. Return 1 on success, 0 on failure.
+ * The calling task does not block.
+ * In the case the lock has associated IRQ number,
+ * after acquiring the lock the IRQ will be disabled.
+ */
 bool_t mutex_trylock (mutex_t *lock);
+
+/*! this is function that called from schdeler-switcher context, it should not use
+ *   os routines that can cause task block 
+ * 
+ */
+typedef bool_t (*scheduless_condition)(void* arg);
+
+/** this lock is blocks until <waitfor> return true, or mutex locked.
+ * \return true - mutex succesfuly locked
+ * \return false - if mutex not locked due to <waitfor> signalled
+ * */
+bool_t mutex_lock_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
+
 void mutex_signal (mutex_t *lock, void *message);
 void *mutex_wait (mutex_t *lock);
+void *mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
 
 /* Interrupt management. */
 void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);
@@ -99,6 +121,12 @@ bool_t mutex_group_add (mutex_group_t*, mutex_t*);
 void mutex_group_listen (mutex_group_t*);
 void mutex_group_unlisten (mutex_group_t*);
 void mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
+/**\~russian
+ * этот лок ожидает захвата мутекса или сигнала от группы
+ * \return true - захвачен lock
+ * \return false - получен сигнал от группы, или мутекс был закрыт извне
+ * */
+bool_t mutex_group_lockwaiting (mutex_t *lock, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
 
 /* User-supplied startup routine. */
 extern void uos_init (void);
@@ -150,7 +178,7 @@ struct _mutex_slot_t {
  * Group: an array of slots.
  */
 struct _mutex_group_t {
-	mutex_t		lock;		/* lock to group_wait() on it */
+//	mutex_t		lock;		/* lock to group_wait() on it */
 	task_t *	waiter;		/* the waiting task pointer */
 	small_uint_t	size;		/* size of slot[] array */
 	small_uint_t	num;		/* number of elements in slot[] */
