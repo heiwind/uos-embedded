@@ -12,6 +12,9 @@
 #endif
 #endif
 
+// depends by bool_t
+#include <runtime/arch.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
