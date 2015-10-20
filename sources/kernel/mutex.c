@@ -44,6 +44,9 @@ void mutex_init (mutex_t *lock)
 void
 mutex_lock (mutex_t *m)
 {
+    if (mutex_recurcived_lock(m))
+        return;
+
 	arch_state_t x;
 
 	arch_intr_disable (&x);
@@ -62,6 +65,9 @@ mutex_lock (mutex_t *m)
  * */
 bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg)
 {
+    if (mutex_recurcived_lock(m))
+        return 1;
+
     arch_state_t x;
 
     arch_intr_disable (&x);
@@ -120,12 +126,9 @@ mutex_trylock (mutex_t *m)
     if (! m->item.next)
         mutex_init (m);
 
-    if (m->master == task_current){
-#if RECURSIVE_LOCKS
-    ++m->deep;
-#endif
+    if (mutex_recurcived_lock(m))
         return 1;
-    }
+
     if ((m->master != NULL) && (m->master != task_current))
         return 0;
 
@@ -218,11 +221,12 @@ mutex_recalculate_prio (mutex_t *m)
 void
 mutex_unlock (mutex_t *m)
 {
-	arch_state_t x;
+    assert(m->master != NULL);
+    assert(m->master == task_current);
 
+    arch_state_t x;
 	assert (STACK_GUARD (task_current));
 	arch_intr_disable (&x);
-	assert (m->master != 0);
 
 #if RECURSIVE_LOCKS
 	if (--m->deep > 0) {

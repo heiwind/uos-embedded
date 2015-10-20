@@ -34,6 +34,16 @@ extern "C" {
 #   define RECURSIVE_LOCKS	1
 #endif
 
+/**\~russian
+ * FASTER_LOCKS добавляет код ускоряющий захват уже захваченого мутекса
+ *  = 0 - всякий захват требует выхода в защищенный от шедулера режим 
+ *  = 1 - если текущая задача уже захватила мутекс, все выполняется бустрее.
+ *      но чуть разбухает размер кода
+ * */
+#ifndef FASTER_LOCKS
+#   define FASTER_LOCKS  1
+#endif
+
 /* System data structures. */
 typedef struct _array_t array_t;
 typedef struct _task_t task_t;

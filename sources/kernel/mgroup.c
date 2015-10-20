@@ -159,6 +159,9 @@ mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 bool_t 
 mutex_group_lockwaiting (mutex_t *m, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 {
+    if (mutex_recurcived_lock(m))
+        return 1;
+
     arch_state_t x;
     struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
 

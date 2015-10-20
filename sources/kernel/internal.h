@@ -153,6 +153,19 @@ INLINE bool_t mutex_lock_yiedling(mutex_t *m)
     return mutex_trylock_in(m);
 }
 
+static inline bool_t mutex_recurcived_lock(mutex_t *m)
+{
+#if FASTER_LOCKS > 0
+    if (m->master == task_current){
+#if RECURSIVE_LOCKS
+    ++m->deep;
+#endif
+        return 1;
+    }
+#endif //FASTER_LOCKS
+    return 0;
+}
+
 /* Recalculate task priority, based on priorities of acquired locks. */
 void task_recalculate_prio (task_t *t);
 
