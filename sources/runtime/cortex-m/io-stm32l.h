@@ -16,11 +16,11 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
- 
+
 #ifdef ARM_STM32L152RC
 #   define STM32L_CAT3
 #endif
- 
+
 typedef volatile unsigned int arm_reg_t;
 
 
@@ -533,18 +533,18 @@ typedef struct
 /////////////////////////////////////////
 typedef struct
 {
-    arm_reg_t ACR;
-    arm_reg_t PECR;
-    arm_reg_t PDKEYR;
-    arm_reg_t PEKEYR;
-    arm_reg_t PRGKEYR;
-    arm_reg_t OPTKEYR;
-    arm_reg_t SR;
-    arm_reg_t OBR;
-    arm_reg_t WRPR1;
-    arm_reg_t WRPR2;
-    arm_reg_t WRPR3;
-    arm_reg_t WRPR4;
+    arm_reg_t ACR;      // Access control
+    arm_reg_t PECR;     // Program/erase control
+    arm_reg_t PDKEYR;   // Power down key
+    arm_reg_t PEKEYR;   // Program/erase key
+    arm_reg_t PRGKEYR;  // Program memory key
+    arm_reg_t OPTKEYR;  // Option byte key
+    arm_reg_t SR;       // Status
+    arm_reg_t OBR;      // Option byte
+    arm_reg_t WRPR1;    // Write protection
+    arm_reg_t WRPR2;    // Write protection
+    arm_reg_t WRPR3;    // Write protection
+    arm_reg_t WRPR4;    // Write protection
 } FLASH_t;
 
 #define FLASH     ((FLASH_t*) STM_FLASH_IFACE_BASE)
@@ -673,6 +673,22 @@ typedef struct
 
 
 /////////////////////////////////////////
+// CRC calculation
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t DR;    // Data
+    arm_reg_t IDR;   // Independent data
+    arm_reg_t CR;    // Control
+} CRC_t;
+
+#define CRC         ((CRC_t*) STM_CRC_BASE)
+
+// CRC_CR values
+#define CRC_RESET       (1 << 0)
+
+
+/////////////////////////////////////////
 // General purpose I/O
 /////////////////////////////////////////
 typedef struct
@@ -773,33 +789,33 @@ typedef struct
 /////////////////////////////////////////
 typedef struct
 {
-    arm_reg_t SR;
-    arm_reg_t CR1;
-    arm_reg_t CR2;
-    arm_reg_t SMPR1;
-    arm_reg_t SMPR2;
-    arm_reg_t SMPR3;
-    arm_reg_t JOFR1;
-    arm_reg_t JOFR2;
-    arm_reg_t JOFR3;
-    arm_reg_t JOFR4;
-    arm_reg_t HTR;
-    arm_reg_t LTR;
-    arm_reg_t SQR1;
-    arm_reg_t SQR2;
-    arm_reg_t SQR3;
-    arm_reg_t SQR4;
-    arm_reg_t SQR5;
-    arm_reg_t JSQR;
-    arm_reg_t JDR1;
-    arm_reg_t JDR2;
-    arm_reg_t JDR3;
-    arm_reg_t JDR4;
-    arm_reg_t DR;
-    arm_reg_t SMPR0;
+    arm_reg_t SR;       // status
+    arm_reg_t CR1;      // control 1
+    arm_reg_t CR2;      // control 2
+    arm_reg_t SMPR1;    // sample time 1
+    arm_reg_t SMPR2;    // sample time 2
+    arm_reg_t SMPR3;    // sample time 3
+    arm_reg_t JOFR1;    // injected channel data offset 1
+    arm_reg_t JOFR2;    // injected channel data offset 2
+    arm_reg_t JOFR3;    // injected channel data offset 3
+    arm_reg_t JOFR4;    // injected channel data offset 4
+    arm_reg_t HTR;      // watchdog higher threshold
+    arm_reg_t LTR;      // watchdog lower threshold
+    arm_reg_t SQR1;     // regular sequence 1
+    arm_reg_t SQR2;     // regular sequence 2
+    arm_reg_t SQR3;     // regular sequence 3
+    arm_reg_t SQR4;     // regular sequence 4
+    arm_reg_t SQR5;     // regular sequence 5
+    arm_reg_t JSQR;     // injected sequence
+    arm_reg_t JDR1;     // injected data 1
+    arm_reg_t JDR2;     // injected data 2
+    arm_reg_t JDR3;     // injected data 3
+    arm_reg_t JDR4;     // injected data 4
+    arm_reg_t DR;       // regular data
+    arm_reg_t SMPR0;    // sample time 0
     arm_reg_t gap0[168];
-    arm_reg_t CSR;
-    arm_reg_t CCR;
+    arm_reg_t CSR;      // common status
+    arm_reg_t CCR;      // common control
 } ADC_t;
 
 #define ADC   ((ADC_t*) STM_ADC_BASE)
@@ -969,90 +985,99 @@ typedef struct
 
 
 /////////////////////////////////////////
-// USART
+// DAC
 /////////////////////////////////////////
 typedef struct
 {
-    arm_reg_t SR;
-    arm_reg_t DR;
-    arm_reg_t BRR;
-    arm_reg_t CR1;
-    arm_reg_t CR2;
-    arm_reg_t CR3;
-    arm_reg_t GTPR;
-} USART_t;
+    arm_reg_t CR;       // control
+    arm_reg_t SWTRIGR;  // software trigger
+    arm_reg_t DHR12R1;  // channel1 12-bit right-aligned data
+    arm_reg_t DHR12L1;  // channel1 12-bit left aligned data
+    arm_reg_t DHR8R1;   // channel1 8-bit right aligned data
+    arm_reg_t DHR12R2;  // channel2 12-bit right aligned data
+    arm_reg_t DHR12L2;  // channel2 12-bit left aligned data
+    arm_reg_t DHR8R2;   // channel2 8-bit right-aligned data
+    arm_reg_t DHR12RD;  // dual DAC 12-bit right-aligned data
+    arm_reg_t DHR12LD;  // dual DAC 12-bit left aligned data
+    arm_reg_t DHR8RD;   // dual DAC 8-bit right aligned data
+    arm_reg_t DOR1;     // channel1 data output
+    arm_reg_t DOR2;     // channel2 data output
+    arm_reg_t SR;       // status
+} DAC_t;
 
-#define USART1   ((USART_t*) STM_USART1_BASE)
-#define USART2   ((USART_t*) STM_USART2_BASE)
-#define USART3   ((USART_t*) STM_USART3_BASE)
-#define UART4    ((USART_t*) STM_UART4_BASE)
-#define UART5    ((USART_t*) STM_UART5_BASE)
-#define USART6   ((USART_t*) STM_USART6_BASE)
+#define DAC   ((DAC_t*) STM_DAC_BASE)
 
-// SR values
-#define USART_CTS           (1 << 9)
-#define USART_LBD           (1 << 8)
-#define USART_TXE           (1 << 7)
-#define USART_TC            (1 << 6)
-#define USART_RXNE          (1 << 5)
-#define USART_IDLE          (1 << 4)
-#define USART_ORE           (1 << 3)
-#define USART_NF            (1 << 2)
-#define USART_FE            (1 << 1)
-#define USART_PE            (1 << 0)
+// DAC_CR values
+#define DMA_DMAUDRIE2           (1 << 29)
+#define DMA_DMAEN2              (1 << 28)
+#define DMA_MAMP2(n)            ((n) << 24)
+#define DMA_WAVE2(n)            ((n) << 22)
+#define DMA_TSEL2(n)            ((n) << 19)
+#define DMA_TEN2                (1 << 18)
+#define DMA_BOFF2               (1 << 17)
+#define DMA_EN2                 (1 << 16)
+#define DMA_DMAUDRIE1           (1 << 13)
+#define DMA_DMAEN1              (1 << 12)
+#define DMA_MAMP1(n)            ((n) << 8)
+#define DMA_WAVE1(n)            ((n) << 6)
+#define DMA_TSEL1(n)            ((n) << 3)
+#define DMA_TEN1                (1 << 2)
+#define DMA_BOFF1               (1 << 1)
+#define DMA_EN1                 (1 << 0)
 
-// BRR values
-#define USART_DIV_MANTISSA(n)   ((n) << 4)
-#define USART_DIV_FRACTION(n)   (n)
+// DAC_SWTRIGR values
+#define DAC_SWTRIG2             (1 << 1)
+#define DAC_SWTRIG1             (1 << 0)
 
-// CR1 values
-#define USART_OVER8         (1 << 15)
-#define USART_UE            (1 << 13)
-#define USART_M             (1 << 12)
-#define USART_WAKE          (1 << 11)
-#define USART_PCE           (1 << 10)
-#define USART_PS            (1 << 9)
-#define USART_PEIE          (1 << 8)
-#define USART_TXEIE         (1 << 7)
-#define USART_TCIE          (1 << 6)
-#define USART_RXNEIE        (1 << 5)
-#define USART_IDLEIE        (1 << 4)
-#define USART_TE            (1 << 3)
-#define USART_RE            (1 << 2)
-#define USART_RWU           (1 << 1)
-#define USART_SBK           (1 << 0)
+// DAC_SR values
+#define DAC_DMAUDR2             (1 << 29)
+#define DAC_DMAUDR1             (1 << 13)
 
-// CR2 values
-#define USART_LINEN         (1 << 14)
-#define USART_STOP_1        (0 << 12)
-#define USART_STOP_05       (1 << 12)
-#define USART_STOP_2        (2 << 12)
-#define USART_STOP_15       (3 << 12)
-#define USART_CLKEN         (1 << 11)
-#define USART_CPOL          (1 << 10)
-#define USART_CPHA          (1 << 9)
-#define USART_LBCL          (1 << 8)
-#define USART_LBDIE         (1 << 6)
-#define USART_LBDL          (1 << 5)
-#define USART_ADD(n)        (n)
 
-// CR3 values
-#define USART_ONEBIT        (1 << 11)
-#define USART_CTSIE         (1 << 10)
-#define USART_CTSE          (1 << 9)
-#define USART_RTSE          (1 << 8)
-#define USART_DMAT          (1 << 7)
-#define USART_DMAR          (1 << 6)
-#define USART_SCEN          (1 << 5)
-#define USART_NACK          (1 << 4)
-#define USART_HDSEL         (1 << 3)
-#define USART_IRLP          (1 << 2)
-#define USART_IREN          (1 << 1)
-#define USART_EIE           (1 << 0)
+/////////////////////////////////////////
+// Comparators (COMP)
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CSR;      // control and status
+} COMP_t;
 
-// GTPR values
-#define USART_GT(n)         ((n) << 8)
-#define USART_PSC(n)        (n)
+#define COMP   ((COMP_t*) STM_COMP_BASE)
+
+// COMP_CSR values
+#define COMP_TSUSP                  (1 << 31)
+#define COMP_CAIF                   (1 << 30)
+#define COMP_CAIE                   (1 << 29)
+#define COMP_RCH13                  (1 << 28)
+#define COMP_FCH8                   (1 << 27)
+#define COMP_FCH3                   (1 << 26)
+#define COMP_OUTSEL_TIM2_INP_CAP4   (0 << 21)
+#define COMP_OUTSEL_TIM2_OCREF_CLR  (1 << 21)
+#define COMP_OUTSEL_TIM3_INP_CAP4   (2 << 21)
+#define COMP_OUTSEL_TIM3_OCREF_CLR  (3 << 21)
+#define COMP_OUTSEL_TIM4_INP_CAP4   (4 << 21)
+#define COMP_OUTSEL_TIM4_OCREF_CLR  (5 << 21)
+#define COMP_OUTSEL_TIM10_INP_CAP1  (6 << 21)
+#define COMP_OUTSEL_NO_REDIR        (7 << 21)
+#define COMP_INSEL_NO_SEL           (0 << 18)
+#define COMP_INSEL_EXT_IO           (1 << 18)
+#define COMP_INSEL_VREFINT          (2 << 18)
+#define COMP_INSEL_3_4_VREFINT      (3 << 18)
+#define COMP_INSEL_1_2_VREFINT      (4 << 18)
+#define COMP_INSEL_1_4_VREFINT      (5 << 18)
+#define COMP_INSEL_DAC_OUT1         (6 << 18)
+#define COMP_INSEL_DAC_OUT2         (7 << 18)
+#define COMP_WNDWE                  (1 << 17)
+#define COMP_VREFOUTEN              (1 << 16)
+#define COMP_CMP2OUT                (1 << 13)
+#define COMP_SPEED                  (1 << 12)
+#define COMP_CMP1OUT                (1 << 7)
+#define COMP_SW1                    (1 << 5)
+#define COMP_CMP1EN                 (1 << 4)
+#define COMP_400KPD                 (1 << 3)
+#define COMP_10KPD                  (1 << 2)
+#define COMP_400KPU                 (1 << 1)
+#define COMP_10KPU                  (1 << 0)
 
 
 /////////////////////////////////////////
@@ -1221,3 +1246,149 @@ typedef struct
 #define RTC_MASKSS(x)       ((x) << 24)
 #define RTC_SS(x)           ((x) << 0)
 
+
+/////////////////////////////////////////
+// Independent watchdog (IWDG)
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t KR;       // Key
+    arm_reg_t DR;       // Prescaler
+    arm_reg_t RLR;      // Reload
+    arm_reg_t ISR;      // Status
+} IWDG_t;
+
+#define IWDG   ((IWDG_t*) STM_IWDG_BASE)
+
+// IWDG_KR values
+#define IWDG_ALIVE_KEY      0xAAAA
+#define IWDG_ACCESS_KEY     0x5555
+#define IWDG_START_KEY      0xCCCC
+
+// IWDG_PR values
+#define IWDG_PR_DIV_4       0
+#define IWDG_PR_DIV_8       1
+#define IWDG_PR_DIV_16      2
+#define IWDG_PR_DIV_32      3
+#define IWDG_PR_DIV_64      4
+#define IWDG_PR_DIV_128     5
+#define IWDG_PR_DIV_256     6
+
+// IWDG_SR values
+#define IWDG_RVU            (1 << 1)
+#define IWDG_PVU            (1 << 0)
+
+
+/////////////////////////////////////////
+// Window watchdog (WWDG)
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CR;       // Control
+    arm_reg_t CFR;      // Configuration
+    arm_reg_t ISR;      // Status
+} WWDG_t;
+
+#define WWDG   ((WWDG_t*) STM_WWDG_BASE)
+
+// WWDG_CR values
+#define WWDG_WDGA           (1 << 7)
+#define WWDG_T(n)           (n)
+
+// WWDG_CFR values
+#define WWDG_EWI            (1 << 9)
+#define WWDG_WDGTB_DIV_1    (0 << 7)
+#define WWDG_WDGTB_DIV_2    (1 << 7)
+#define WWDG_WDGTB_DIV_4    (2 << 7)
+#define WWDG_WDGTB_DIV_8    (3 << 7)
+#define WWDG_W(n)           (n)
+
+// WWDG_SR values
+#define WWDG_EWIF           (1 << 0)
+
+
+/////////////////////////////////////////
+// USART
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t SR;       // Status
+    arm_reg_t DR;       // Data
+    arm_reg_t BRR;      // Baud rate
+    arm_reg_t CR1;      // Control 1
+    arm_reg_t CR2;      // Control 2
+    arm_reg_t CR3;      // Control 3
+    arm_reg_t GTPR;     // Guard time and prescaler
+} USART_t;
+
+#define USART1   ((USART_t*) STM_USART1_BASE)
+#define USART2   ((USART_t*) STM_USART2_BASE)
+#define USART3   ((USART_t*) STM_USART3_BASE)
+#define UART4    ((USART_t*) STM_UART4_BASE)
+#define UART5    ((USART_t*) STM_UART5_BASE)
+#define USART6   ((USART_t*) STM_USART6_BASE)
+
+// SR values
+#define USART_CTS           (1 << 9)
+#define USART_LBD           (1 << 8)
+#define USART_TXE           (1 << 7)
+#define USART_TC            (1 << 6)
+#define USART_RXNE          (1 << 5)
+#define USART_IDLE          (1 << 4)
+#define USART_ORE           (1 << 3)
+#define USART_NF            (1 << 2)
+#define USART_FE            (1 << 1)
+#define USART_PE            (1 << 0)
+
+// BRR values
+#define USART_DIV_MANTISSA(n)   ((n) << 4)
+#define USART_DIV_FRACTION(n)   (n)
+
+// CR1 values
+#define USART_OVER8         (1 << 15)
+#define USART_UE            (1 << 13)
+#define USART_M             (1 << 12)
+#define USART_WAKE          (1 << 11)
+#define USART_PCE           (1 << 10)
+#define USART_PS            (1 << 9)
+#define USART_PEIE          (1 << 8)
+#define USART_TXEIE         (1 << 7)
+#define USART_TCIE          (1 << 6)
+#define USART_RXNEIE        (1 << 5)
+#define USART_IDLEIE        (1 << 4)
+#define USART_TE            (1 << 3)
+#define USART_RE            (1 << 2)
+#define USART_RWU           (1 << 1)
+#define USART_SBK           (1 << 0)
+
+// CR2 values
+#define USART_LINEN         (1 << 14)
+#define USART_STOP_1        (0 << 12)
+#define USART_STOP_05       (1 << 12)
+#define USART_STOP_2        (2 << 12)
+#define USART_STOP_15       (3 << 12)
+#define USART_CLKEN         (1 << 11)
+#define USART_CPOL          (1 << 10)
+#define USART_CPHA          (1 << 9)
+#define USART_LBCL          (1 << 8)
+#define USART_LBDIE         (1 << 6)
+#define USART_LBDL          (1 << 5)
+#define USART_ADD(n)        (n)
+
+// CR3 values
+#define USART_ONEBIT        (1 << 11)
+#define USART_CTSIE         (1 << 10)
+#define USART_CTSE          (1 << 9)
+#define USART_RTSE          (1 << 8)
+#define USART_DMAT          (1 << 7)
+#define USART_DMAR          (1 << 6)
+#define USART_SCEN          (1 << 5)
+#define USART_NACK          (1 << 4)
+#define USART_HDSEL         (1 << 3)
+#define USART_IRLP          (1 << 2)
+#define USART_IREN          (1 << 1)
+#define USART_EIE           (1 << 0)
+
+// GTPR values
+#define USART_GT(n)         ((n) << 8)
+#define USART_PSC(n)        (n)

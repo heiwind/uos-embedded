@@ -277,21 +277,35 @@ generator will not work properly
 	stm32l_low_power();
 	disable_bor();
 #endif
-    
+
+	// Init debug UART    
 #ifndef NDEBUG
-    // Init debug UART
+    unsigned mant = (unsigned)(KHZ / (115.2 * 16));
+    unsigned frac = (KHZ / (115.2 * 16) - mant) * 16;
+#if  defined USE_USART1
+#warning Using USART1
+    RCC->AHBENR |= RCC_GPIOAEN;
+    GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODE_MASK(9) | GPIO_MODE_MASK(10))) |
+		GPIO_ALT(9) | GPIO_ALT(10);
+    GPIOA->AFRH |= GPIO_AF_USART1(9) | GPIO_AF_USART1(10);
+    RCC->APB2ENR |= RCC_USART1EN;
+    USART1->CR1 |= USART_UE;
+    USART1->CR2 |= USART_STOP_1;
+    USART1->BRR = USART_DIV_MANTISSA(mant) | USART_DIV_FRACTION(frac);
+    USART1->CR1 |= USART_TE | USART_RE;
+#else
+#warning Using USART3
     RCC->AHBENR |= RCC_GPIOCEN;
     GPIOC->MODER = (GPIOC->MODER & ~(GPIO_MODE_MASK(10) | GPIO_MODE_MASK(11))) |
 		GPIO_ALT(10) | GPIO_ALT(11);
     GPIOC->AFRH |= GPIO_AF_USART3(10) | GPIO_AF_USART3(11);
-    
-    unsigned mant = (unsigned)(KHZ / (115.2 * 16));
-    unsigned frac = (KHZ / (115.2 * 16) - mant) * 16;
     RCC->APB1ENR |= RCC_USART3EN;
     USART3->CR1 |= USART_UE;
     USART3->CR2 |= USART_STOP_1;
     USART3->BRR = USART_DIV_MANTISSA(mant) | USART_DIV_FRACTION(frac);
     USART3->CR1 |= USART_TE | USART_RE;
+#endif
+    
 #endif // NDEBUG
 #endif // ARM_STM32L152RC
 
