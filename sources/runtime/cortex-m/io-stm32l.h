@@ -17,6 +17,10 @@
  * "COPY-UOS.txt" for details.
  */
 
+#ifdef ARM_STM32L151RC
+#   define STM32L_CAT3
+#endif
+
 #ifdef ARM_STM32L152RC
 #   define STM32L_CAT3
 #endif
@@ -59,8 +63,8 @@ typedef volatile unsigned int arm_reg_t;
 #define STM_UART5_BASE          0x40005000
 #define STM_I2C1_BASE           0x40005400
 #define STM_I2C2_BASE           0x40005800
-#define STM_USB_DEV_FS          0x40005C00
-#define STM_USB_DEV_FS_SRAM     0x40006000
+#define STM_USB_DEV_FS_BASE     0x40005C00
+#define STM_USB_DEV_FS_SRAM_BASE 0x40006000
 #define STM_PWR_BASE            0x40007000
 #define STM_DAC_BASE            0x40007400
 #define STM_COMP_BASE           0x40007C00
@@ -272,7 +276,14 @@ typedef struct
 // ICSCR
 #define RCC_MSITRIM(n)          ((n) << 24)
 #define RCC_MSICAL(n)           ((n) << 16)
-#define RCC_MSIRANGE(n)         ((n) << 13)
+#define RCC_MSIRANGE_65536      (0 << 13)
+#define RCC_MSIRANGE_131072     (1 << 13)
+#define RCC_MSIRANGE_262144     (2 << 13)
+#define RCC_MSIRANGE_524288     (3 << 13)
+#define RCC_MSIRANGE_1048K      (4 << 13)
+#define RCC_MSIRANGE_2097K      (5 << 13)
+#define RCC_MSIRANGE_4194K      (6 << 13)
+#define RCC_MSIRANGE_MASK       (7 << 13)
 #define RCC_HSITRIM(n)          ((n) << 8)
 #define RCC_HSICAL(n)           ((n))
 
@@ -782,6 +793,49 @@ typedef struct
 #define GPIO_AF_OTG_HS_FS(n) (0xC << (4 * ((n) & 7)))
 #define GPIO_AF_DCMI(n)     (0xD << (4 * ((n) & 7)))
 #define GPIO_AF_EVENTOUT(n) (0xF << (4 * ((n) & 7)))
+
+
+/////////////////////////////////////////
+// SYSCFG
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t MEMRMP;   // memory remap
+    arm_reg_t PMC;      // peripheral mode configuration
+    arm_reg_t EXTICR1;  // external interrupt configuration 1
+    arm_reg_t EXTICR2;  // external interrupt configuration 2
+    arm_reg_t EXTICR3;  // external interrupt configuration 3
+    arm_reg_t EXTICR4;  // external interrupt configuration 4
+} SYSCFG_t;
+
+#define SYSCFG      ((SYSCFG_t*) STM_SYSCFG_BASE)
+
+// SYSCFG_MEMRMP values
+#define SYSCFG_BOOT_MAIN_FLASH      (0 << 8)
+#define SYSCFG_BOOT_SYSTEM_FLASH    (1 << 8)
+#define SYSCFG_BOOT_EMB_SRAM        (3 << 8)
+#define SYSCFG_MEM_MAIN_FLASH       (0 << 8)
+#define SYSCFG_MEM_SYSTEM_FLASH     (1 << 8)
+#define SYSCFG_MEM_FSMC             (2 << 8)
+#define SYSCFG_MEM_SRAM             (3 << 8)
+
+// SYSCFG_PMC values
+#define SYSCFG_LCD_CAPA_PE12        (1 << 5)
+#define SYSCFG_LCD_CAPA_PE11        (1 << 4)
+#define SYSCFG_LCD_CAPA_PB0         (1 << 3)
+#define SYSCFG_LCD_CAPA_PB12        (1 << 2)
+#define SYSCFG_LCD_CAPA_PB2         (1 << 1)
+#define SYSCFG_USB_PU               (1 << 0)
+
+// SYSCFG_EXTICRx values
+#define SYSCFG_PA(x)                (0 << (((x) & 3) * 4))
+#define SYSCFG_PB(x)                (1 << (((x) & 3) * 4))
+#define SYSCFG_PC(x)                (2 << (((x) & 3) * 4))
+#define SYSCFG_PD(x)                (3 << (((x) & 3) * 4))
+#define SYSCFG_PE(x)                (4 << (((x) & 3) * 4))
+#define SYSCFG_PH(x)                (5 << (((x) & 3) * 4))
+#define SYSCFG_PF(x)                (6 << (((x) & 3) * 4))
+#define SYSCFG_PG(x)                (7 << (((x) & 3) * 4))
 
 
 /////////////////////////////////////////
@@ -1308,6 +1362,106 @@ typedef struct
 
 
 /////////////////////////////////////////
+// USB
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t EPR[8];       // Endpoint n registers
+    arm_reg_t gap0[8];      // Reserved
+    arm_reg_t CNTR;         // Control
+    arm_reg_t ISTR;         // Interrupt status
+    arm_reg_t FNR;          // Frame number
+    arm_reg_t DADDR;        // Device address
+    arm_reg_t BTABLE;       // Buffer table address (the value must be
+                            // 8-byte aligned)
+} USB_t;
+
+// One item of USB buffer descriptor table. The table shall be an
+// array of defined below structure placed somewhere in memory.
+// Must be 8-byte aligned.
+typedef struct
+{
+    arm_reg_t ADDR_TX;
+    arm_reg_t COUNT_TX;
+    arm_reg_t ADDR_RX;
+    arm_reg_t COUNT_RX;
+} USB_BTABLE_item_t;
+
+#define USB                 ((USB_t*) STM_USB_DEV_FS_BASE)
+#define USB_PACKET_BUF      ((volatile uint8_t *) STM_USB_DEV_FS_SRAM_BASE)
+#define USB_PACKET_BUF_SZ   (512 * 2)
+
+// USB_EPR[n] values
+#define USB_CTR_RX              (1 << 15)
+#define USB_DTOG_RX             (1 << 14)
+#define USB_STAT_RX_DISABLED    (0 << 12)
+#define USB_STAT_RX_STALL       (1 << 12)
+#define USB_STAT_RX_NAK         (2 << 12)
+#define USB_STAT_RX_VALID       (3 << 12)
+#define USB_STAT_RX_MASK        (3 << 12)
+#define USB_SETUP               (1 << 11)
+#define USB_EP_TYPE_BULK        (0 << 9)
+#define USB_EP_TYPE_CONTROL     (1 << 9)
+#define USB_EP_TYPE_ISO         (2 << 9)
+#define USB_EP_TYPE_INTERRUPT   (3 << 9)
+#define USB_DBL_BUF             (1 << 8) // EP_KIND for BULK EP
+#define USB_STATUS_OUT          (1 << 8) // EP_KING for CONTROL EP
+#define USB_CTR_TX              (1 << 7)
+#define USB_DTOG_TX             (1 << 6)
+#define USB_STAT_TX_DISABLED    (0 << 4)
+#define USB_STAT_TX_STALL       (1 << 4)
+#define USB_STAT_TX_NAK         (2 << 4)
+#define USB_STAT_TX_VALID       (3 << 4)
+#define USB_STAT_TX_MASK        (3 << 4)
+#define USB_EA(x)               ((x) & 0xF)
+
+#define USB_EPR_RW_MASK         0x878F
+
+// BTABLE COUNT_RX values
+#define USB_BL_SIZE             (1 << 15)
+#define USB_NUM_BLOCK(x)        ((x) << 10)
+#define USB_GET_COUNT_RX(x)     ((x) & 0x1FF)
+
+// USB_CNTR values
+#define USB_CTRM                (1 << 15)
+#define USB_PMAOVRM             (1 << 14)
+#define USB_ERRM                (1 << 13)
+#define USB_WKUPM               (1 << 12)
+#define USB_SUSPM               (1 << 11)
+#define USB_RESETM              (1 << 10)
+#define USB_SOFM                (1 << 9)
+#define USB_ESOFM               (1 << 8)
+#define USB_RESUME              (1 << 4)
+#define USB_FSUSP               (1 << 3)
+#define USB_LP_MODE             (1 << 2)
+#define USB_PDWN                (1 << 1)
+#define USB_FRES                (1 << 0)
+
+// USB_ISTR values
+#define USB_CTR                 (1 << 15)
+#define USB_PMAOVR              (1 << 14)
+#define USB_ERR                 (1 << 13)
+#define USB_WKUP                (1 << 12)
+#define USB_SUSP                (1 << 11)
+#define USB_RESET               (1 << 10)
+#define USB_SOF                 (1 << 9)
+#define USB_ESOF                (1 << 8)
+#define USB_DIR                 (1 << 4)
+#define USB_EP_ID(x)            (x)
+
+// USB_FNR values
+#define USB_RXDP                (1 << 15)
+#define USB_RXDM                (1 << 14)
+#define USB_LCK                 (1 << 13)
+#define USB_GET_LSOF(r)         (((r) >> 11) & 3)
+#define USB_GET_FN(r)           ((r) & 0x7FF)
+
+// USB_DADDR values
+#define USB_EF                  (1 << 7)
+#define USB_ADD(x)              (x)
+
+
+/////////////////////////////////////////
 // USART
 /////////////////////////////////////////
 typedef struct
@@ -1392,3 +1546,86 @@ typedef struct
 // GTPR values
 #define USART_GT(n)         ((n) << 8)
 #define USART_PSC(n)        (n)
+
+
+/////////////////////////////////////////
+// SPI
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CR1;      // Control 1
+    arm_reg_t CR2;      // Control 2
+    arm_reg_t SR;       // Status
+    arm_reg_t DR;       // Data
+    arm_reg_t CRCPR;    // CRC polynomial
+    arm_reg_t RXCRCR;   // RX CRC
+    arm_reg_t TXCRCR;   // TX CRC
+    arm_reg_t I2SCFGR;  // I2S configuration
+    arm_reg_t I2SPR;    // I2S prescaler
+} SPI_t;
+
+#define SPI1    ((SPI_t*) STM_SPI1_BASE)
+#define SPI2    ((SPI_t*) STM_SPI2_I2S2_BASE)
+#define SPI3    ((SPI_t*) STM_SPI3_I2S3_BASE)
+
+
+// SPI_CR1 values
+#define SPI_BIDIMODE        (1 << 15)
+#define SPI_BIDIOE          (1 << 14)
+#define SPI_CRCEN           (1 << 13)
+#define SPI_CRCNEXT         (1 << 12)
+#define SPI_DFF             (1 << 11)
+#define SPI_RXONLY          (1 << 10)
+#define SPI_SSM             (1 << 9)
+#define SPI_SSI             (1 << 8)
+#define SPI_LSBFIRST        (1 << 7)
+#define SPI_SPE             (1 << 6)
+#define SPI_BR(x)           ((x) << 3)
+#define SPI_MSTR            (1 << 2)
+#define SPI_CPOL            (1 << 1)
+#define SPI_CPHA            (1 << 0)
+
+// SPI_CR2 values
+#define SPI_TXEIE           (1 << 7)
+#define SPI_RXNEIE          (1 << 6)
+#define SPI_ERRIE           (1 << 5)
+#define SPI_FRF             (1 << 4)
+#define SPI_SSOE            (1 << 2)
+#define SPI_TXDMAEN         (1 << 1)
+#define SPI_RXDMAEN         (1 << 0)
+
+// SPI_SR values
+#define SPI_FRE             (1 << 8)
+#define SPI_BSY             (1 << 7)
+#define SPI_OVR             (1 << 6)
+#define SPI_MODF            (1 << 5)
+#define SPI_CRCERR          (1 << 4)
+#define SPI_UDR             (1 << 3)
+#define SPI_CHSIDE          (1 << 2)
+#define SPI_TXE             (1 << 1)
+#define SPI_RXNE            (1 << 0)
+
+// SPI_I2SCFGR values
+#define SPI_I2SMOD              (1 << 11)
+#define SPI_I2SE                (1 << 10)
+#define SPI_I2SCFG_SLAVE_TX     (0 << 8)
+#define SPI_I2SCFG_SLAVE_RX     (1 << 8)
+#define SPI_I2SCFG_MASTER_TX    (2 << 8)
+#define SPI_I2SCFG_MASTER_RX    (3 << 8)
+#define SPI_PCMSYNC             (1 << 7)
+#define SPI_I2SSTD_PHILIPS      (0 << 4)
+#define SPI_I2SSTD_MSB_JUST     (1 << 4)
+#define SPI_I2SSTD_LSB_JUST     (2 << 4)
+#define SPI_I2SSTD_PCM          (3 << 4)
+#define SPI_CKPOL               (1 << 3)
+#define SPI_DATLEN_16BIT        (0 << 1)
+#define SPI_DATLEN_24BIT        (1 << 1)
+#define SPI_DATLEN_32BIT        (2 << 1)
+#define SPI_CHLEN_16BIT         (0 << 0)
+#define SPI_CHLEN_32BIT         (1 << 0)
+
+// SPI_I2SPR values
+#define SPI_MCKOE           (1 << 9)
+#define SPI_ODD             (1 << 8)
+#define SPI_I2SDIV(x)       (x)
+
