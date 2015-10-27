@@ -22,8 +22,8 @@
 extern unsigned long _etext, __data_start, _edata, __bss_start, __bss_end;
 extern void main (void);
 
-#ifdef ARM_STM32L152RC
-void disable_bor()
+#if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
+static inline void disable_bor()
 {
     if ((FLASH->OBR & FLASH_BOR_OFF_MASK) == 0) {
         return;
@@ -66,10 +66,53 @@ void disable_bor()
     FLASH->PECR |= FLASH_OBL_LAUNCH;
 }
 
-void stm32l_low_power()
+static inline void enable_flash_prefetch()
+{
+	FLASH->ACR = FLASH_ACC64;
+	while (! (FLASH->ACR & FLASH_ACC64));
+	FLASH->ACR = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY(1);
+	while (! (FLASH->ACR & FLASH_LATENCY(1)));
+}
+#endif
+
+#if defined (ARM_STM32L151RC)
+static inline void stm32l_low_power()
+{
+	RCC->AHBENR |= RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN;
+    RCC->APB1ENR = RCC_PWREN;
+    asm volatile ("dsb");
+    
+    RCC->CSR &= ~RCC_LSION;
+    
+    GPIOA->MODER = 0xFFFFFFFF;
+    GPIOB->MODER = 0xFFFF33FF;
+    GPIOC->MODER = 0xFFFFFFFF;
+    
+    GPIOA->OTYPER = 0;
+    GPIOB->OTYPER = 0;
+    GPIOC->OTYPER = 0;
+
+    GPIOA->PUPDR = 0;
+    GPIOB->PUPDR = 0;
+    GPIOC->PUPDR = 0;
+
+    GPIOA->OSPEEDR = 0;
+    GPIOB->OSPEEDR = 0;
+    GPIOC->OSPEEDR = 0;
+    
+	//RCC->AHBENR &= ~(RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN;
+    
+    while (PWR->CSR & PWR_VOSF);
+    PWR->CR = (PWR->CR & ~PWR_VOS_MASK) | PWR_VOS_1_2 | PWR_ULP | PWR_LPSDSR;
+    while (PWR->CSR & PWR_VOSF);
+}
+#endif
+
+#if defined (ARM_STM32L152RC)
+static inline void stm32l_low_power()
 {
 	RCC->AHBENR |= RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN | RCC_GPIODEN |
-        RCC_GPIOEEN | RCC_GPIOHEN;  
+        RCC_GPIOEEN | RCC_GPIOHEN;
     RCC->APB1ENR = RCC_PWREN;
     asm volatile ("dsb");
     
@@ -270,9 +313,97 @@ generator will not work properly
 #endif // NDEBUG
 #endif // ARM_STM32F4
 
-#ifdef ARM_STM32L152RC
-    // Возможно, нужно вручную выставить 1 цикл задержки (1 WS) Flash
-    // при определённых частотах.
+
+#if defined(ARM_STM32L151RC) || defined(ARM_STM32L152RC)
+
+#if defined(CLK_SOURCE_HSI)
+
+	enable_flash_prefetch();
+
+    RCC->CR |= RCC_HSION;
+    while (! (RCC->CR & RCC_HSIRDY));
+
+#if KHZ==16384
+    RCC->CFGR = RCC_SW_HSI;
+    while ((RCC->CFGR & RCC_SWS_MASK) != RCC_SWS_HSI);
+#elif KHZ==32768
+	RCC->CFGR = RCC_PLLSRC_HSI | RCC_PLLMUL6 | RCC_PLLDIV3;
+    RCC->CR |= RCC_PLLON;
+    while (! (RCC->CR & RCC_PLLRDY));
+    
+    RCC->CFGR |= RCC_SW_PLL;
+    while ((RCC->CFGR & RCC_SWS_MASK) != RCC_SWS_PLL);
+#else
+#	error "Unsupported CPU frequency when using HSI"
+#endif
+
+#elif defined(CLK_SOURCE_HSE)
+
+	enable_flash_prefetch();
+
+    RCC->CR |= RCC_HSEON;
+    while (! (RCC->CR & RCC_HSERDY));
+	
+#if KHZ_HSE==2048
+	RCC->CFGR = RCC_PLLSRC_HSE | RCC_PLLMUL48 | RCC_PLLDIV3;
+#elif KHZ_HSE==4096
+	RCC->CFGR = RCC_PLLSRC_HSE | RCC_PLLMUL24 | RCC_PLLDIV3;
+#elif KHZ_HSE==8192
+	RCC->CFGR = RCC_PLLSRC_HSE | RCC_PLLMUL12 | RCC_PLLDIV3;
+#elif KHZ_HSE==12288
+	RCC->CFGR = RCC_PLLSRC_HSE | RCC_PLLMUL8 | RCC_PLLDIV3;
+#elif KHZ_HSE==16384
+	RCC->CFGR = RCC_PLLSRC_HSE | RCC_PLLMUL6 | RCC_PLLDIV3;
+#elif KHZ_HSE==24576
+	RCC->CFGR = RCC_PLLSRC_HSE | RCC_PLLMUL4 | RCC_PLLDIV3;
+#else
+#	error "Unsupported HSE frequency"
+#endif // KHZ_HSE==
+
+#if KHZ!=32768
+#	error "Unsupported CPU frequency when using HSE"
+#endif
+
+    RCC->CR |= RCC_PLLON;
+    while (! (RCC->CR & RCC_PLLRDY));
+    
+    RCC->CFGR |= RCC_SW_PLL;
+    while ((RCC->CFGR & RCC_SWS_MASK) != RCC_SWS_PLL);
+
+
+#else 	// MSI clock source
+
+#if KHZ==65
+	RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_65536;
+	while (! (RCC->CR & RCC_MSIRDY));
+#elif KHZ==131
+	RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_131072;
+	while (! (RCC->CR & RCC_MSIRDY));
+#elif KHZ==262
+	RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_262144;
+	while (! (RCC->CR & RCC_MSIRDY));
+#elif KHZ==524
+	RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_524288;
+	while (! (RCC->CR & RCC_MSIRDY));
+#elif KHZ==1048
+	RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_1048K;
+	while (! (RCC->CR & RCC_MSIRDY));
+#elif KHZ==2097
+	// This is reset value!
+	//RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_2097K;
+	//while (! (RCC->CR & RCC_MSIRDY));
+#elif KHZ==4194
+	RCC->ICSCR = (RCC->ICSCR & ~RCC_MSIRANGE_MASK) | RCC_MSIRANGE_4194K;
+	while (! (RCC->CR & RCC_MSIRDY));
+#	ifndef POWER_SAVE
+		enable_flash_prefetch();
+#	endif
+#else
+#	error "Invalid clock frequency for MSI"
+#endif	// KHZ==
+
+#endif	// CLK_SOURCE_HSI
+    
 #ifdef POWER_SAVE
 	stm32l_low_power();
 	disable_bor();
@@ -280,8 +411,14 @@ generator will not work properly
 
 	// Init debug UART    
 #ifndef NDEBUG
-    unsigned mant = (unsigned)(KHZ / (115.2 * 16));
-    unsigned frac = (KHZ / (115.2 * 16) - mant) * 16;
+
+#ifndef DBG_UART_KHZ
+#	define DBG_UART_KHZ 115.2
+#endif
+
+    unsigned mant = (unsigned)(KHZ / (DBG_UART_KHZ * 16));
+    unsigned frac = (KHZ / (DBG_UART_KHZ * 16) - mant) * 16;
+    
 #if  defined USE_USART1
 #warning Using USART1
     RCC->AHBENR |= RCC_GPIOAEN;
@@ -307,7 +444,7 @@ generator will not work properly
 #endif
     
 #endif // NDEBUG
-#endif // ARM_STM32L152RC
+#endif // ARM_STM32L151RC || ARM_STM32L152RC
 
 #ifndef EMULATOR /* not needed on emulator */
 	/* Copy the .data image from flash to ram.

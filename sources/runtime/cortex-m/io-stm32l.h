@@ -1415,7 +1415,7 @@ typedef struct
 #define USB_STAT_TX_MASK        (3 << 4)
 #define USB_EA(x)               ((x) & 0xF)
 
-#define USB_EPR_RW_MASK         0x878F
+#define USB_EPR_RW_MASK         0x070F
 
 // BTABLE COUNT_RX values
 #define USB_BL_SIZE             (1 << 15)
@@ -1546,6 +1546,147 @@ typedef struct
 // GTPR values
 #define USART_GT(n)         ((n) << 8)
 #define USART_PSC(n)        (n)
+
+
+/////////////////////////////////////////
+// FSMC
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t BCR1;     // chip-select control register 1
+    arm_reg_t BTR1;     // chip-select timing register 1
+    arm_reg_t BCR2;     // chip-select control register 2
+    arm_reg_t BTR2;     // chip-select timing register 2
+    arm_reg_t BCR3;     // chip-select control register 3
+    arm_reg_t BTR3;     // chip-select timing register 3
+    arm_reg_t BCR4;     // chip-select control register 4
+    arm_reg_t BTR4;     // chip-select timing register 4
+    arm_reg_t gap0[57];
+    arm_reg_t BWTR1;    // write timing register 1
+    arm_reg_t gap1;
+    arm_reg_t BWTR2;    // write timing register 2
+    arm_reg_t gap2;
+    arm_reg_t BWTR3;    // write timing register 3
+    arm_reg_t gap3;
+    arm_reg_t BWTR4;    // write timing register 4
+} FSMC_t;
+
+#define FSMC    ((FSMC_t*) STM_FSMC_BASE)
+
+// FSMC_BCR values
+#define FSMC_CBURSTRW       (1 << 19)
+#define FSMC_ASYNCWAIT      (1 << 15)
+#define FSMC_EXTMOD         (1 << 14)
+#define FSMC_WAITEN         (1 << 13)
+#define FSMC_WREN           (1 << 12)
+#define FSMC_WAITCFG        (1 << 11)
+#define FSMC_WRAPMOD        (1 << 10)
+#define FSMC_WAITPOL        (1 << 9)
+#define FSMC_BURSTEN        (1 << 8)
+#define FSMC_FACCEN         (1 << 6)
+#define FSMC_MWID_8BITS     (0 << 4)
+#define FSMC_MWID_16BITS    (1 << 4)
+#define FSMC_MTYP_SRAM      (0 << 2)
+#define FSMC_MTYP_CRAM      (1 << 2)
+#define FSMC_MTYP_FLASH     (2 << 2)
+#define FSMC_MUXEN          (1 << 1)
+#define FSMC_MBKEN          (1 << 0)
+
+// FSMC_BTR, FSMC_BWTR values
+#define FSMC_ACCMOD_A       (0 << 28)
+#define FSMC_ACCMOD_B       (1 << 28)
+#define FSMC_ACCMOD_C       (2 << 28)
+#define FSMC_ACCMOD_D       (3 << 28)
+#define FSMC_DATLAT(x)      ((x) << 24) // Only BTR
+#define FSMC_CLKDIV(x)      ((x) << 20) // Only BTR
+#define FSMC_BUSTURN(x)     ((x) << 16)
+#define FSMC_DATAST(x)      ((x) << 8)
+#define FSMC_ADDHLD(x)      ((x) << 4)
+#define FSMC_ADDSET(x)      ((x) << 0)
+
+
+/////////////////////////////////////////
+// I2C
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CR1;      // Control 1
+    arm_reg_t CR2;      // Control 2
+    arm_reg_t OAR1;     // Own address 1
+    arm_reg_t OAR2;     // Own address 2
+    arm_reg_t DR;       // Data
+    arm_reg_t SR1;      // Status 1
+    arm_reg_t SR2;      // Status 2
+    arm_reg_t CCR;      // Clock control
+    arm_reg_t TRISE;    // TRISE
+} I2C_t;
+
+#define I2C1    ((I2C_t*) STM_I2C1_BASE)
+#define I2C2    ((I2C_t*) STM_I2C2_BASE)
+
+// I2C_CR1 values
+#define I2C_SWRST           (1 << 15)
+#define I2C_ALERT           (1 << 13)
+#define I2C_PEC             (1 << 12)
+#define I2C_POS             (1 << 11)
+#define I2C_ACK             (1 << 10)
+#define I2C_STOP            (1 << 9)
+#define I2C_START           (1 << 8)
+#define I2C_NOSTRETCH       (1 << 7)
+#define I2C_ENGC            (1 << 6)
+#define I2C_ENPEC           (1 << 5)
+#define I2C_ENARR           (1 << 4)
+#define I2C_SMBTYPE         (1 << 3)
+#define I2C_SMBUS           (1 << 1)
+#define I2C_PEC             (1 << 0)
+
+// I2C_CR2 values
+#define I2C_LAST            (1 << 12)
+#define I2C_DMAEN           (1 << 11)
+#define I2C_ITBUFEN         (1 << 10)
+#define I2C_ITEVTEN         (1 << 9)
+#define I2C_ITERREN         (1 << 8)
+#define I2C_FREQ(x)         ((x) << 0)
+
+// I2C_OAR1 values
+#define I2C_ADDMODE         (1 << 15)
+#define I2C_ALWAYS_ONE      (1 << 14)
+#define I2C_ADD(x)          ((x) << 0)
+
+// I2C_OAR2 values
+#define I2C_ADD2(x)         ((x) << 1)
+#define I2C_ENDUAL          (1 << 0)
+
+// I2C_SR1 values
+#define I2C_SMBALERT        (1 << 15)
+#define I2C_TIMEOUT         (1 << 14)
+#define I2C_PECERR          (1 << 12)
+#define I2C_OVR             (1 << 11)
+#define I2C_AF              (1 << 10)
+#define I2C_ARLO            (1 << 9)
+#define I2C_BERR            (1 << 8)
+#define I2C_TXE             (1 << 7)
+#define I2C_RXNE            (1 << 6)
+#define I2C_STOPF           (1 << 4)
+#define I2C_ADD10           (1 << 3)
+#define I2C_BTF             (1 << 2)
+#define I2C_ADDR            (1 << 1)
+#define I2C_SB              (1 << 0)
+
+// I2C_SR2 values
+#define I2C_PEC(x)          ((x) << 8)
+#define I2C_DUALF           (1 << 7)
+#define I2C_SMBHOST         (1 << 6)
+#define I2C_SMBDEFAULT      (1 << 5)
+#define I2C_GENCALL         (1 << 4)
+#define I2C_TRA             (1 << 2)
+#define I2C_BUSY            (1 << 1)
+#define I2C_MSL             (1 << 0)
+
+// I2C_CCR values
+#define I2C_FS              (1 << 15)
+#define I2C_DUTY            (1 << 14)
+#define I2C_CCR(x)          ((x) << 0)
 
 
 /////////////////////////////////////////

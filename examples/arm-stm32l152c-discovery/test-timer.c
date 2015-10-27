@@ -19,7 +19,7 @@ void hello (void *arg)
 
 void uos_init (void)
 {
-	debug_puts ("\nTesting timer.\n");
+	debug_printf ("\nTesting timer.\n");
 	timer_init (&timer, KHZ, 10);
 	task_create (hello, "Timer", "hello", 1, task, sizeof (task));
 }

@@ -2,7 +2,7 @@ TARGET		= $(CURDIR)
 OS		= $(shell cd ../..; pwd)
 include target.cfg
 
-TEST		= test-timer
+TEST		= test-usbdev
 TESTS		+= test-led.bin
 TESTS		+= test-debug.bin
 TESTS		+= test-task.bin
@@ -10,6 +10,7 @@ TESTS		+= test-timer.bin
 TESTS		+= test-tswitch.bin
 TESTS		+= test-latency.bin
 TESTS		+= philosophers.bin
+TESTS		+= test-usbdev.bin
 OUTS		= $(TESTS:%.bin=%.elf)
 
 all:		$(OUTS) $(TESTS) $(TEST).dis
@@ -21,6 +22,6 @@ clean:
 		rm -rf *~ *.[oasi] *.elf *.lst *.dis .deps $(TESTS) $(MODULES)
 
 load:		$(TEST).bin
-		st-flash write $< 0x08000000
+		st-flash --reset write $< 0x08000000
 
 include $(OS)/sources/rules.mak

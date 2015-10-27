@@ -258,6 +258,7 @@ void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, mutex_t *hal_mutex)
 
 void usbdevhal_reset (usbdev_t *u)
 {
+//debug_printf("usbdevhal_reset\n");
     int i;
     for (i = 0; i < USBDEV_NB_ENDPOINTS; ++i) {
         u->ep_out[i].state = EP_STATE_DISABLED;
@@ -284,7 +285,7 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
     int req_state;
     uint8_t *hdl_data;
     int hdl_size;
-//debug_printf ("usbdevhal_in_done, ep = %d, size = %d, EP0 state = 0x%03X\n", ep, size, epi->state);
+//debug_printf ("usbdevhal_in_done, ep = %d, size = %d, EP state = 0x%03X, attr %X\n", ep, size, epi->state, epi->attr);
 
     switch (epi->state) {
     case EP_STATE_NACK:   	// Основное состояние конечной точки IN до подготовки данных для отправки
