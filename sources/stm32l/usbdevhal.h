@@ -23,6 +23,8 @@ typedef struct _stm32l_usbdev_t
     
     unsigned            nb_active_eps;
     unsigned            free_pkt_mem_offset;
+    int                 max_size[USBDEV_MAX_EP_NB];
+    uint16_t            bulk_active;
 } stm32l_usbdev_t;
 
 typedef struct _ep_state_t {

@@ -1394,6 +1394,7 @@ typedef struct
 // USB_EPR[n] values
 #define USB_CTR_RX              (1 << 15)
 #define USB_DTOG_RX             (1 << 14)
+#define USB_GET_DTOG_RX(r)      (((r) >> 14) & 1)
 #define USB_STAT_RX_DISABLED    (0 << 12)
 #define USB_STAT_RX_STALL       (1 << 12)
 #define USB_STAT_RX_NAK         (2 << 12)
@@ -1409,6 +1410,7 @@ typedef struct
 #define USB_STATUS_OUT          (1 << 8) // EP_KING for CONTROL EP
 #define USB_CTR_TX              (1 << 7)
 #define USB_DTOG_TX             (1 << 6)
+#define USB_GET_DTOG_TX(r)      (((r) >> 6) & 1)
 #define USB_STAT_TX_DISABLED    (0 << 4)
 #define USB_STAT_TX_STALL       (1 << 4)
 #define USB_STAT_TX_NAK         (2 << 4)

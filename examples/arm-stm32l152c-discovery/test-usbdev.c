@@ -216,7 +216,13 @@ static void hello (void *arg)
     unsigned prev_bytes_tx = 0;
     
     debug_printf ("Free memory: %d bytes\n", mem_available (&pool));
+    
+    static uint8_t v = 0;
+    int i;
+    for (i = 0; i < 4096; ++i)
+        buf[i] = v++;
     usbdev_ack_in (&usb, config_descriptor.ep_in.bEndpointAddress & 0xF, buf, sizeof(buf));
+    
     for (;;) {
         timer_delay (&timer, 1000);
 
