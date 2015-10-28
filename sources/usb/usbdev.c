@@ -36,6 +36,8 @@ static void set_configuration (usbdev_t *u, int conf_num)
                 u->ep_in[ep].state = EP_STATE_NACK;
             }
             u->hal->ep_attr (ep, dir, pep->bmAttributes, pep->wMaxPacketSize, pep->bInterval, u->hal_arg);
+			if ((dir == USBDEV_DIR_OUT) && u->ep_out[ep].specific_handler)
+				u->hal->ep_wait_out(ep, 0, u->hal_arg);
             pchar += sizeof (usb_ep_desc_t);
             pep = (usb_ep_desc_t *) pchar;
         }

@@ -41,7 +41,7 @@ static void stm32l_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, i
             u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 2);
         else
             u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 32 - 1);
-        USB->EPR[cur_epr] = USB_STAT_RX_VALID | USB_STAT_TX_NAK | 
+        USB->EPR[cur_epr] = USB_STAT_RX_NAK | USB_STAT_TX_NAK | 
             USB_EP_TYPE_CONTROL | USB_EA(ep);
     break;
     case EP_ATTR_ISOCH:
@@ -58,7 +58,7 @@ static void stm32l_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, i
                 u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 2);
             else
                 u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 32 - 1);
-            USB->EPR[cur_epr] = USB_STAT_RX_VALID | USB_EP_TYPE_BULK | USB_EA(ep);
+            USB->EPR[cur_epr] = USB_STAT_RX_NAK | USB_EP_TYPE_BULK | USB_EA(ep);
         }
         u->free_pkt_mem_offset += max_size;
     break;
