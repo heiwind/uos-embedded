@@ -326,6 +326,13 @@ generator will not work properly
 #if KHZ==16384
     RCC->CFGR = RCC_SW_HSI;
     while ((RCC->CFGR & RCC_SWS_MASK) != RCC_SWS_HSI);
+#elif KHZ==24576
+	RCC->CFGR = RCC_PLLSRC_HSI | RCC_PLLMUL6 | RCC_PLLDIV4;
+    RCC->CR |= RCC_PLLON;
+    while (! (RCC->CR & RCC_PLLRDY));
+    
+    RCC->CFGR |= RCC_SW_PLL;
+    while ((RCC->CFGR & RCC_SWS_MASK) != RCC_SWS_PLL);
 #elif KHZ==32768
 	RCC->CFGR = RCC_PLLSRC_HSI | RCC_PLLMUL6 | RCC_PLLDIV3;
     RCC->CR |= RCC_PLLON;

@@ -105,7 +105,7 @@ typedef struct _usbdev_hal_t usbdev_hal_t;
 
 // Установка адреса устройства.
 // Эта функция должна установить адрес устройства, указанный в параметре addr.
-typedef void (*usbdev_set_addr_func_t) (unsigned addr);
+typedef void (*usbdev_set_addr_func_t) (unsigned addr, void *arg);
 
 // Установка атрибутов конечной точки.
 // Номер конечной точки указан в параметре ep, направление - в параметре dir.
@@ -113,16 +113,16 @@ typedef void (*usbdev_set_addr_func_t) (unsigned addr);
 // attr - требуемые атрибуты конечной точки (TODO: описать атрибуты).
 // max_size - максимальный размер передачи.
 // interval - интервал передачи (имеет значение только для изохронных конечных точек).
-typedef void (*usbdev_set_ep_attr_func_t) (unsigned ep, int dir, unsigned attr, int max_size, int interval);
+typedef void (*usbdev_set_ep_attr_func_t) (unsigned ep, int dir, unsigned attr, int max_size, int interval, void *arg);
 
 // Функция определения имеющегося свободного места в передатчике.
 // Данная функция должна возвращать, сколько ещё байт можно выдать в конечную точку с
 // номером ep.
-typedef int  (*usbdev_in_avail_func_t) (unsigned ep);
+typedef int  (*usbdev_in_avail_func_t) (unsigned ep, void *arg);
 
 // Функция установки конечной точки в состояние ожидания приёма пакета от хоста.
 // Конечная точка должна принимать все входящие пакеты, как OUT, так и SETUP.
-typedef void (*usbdev_ep_wait_out_func_t) (unsigned ep, int ack);
+typedef void (*usbdev_ep_wait_out_func_t) (unsigned ep, int ack, void *arg);
 
 // Функция установки конечной точки в состояние ожидания выдачи пакета хосту.
 // ep - номер конечной точки.
@@ -130,12 +130,12 @@ typedef void (*usbdev_ep_wait_out_func_t) (unsigned ep, int ack);
 // data - указатель на буфер с данными пакета.
 // size - размер буфера с данными.
 // last - признак последнего пакета в текущей передаче
-typedef void (*usbdev_ep_wait_in_func_t) (unsigned ep, int pid, const void *data, int size, int last);
+typedef void (*usbdev_ep_wait_in_func_t) (unsigned ep, int pid, const void *data, int size, int last, void *arg);
 
 // Функция установки конечной точки в состояние STALL.
 // ep - номер конечной точки.
 // dir - направление конечной точки (USBDEV_DIR_OUT или USBDEV_DIR_IN).
-typedef void (*usbdev_ep_stall_func_t) (unsigned ep, int dir);
+typedef void (*usbdev_ep_stall_func_t) (unsigned ep, int dir, void *arg);
 
 // Прототип функции-обработчика запросов, специфичных для класса.
 // Обработчик регистрируется в стеке вызовом usbdev_set_class_handler.
@@ -209,6 +209,7 @@ struct __attribute__ ((packed)) _usbdev_t
     unsigned                usb_addr;
     
     usbdev_hal_t *          hal;
+	void *					hal_arg;
     mutex_t *               hal_lock;
     mem_pool_t *            pool;
     
@@ -244,7 +245,7 @@ struct __attribute__ ((packed)) _usbdev_t
 // в момент инициализации аппаратного драйвера. Функция передаёт в 
 // параметре hal в стек структуру с функциями, которые затем будут 
 // вызываться стеком.
-void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, mutex_t *hal_mutex);
+void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, void *arg, mutex_t *hal_mutex);
 
 // Эту функцию должен вызвать аппаратный драйвер по событию сброса шины USB.
 void usbdevhal_reset (usbdev_t *u);

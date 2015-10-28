@@ -168,6 +168,7 @@ static int ep0_specific_handler (usbdev_t *u, void *tag,
         *size = 0;
         for (i = 0; i < setup->wLength; ++i) {
             if (databuf[i] != v++) {
+//debug_printf("bad_data: 0x%02X, expected 0x%02X\n", databuf[i], v-1);
                 bad_data++;
                 v = databuf[i] + 1;
             }
@@ -182,6 +183,7 @@ static int bulk_in_handler (usbdev_t *u, void *tag,
     static uint8_t v = 0;
     unsigned i;
     
+//debug_printf("bulk_in_handler\n");
     bytes_transmitted += 4096;
     for (i = 0; i < 4096; ++i)
         buf[i] = v++;
@@ -197,10 +199,11 @@ static int bulk_out_handler (usbdev_t *u, void *tag,
     uint8_t *databuf = *data;
     unsigned i;
     
-//debug_printf("out_handler, size = %d\n", *size);
+//debug_printf("bulk_out_handler, size = %d\n", *size);
     bytes_received += *size;
     for (i = 0; i < *size; ++i)
         if (databuf[i] != v++) {
+//debug_printf("bad_data: 0x%02X, expected 0x%02X\n", databuf[i], v-1);
             bad_data++;
             v = databuf[i] + 1;
         }
@@ -215,8 +218,7 @@ static void hello (void *arg)
     debug_printf ("Free memory: %d bytes\n", mem_available (&pool));
     usbdev_ack_in (&usb, config_descriptor.ep_in.bEndpointAddress & 0xF, buf, sizeof(buf));
     for (;;) {
-        //timer_delay (&timer, 1000);
-        mdelay (1000);
+        timer_delay (&timer, 1000);
 
         debug_printf ("disc: %d, bad_rq: %d, bad_tr: %d, bad_l: %d, ctl_fail: %d, out_mem: %d, rx: %d, rx rate: %d, tx: %d, tx rate: %d, bad_data: %d\n",
             usb.rx_discards, usb.rx_bad_req, usb.rx_bad_trans, usb.rx_bad_len, usb.ctrl_failed, 

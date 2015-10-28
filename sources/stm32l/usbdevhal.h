@@ -20,6 +20,9 @@ typedef struct _stm32l_usbdev_t
     USB_BTABLE_item_t * btable;
     
     uint16_t            rx_buf [EP_MAX_PKT_BULK_FS / 2];
+    
+    unsigned            nb_active_eps;
+    unsigned            free_pkt_mem_offset;
 } stm32l_usbdev_t;
 
 typedef struct _ep_state_t {

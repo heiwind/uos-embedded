@@ -1447,7 +1447,7 @@ typedef struct
 #define USB_SOF                 (1 << 9)
 #define USB_ESOF                (1 << 8)
 #define USB_DIR                 (1 << 4)
-#define USB_EP_ID(x)            (x)
+#define USB_GET_EP_ID(x)        ((x) & 0xF)
 
 // USB_FNR values
 #define USB_RXDP                (1 << 15)
@@ -1638,7 +1638,7 @@ typedef struct
 #define I2C_ENARR           (1 << 4)
 #define I2C_SMBTYPE         (1 << 3)
 #define I2C_SMBUS           (1 << 1)
-#define I2C_PEC             (1 << 0)
+#define I2C_PE              (1 << 0)
 
 // I2C_CR2 values
 #define I2C_LAST            (1 << 12)
@@ -1674,7 +1674,7 @@ typedef struct
 #define I2C_SB              (1 << 0)
 
 // I2C_SR2 values
-#define I2C_PEC(x)          ((x) << 8)
+#define I2C_PECR(x)         ((x) << 8)
 #define I2C_DUALF           (1 << 7)
 #define I2C_SMBHOST         (1 << 6)
 #define I2C_SMBDEFAULT      (1 << 5)
