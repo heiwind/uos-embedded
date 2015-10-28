@@ -37,10 +37,10 @@ static void stm32l_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, i
         u->free_pkt_mem_offset += max_size;
         u->btable[cur_epr].ADDR_RX = (u->free_pkt_mem_offset >> 1);
         u->free_pkt_mem_offset += max_size;
-        if (USBDEV_EP0_MAX_SIZE < 32)
-            u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 2);
+        if (max_size < 32)
+            u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(max_size / 2);
         else
-            u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 32 - 1);
+            u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(max_size / 32 - 1);
         USB->EPR[cur_epr] = USB_STAT_RX_NAK | USB_STAT_TX_NAK | 
             USB_EP_TYPE_CONTROL | USB_EA(ep);
     break;
@@ -48,19 +48,25 @@ static void stm32l_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, i
         // TODO
     break;
     case EP_ATTR_BULK:
-        assert(u->free_pkt_mem_offset + max_size <= 1024);
-        if (dir == USBDEV_DIR_IN) {
-            u->btable[cur_epr].ADDR_TX = (u->free_pkt_mem_offset >> 1);
-            USB->EPR[cur_epr] = USB_STAT_TX_NAK | USB_EP_TYPE_BULK | USB_EA(ep);
-        } else {
-            u->btable[cur_epr].ADDR_RX = (u->free_pkt_mem_offset >> 1);
-            if (USBDEV_EP0_MAX_SIZE < 32)
-                u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 2);
-            else
-                u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 32 - 1);
-            USB->EPR[cur_epr] = USB_STAT_RX_NAK | USB_EP_TYPE_BULK | USB_EA(ep);
-        }
+        assert(u->free_pkt_mem_offset + (max_size << 1) <= 1024);
+        u->btable[cur_epr].ADDR_TX = (u->free_pkt_mem_offset >> 1);
         u->free_pkt_mem_offset += max_size;
+        u->btable[cur_epr].ADDR_RX = (u->free_pkt_mem_offset >> 1);
+        u->free_pkt_mem_offset += max_size;
+        if (dir == USBDEV_DIR_IN) {
+            USB->EPR[cur_epr] = USB_STAT_TX_VALID | USB_EP_TYPE_BULK | 
+                USB_DBL_BUF | USB_EA(ep) | USB_DTOG_RX;
+        } else {
+            if (max_size < 32) {
+                u->btable[cur_epr].COUNT_TX = USB_NUM_BLOCK(max_size / 2);
+                u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(max_size / 2);
+            } else {
+                u->btable[cur_epr].COUNT_TX = USB_BL_SIZE | USB_NUM_BLOCK(max_size / 32 - 1);
+                u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(max_size / 32 - 1);
+            }
+            USB->EPR[cur_epr] = USB_STAT_RX_VALID | USB_EP_TYPE_BULK | 
+                USB_DBL_BUF | USB_EA(ep) | USB_DTOG_TX;
+        }
     break;
     case EP_ATTR_INTR:
         assert(u->free_pkt_mem_offset + max_size <= 1024);
@@ -69,10 +75,10 @@ static void stm32l_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, i
             USB->EPR[cur_epr] = USB_STAT_TX_NAK | USB_EP_TYPE_INTERRUPT | USB_EA(ep);
         } else {
             u->btable[cur_epr].ADDR_RX = (u->free_pkt_mem_offset >> 1);
-            if (USBDEV_EP0_MAX_SIZE < 32)
-                u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 2);
+            if (max_size < 32)
+                u->btable[cur_epr].COUNT_RX = USB_NUM_BLOCK(max_size / 2);
             else
-                u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(USBDEV_EP0_MAX_SIZE / 32 - 1);
+                u->btable[cur_epr].COUNT_RX = USB_BL_SIZE | USB_NUM_BLOCK(max_size / 32 - 1);
             USB->EPR[cur_epr] = USB_STAT_RX_NAK | USB_EP_TYPE_INTERRUPT | USB_EA(ep);
         }
         u->free_pkt_mem_offset += max_size;
@@ -85,22 +91,43 @@ static void stm32l_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, i
 static void stm32l_ep_wait_out (unsigned ep, int ack, void *arg)
 {
 //debug_printf ("ep_wait_out, ep = %d\n", ep);
-    USB->EPR[ep] = (USB->EPR[ep] & (USB_EPR_RW_MASK | USB_STAT_RX_MASK)) ^ USB_STAT_RX_VALID;
+    if ((USB->EPR[ep] & USB_EP_TYPE_MASK) == USB_EP_TYPE_BULK)
+        ; //USB->EPR[ep] = (USB->EPR[ep] & USB_EPR_RW_MASK) | USB_DTOG_TX;
+    else
+        USB->EPR[ep] = (USB->EPR[ep] & (USB_EPR_RW_MASK | USB_STAT_RX_MASK)) ^ USB_STAT_RX_VALID;
 }
+
+
 
 static void stm32l_ep_wait_in (unsigned ep, int pid, const void *data, int size, int last, void *arg)
 {
 //debug_printf ("ep_wait_in, ep = %d, pid = %d, data @ %p, size = %d, last = %d\n", ep, pid, data, size, last);
     stm32l_usbdev_t *u = arg;
-    volatile uint32_t *packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_TX << 1));
+    volatile uint32_t *packet;
     const uint16_t *p = data;
     int i;
+    int bulk_ep = ((USB->EPR[ep] & USB_EP_TYPE_MASK) == USB_EP_TYPE_BULK);
     
-    u->btable[ep].COUNT_TX = size;
+    if (bulk_ep) {
+        if (USB->EPR[ep] & USB_DTOG_TX) {
+            packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_RX << 1));
+            u->btable[ep].COUNT_RX = size;
+        } else {
+            packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_TX << 1));
+            u->btable[ep].COUNT_TX = size;
+        }
+    } else {
+        packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_TX << 1));
+        u->btable[ep].COUNT_TX = size;
+    }
+    
     for (i = 0; i < ((size + 1) >> 1); ++i)
         *packet++ = *p++;
         
-    USB->EPR[ep] = (USB->EPR[ep] & (USB_EPR_RW_MASK | USB_STAT_TX_MASK)) ^ USB_STAT_TX_VALID;
+    if (bulk_ep)
+        USB->EPR[ep] = (USB->EPR[ep] & USB_EPR_RW_MASK) | USB_DTOG_RX;
+    else
+        USB->EPR[ep] = (USB->EPR[ep] & (USB_EPR_RW_MASK | USB_STAT_TX_MASK)) ^ USB_STAT_TX_VALID;
 }
 
 static void stm32l_ep_stall (unsigned ep, int dir, void *arg)
@@ -215,19 +242,40 @@ static void usb_lp_interrupt_task (void *arg)
                 epr = USB->EPR[ep];
 
                 if (epr & USB_CTR_TX) {
-                    usbdevhal_in_done (u->usbdev, ep, u->btable[ep].COUNT_TX);
+                    if ((epr & USB_EP_TYPE_MASK) == USB_EP_TYPE_BULK) {
+                        if (epr & USB_DTOG_TX)
+                            usbdevhal_in_done (u->usbdev, ep, u->btable[ep].COUNT_RX);
+                        else 
+                            usbdevhal_in_done (u->usbdev, ep, u->btable[ep].COUNT_TX);
+                    } else {
+                        usbdevhal_in_done (u->usbdev, ep, u->btable[ep].COUNT_TX);
+                    }
                 }
                 
                 if (epr & USB_CTR_RX) {
-                    //debug_printf("--r %d, %04X\n", ep, u->btable[ep].COUNT_RX);
-                    bytes = USB_GET_COUNT_RX(u->btable[ep].COUNT_RX);
-                    packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_RX << 1));
-                    for (i = 0; i < ((bytes + 1) >> 1); ++i)
-                        u->rx_buf[i] = packet[i];
-                    if (epr & USB_SETUP) {
-                        usbdevhal_out_done (u->usbdev, ep, USBDEV_TRANSACTION_SETUP, u->rx_buf, bytes);
-                    } else {
+                    if ((epr & USB_EP_TYPE_MASK) == USB_EP_TYPE_BULK) {
+                        if (epr & USB_DTOG_RX) {
+                            bytes = USB_GET_COUNT_RX(u->btable[ep].COUNT_TX);
+                            packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_TX << 1));
+                        } else {
+                            bytes = USB_GET_COUNT_RX(u->btable[ep].COUNT_RX);
+                            packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_RX << 1));
+                        }
+                        for (i = 0; i < ((bytes + 1) >> 1); ++i)
+                            u->rx_buf[i] = packet[i];
+                        USB->EPR[ep] = (epr & USB_EPR_RW_MASK) | USB_DTOG_TX;
                         usbdevhal_out_done (u->usbdev, ep, USBDEV_TRANSACTION_OUT, u->rx_buf, bytes);
+                    } else {
+                        //debug_printf("--r %d, %04X\n", ep, u->btable[ep].COUNT_RX);
+                        bytes = USB_GET_COUNT_RX(u->btable[ep].COUNT_RX);
+                        packet = (volatile uint32_t *)(USB_PACKET_BUF + (u->btable[ep].ADDR_RX << 1));
+                        for (i = 0; i < ((bytes + 1) >> 1); ++i)
+                            u->rx_buf[i] = packet[i];
+                        if (epr & USB_SETUP) {
+                            usbdevhal_out_done (u->usbdev, ep, USBDEV_TRANSACTION_SETUP, u->rx_buf, bytes);
+                        } else {
+                            usbdevhal_out_done (u->usbdev, ep, USBDEV_TRANSACTION_OUT, u->rx_buf, bytes);
+                        }
                     }
                 }
             }

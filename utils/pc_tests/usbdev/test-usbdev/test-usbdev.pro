@@ -1,8 +1,8 @@
 TEMPLATE = app
 CONFIG += console
-CONFIG -= qt
 
-SOURCES += main.c
+SOURCES += \
+    main.cpp
 
 build_pass:CONFIG(release, debug|release) {
     DESTDIR = ../build_release

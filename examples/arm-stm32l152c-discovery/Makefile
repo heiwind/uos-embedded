@@ -2,7 +2,7 @@ TARGET		= $(CURDIR)
 OS		= $(shell cd ../..; pwd)
 include target.cfg
 
-TEST		= test-hid
+TEST		= test-usbdev
 TESTS		+= test-led.bin
 TESTS		+= test-debug.bin
 TESTS		+= test-task.bin

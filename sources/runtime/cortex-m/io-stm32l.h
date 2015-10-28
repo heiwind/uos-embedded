@@ -1404,6 +1404,7 @@ typedef struct
 #define USB_EP_TYPE_CONTROL     (1 << 9)
 #define USB_EP_TYPE_ISO         (2 << 9)
 #define USB_EP_TYPE_INTERRUPT   (3 << 9)
+#define USB_EP_TYPE_MASK        (3 << 9)
 #define USB_DBL_BUF             (1 << 8) // EP_KIND for BULK EP
 #define USB_STATUS_OUT          (1 << 8) // EP_KING for CONTROL EP
 #define USB_CTR_TX              (1 << 7)
