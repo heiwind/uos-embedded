@@ -2,7 +2,7 @@ TARGET		= $(CURDIR)
 OS		= $(shell cd ../..; pwd)
 include target.cfg
 
-TEST		= test-usbdev
+TEST		= test-hid
 TESTS		+= test-led.bin
 TESTS		+= test-debug.bin
 TESTS		+= test-task.bin
@@ -11,6 +11,7 @@ TESTS		+= test-tswitch.bin
 TESTS		+= test-latency.bin
 TESTS		+= philosophers.bin
 TESTS		+= test-usbdev.bin
+TESTS		+= test-hid.bin
 OUTS		= $(TESTS:%.bin=%.elf)
 
 all:		$(OUTS) $(TESTS) $(TEST).dis
