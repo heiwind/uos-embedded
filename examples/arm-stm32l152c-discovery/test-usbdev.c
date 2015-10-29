@@ -89,7 +89,7 @@ static const this_conf_desc_t config_descriptor = {
     {
         .bLength            = sizeof (usb_ep_desc_t),
         .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
-        .bEndpointAddress   = EP_OUT_NUMBER(1),
+        .bEndpointAddress   = EP_OUT_NUMBER(2),
         .bmAttributes       = EP_ATTR_BULK | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
         .wMaxPacketSize     = EP_MAX_PKT_BULK_FS,
         .bInterval          = 0
@@ -99,7 +99,7 @@ static const this_conf_desc_t config_descriptor = {
     {
         .bLength            = sizeof (usb_ep_desc_t),
         .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
-        .bEndpointAddress   = EP_IN_NUMBER(2),
+        .bEndpointAddress   = EP_IN_NUMBER(1),
         .bmAttributes       = EP_ATTR_BULK | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
         .wMaxPacketSize     = EP_MAX_PKT_BULK_FS,
         .bInterval          = 0
