@@ -8,9 +8,10 @@ struct _stm32l_prog_flash_t
     flashif_t       flashif;
     
     uint32_t		start_addr;
+    uint32_t		size;
 };
 typedef struct _stm32l_prog_flash_t stm32l_prog_flash_t;
 
-void stm32l_prog_flash_init(stm32l_prog_flash_t *m, uint32_t start_addr, unsigned size);
+void stm32l_prog_flash_init(stm32l_prog_flash_t *m, uint32_t start_addr, uint32_t size);
 
 #endif // __STM32L_PROG_FLASH_H__

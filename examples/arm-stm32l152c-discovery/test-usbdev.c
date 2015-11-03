@@ -54,8 +54,12 @@ typedef struct __attribute__ ((packed)) _this_conf_desc_t
 {
     usb_conf_desc_t     conf;
     usb_iface_desc_t    iface;
-    usb_ep_desc_t       ep_out;
-    usb_ep_desc_t       ep_in;
+    usb_ep_desc_t       ep_bulk_out;
+    usb_ep_desc_t       ep_bulk_in;
+    usb_ep_desc_t       ep_intr_in;
+    usb_ep_desc_t       ep_intr_out;
+    usb_ep_desc_t       ep_iso_in;
+    usb_ep_desc_t       ep_iso_out;
 } this_conf_desc_t;
 
 static const this_conf_desc_t config_descriptor = {
@@ -77,7 +81,7 @@ static const this_conf_desc_t config_descriptor = {
         .bDescriptorType    = USB_DESC_TYPE_IFACE,
         .bInterfaceNumber   = 0,
         .bAlternateSettings = 0,
-        .bNumEndpoints      = 2,
+        .bNumEndpoints      = 6,
         .bInterfaceClass    = 0,
         .bInterfaceSubClass = 0,
         .bInterfaceProtocol = 0,
@@ -85,7 +89,7 @@ static const this_conf_desc_t config_descriptor = {
     },
     
     
-    // Endpoint OUT descriptor
+    // Endpoint BULK OUT descriptor
     {
         .bLength            = sizeof (usb_ep_desc_t),
         .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
@@ -95,7 +99,7 @@ static const this_conf_desc_t config_descriptor = {
         .bInterval          = 0
     },
     
-    // Endpoint IN descriptor
+    // Endpoint BULK IN descriptor
     {
         .bLength            = sizeof (usb_ep_desc_t),
         .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
@@ -103,7 +107,47 @@ static const this_conf_desc_t config_descriptor = {
         .bmAttributes       = EP_ATTR_BULK | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
         .wMaxPacketSize     = EP_MAX_PKT_BULK_FS,
         .bInterval          = 0
-    }
+    },
+    
+    // Endpoint INTERRUPT IN descriptor
+    {
+        .bLength            = sizeof (usb_ep_desc_t),
+        .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
+        .bEndpointAddress   = EP_IN_NUMBER(4),
+        .bmAttributes       = EP_ATTR_INTR | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
+        .wMaxPacketSize     = EP_MAX_PKT_INTR_FS,
+        .bInterval          = 1
+    },
+
+    // Endpoint INTERRUPT OUT descriptor
+    {
+        .bLength            = sizeof (usb_ep_desc_t),
+        .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
+        .bEndpointAddress   = EP_OUT_NUMBER(3),
+        .bmAttributes       = EP_ATTR_INTR | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
+        .wMaxPacketSize     = EP_MAX_PKT_INTR_FS,
+        .bInterval          = 1
+    },
+    
+    // Endpoint ISOCHRONOUS IN descriptor
+    {
+        .bLength            = sizeof (usb_ep_desc_t),
+        .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
+        .bEndpointAddress   = EP_IN_NUMBER(5),
+        .bmAttributes       = EP_ATTR_ISOCH | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
+        .wMaxPacketSize     = 64,
+        .bInterval          = 1
+    },
+
+    // Endpoint ISOCHRONOUS OUT descriptor
+    {
+        .bLength            = sizeof (usb_ep_desc_t),
+        .bDescriptorType    = USB_DESC_TYPE_ENDPOINT,
+        .bEndpointAddress   = EP_OUT_NUMBER(6),
+        .bmAttributes       = EP_ATTR_ISOCH | EP_ATTR_NO_SYNC | EP_ATTR_DATA,
+        .wMaxPacketSize     = 64,
+        .bInterval          = 1
+    },
 };
 
 // Language code string descriptor
@@ -183,7 +227,7 @@ static int bulk_in_handler (usbdev_t *u, void *tag,
     static uint8_t v = 0;
     unsigned i;
     
-//debug_printf("bulk_in_handler\n");
+//debug_printf("bulk_in_handler, size = %d\n", *size);
     bytes_transmitted += 4096;
     for (i = 0; i < 4096; ++i)
         buf[i] = v++;
@@ -192,14 +236,44 @@ static int bulk_in_handler (usbdev_t *u, void *tag,
     return USBDEV_ACK;
 }
 
-static int bulk_out_handler (usbdev_t *u, void *tag, 
+static int intr_in_handler (usbdev_t *u, void *tag, 
+    usb_setup_pkt_t *setup, uint8_t **data, int *size)
+{
+    static uint8_t v = 0;
+    unsigned i;
+    
+//debug_printf("intr_in_handler, size = %d\n", *size);
+    bytes_transmitted += config_descriptor.ep_intr_in.wMaxPacketSize;
+    for (i = 0; i < config_descriptor.ep_intr_in.wMaxPacketSize; ++i)
+        buf[i] = v++;
+    *data = buf;
+    *size = config_descriptor.ep_intr_in.wMaxPacketSize;
+    return USBDEV_ACK;
+}
+
+static int iso_in_handler (usbdev_t *u, void *tag, 
+    usb_setup_pkt_t *setup, uint8_t **data, int *size)
+{
+    static uint8_t v = 0;
+    unsigned i;
+    
+//debug_printf("iso_in_handler, size = %d, v = %X\n", *size, v);
+    bytes_transmitted += config_descriptor.ep_iso_in.wMaxPacketSize;
+    for (i = 0; i < config_descriptor.ep_iso_in.wMaxPacketSize; ++i)
+        buf[i] = v++;
+    *data = buf;
+    *size = config_descriptor.ep_iso_in.wMaxPacketSize;
+    return USBDEV_ACK;
+}
+
+static int out_handler (usbdev_t *u, void *tag, 
     usb_setup_pkt_t *setup, uint8_t **data, int *size)
 {
     static uint8_t v = 0;
     uint8_t *databuf = *data;
     unsigned i;
     
-//debug_printf("bulk_out_handler, size = %d\n", *size);
+//debug_printf("out_handler, size = %d\n", *size);
     bytes_received += *size;
     for (i = 0; i < *size; ++i)
         if (databuf[i] != v++) {
@@ -221,7 +295,9 @@ static void hello (void *arg)
     int i;
     for (i = 0; i < 4096; ++i)
         buf[i] = v++;
-    usbdev_ack_in (&usb, config_descriptor.ep_in.bEndpointAddress & 0xF, buf, sizeof(buf));
+    usbdev_ack_in (&usb, config_descriptor.ep_bulk_in.bEndpointAddress & 0xF, buf, sizeof(buf));
+    usbdev_ack_in (&usb, config_descriptor.ep_intr_in.bEndpointAddress & 0xF, buf, sizeof(buf));
+    usbdev_ack_in (&usb, config_descriptor.ep_iso_in.bEndpointAddress & 0xF, buf, sizeof(buf));
     
     for (;;) {
         timer_delay (&timer, 1000);
@@ -248,10 +324,18 @@ void uos_init (void)
     usbdev_add_config_desc (&usb, &config_descriptor);
     usbdev_set_string_table (&usb, usb_strings);
     usbdev_set_iface_specific_handler (&usb, 0, ep0_specific_handler, 0);
-    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_out.bEndpointAddress, 
-        USBDEV_DIR_OUT, bulk_out_handler, 0);
-    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_in.bEndpointAddress & 0xF, 
+    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_bulk_out.bEndpointAddress, 
+        USBDEV_DIR_OUT, out_handler, 0);
+    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_bulk_in.bEndpointAddress & 0xF, 
         USBDEV_DIR_IN, bulk_in_handler, 0);
+    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_intr_out.bEndpointAddress, 
+        USBDEV_DIR_OUT, out_handler, 0);
+    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_intr_in.bEndpointAddress & 0xF, 
+        USBDEV_DIR_IN, intr_in_handler, 0);
+    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_iso_out.bEndpointAddress, 
+        USBDEV_DIR_OUT, out_handler, 0);
+    usbdev_set_ep_specific_handler (&usb, config_descriptor.ep_iso_in.bEndpointAddress & 0xF, 
+        USBDEV_DIR_IN, iso_in_handler, 0);
 
     stm32l_usbdev_init (&usbhal, &usb, 10, &pool);    
     task_create (hello, 0, "hello", 1, task, sizeof (task));

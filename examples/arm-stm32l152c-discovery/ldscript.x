@@ -9,11 +9,11 @@ ENTRY(_start_)
 MEMORY
 {
   text   (rx)   : ORIGIN = 0x08000000,	LENGTH = 256k
-  data   (rw!x) : ORIGIN = 0x20000000,	LENGTH = 32k
+  data   (rw!x) : ORIGIN = 0x20000000,	LENGTH = 32768-64
 }
 
 /* higher address of the user mode stack */
-_estack = ORIGIN(data) + LENGTH(data);
+_estack = 0x20008000;
 
 SECTIONS
 {
@@ -65,18 +65,29 @@ SECTIONS
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
+    PROVIDE (__loader_funcs_start = .);
+    *(.loader_funcs)
+    PROVIDE (__loader_funcs_end = .);
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
     *(.glue_7t) *(.glue_7)
     __rodata_start = . ;
     *(.rodata .rodata.* .gnu.linkonce.r.*)
+    . = ALIGN (32 / 8);
+  } > text
+  
+  .ARM.exidx      : AT (ADDR (.text) + SIZEOF (.text))
+  {
+    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     /* Align here to ensure that the .data section start on word boundary. */
     . = ALIGN (32 / 8);
     _etext = .;
   } > text
+  
+  . = ALIGN (32 / 8);
 
   /* Start data (internal SRAM).  */
-  .data		  : AT (ADDR (.text) + SIZEOF (.text))
+  .data		  : AT (ADDR (.text) + SIZEOF (.text) + SIZEOF (.ARM.exidx))
   {
     __data_start = . ;
     *(.data .data.* .gnu.linkonce.d.*)
