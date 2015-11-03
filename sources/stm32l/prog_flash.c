@@ -5,12 +5,12 @@
 
 #define LOADER_FUNCS_SECTION_SIZE   0x1000u
 
-extern char __loader_funcs_start, __loader_funcs_end;
+extern char __sram_code_start, __sram_code_end;
 
 static uint8_t loader_funcs_cram [LOADER_FUNCS_SECTION_SIZE];
 
 
-static void burn (flashif_t *flash, unsigned addr, void *data, int size) __attribute__ ((section (".loader_funcs")));
+static void burn (flashif_t *flash, unsigned addr, void *data, int size) __attribute__ ((section (".sram_code")));
 static void (*cram_burn) (flashif_t *flash, unsigned addr, void *data, int size);
 
 static inline void prog_flash_unlock()
@@ -187,9 +187,9 @@ void stm32l_prog_flash_init(stm32l_prog_flash_t *m, uint32_t start_addr, uint32_
     
     // Copy function code to SRAM
 	unsigned func_offset;
-    func_offset = (unsigned) burn - (unsigned) &__loader_funcs_start;
+    func_offset = (unsigned) burn - (unsigned) &__sram_code_start;
     cram_burn = (void (*) (flashif_t *, unsigned, void *, int)) (loader_funcs_cram + func_offset);
     
-    const int loader_funcs_size = &__loader_funcs_end - &__loader_funcs_start;
-    memcpy (loader_funcs_cram, (void *)(((unsigned)&__loader_funcs_start) & ~3), loader_funcs_size);
+    const int loader_funcs_size = &__sram_code_end - &__sram_code_start;
+    memcpy (loader_funcs_cram, (void *)(((unsigned)&__sram_code_start) & ~3), loader_funcs_size);
 }

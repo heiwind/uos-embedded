@@ -65,9 +65,9 @@ SECTIONS
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
-    PROVIDE (__loader_funcs_start = .);
-    *(.loader_funcs)
-    PROVIDE (__loader_funcs_end = .);
+    PROVIDE (__sram_code_start = .);
+    *(.sram_code)
+    PROVIDE (__sram_code_end = .);
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
     *(.glue_7t) *(.glue_7)
