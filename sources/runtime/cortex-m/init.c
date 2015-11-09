@@ -478,6 +478,11 @@ generator will not work properly
 			 ARM_SCB->SHPR3 = ARM_SHPR3_SYSTICK(64) | /* SysTick */
 			 ARM_SHPR3_PENDSV(0);	/* PendSV */
 
+    int i;
+    for (i = 0; i < (ARCH_INTERRUPTS + 3) / 4; ++i)
+        ARM_NVIC_IPR(i) = 0x40404040;
+
+#if 0       
 	ARM_NVIC_IPR(0) = 0x40404040;		/* CAN1, CAN2, USB */
 	ARM_NVIC_IPR(1) = 0x40404040;		/* DMA, UART1, UART2 */
 	ARM_NVIC_IPR(2) = 0x40404040;		/* SSP1, I2C, POWER */
@@ -486,6 +491,7 @@ generator will not work properly
 	ARM_NVIC_IPR(5) = 0x40404040;		/* SSP2 */
 	ARM_NVIC_IPR(6) = 0x40404040;		/* BACKUP */
 	ARM_NVIC_IPR(7) = 0x40404040;		/* external INT[1:4] */
+#endif
 
 	main ();
 }

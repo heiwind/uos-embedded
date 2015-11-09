@@ -88,12 +88,12 @@ static void dump (const void *addr, int size)
 }
 #endif
 
-static void set_addr (unsigned addr)
+static void set_addr (unsigned addr, void *arg)
 {
 //debug_printf ("set_addr: %d\n", read_reg(FNADDR));
 }
 
-static void ep_attr (unsigned ep, int dir, unsigned attr, int max_size, int interval)
+static void ep_attr (unsigned ep, int dir, unsigned attr, int max_size, int interval, void *arg)
 {
 //debug_printf ("ep_attr, ep = %d, dir = %d, attr = 0x%X, max_size = %d\n", ep, dir, attr, max_size);
     switch (attr & EP_ATTR_TRANSFER_MASK) {
@@ -119,7 +119,7 @@ static void ep_attr (unsigned ep, int dir, unsigned attr, int max_size, int inte
     }
 }
 
-static void ep_wait_out (unsigned ep, int ack)
+static void ep_wait_out (unsigned ep, int ack, void *arg)
 {
 //debug_printf ("ep_wait_out, ep = %d, ack = %d\n", ep, ack);
     if (ack) {
@@ -130,7 +130,7 @@ static void ep_wait_out (unsigned ep, int ack)
         write_reg(EPIRQ, OUT1BAVIRQ);
 }
 
-static void ep_wait_in (unsigned ep, int pid, const void *data, int size, int last)
+static void ep_wait_in (unsigned ep, int pid, const void *data, int size, int last, void *arg)
 {
 //debug_printf ("ep_wait_in, ep = %d, pid = %d, data @ %p, size = %d\n", ep, pid, data, size);
 
@@ -174,7 +174,7 @@ static void ep_wait_in (unsigned ep, int pid, const void *data, int size, int la
     write_reg(EPIEN, epien);
 }
 
-static void ep_stall (unsigned ep, int dir)
+static void ep_stall (unsigned ep, int dir, void *arg)
 {
 //debug_printf ("STALL EP%d\n", ep);
     if (dir == USBDEV_DIR_IN) {
@@ -189,7 +189,7 @@ static void ep_stall (unsigned ep, int dir)
     }
 }
 
-static int in_avail_bytes (unsigned ep)
+static int in_avail_bytes (unsigned ep, void *arg)
 {
     int res = 0;
     if (ep == 0) {
@@ -389,7 +389,7 @@ void max3421e_usbdev_init (usbdev_t *owner, spimif_t *spi,
     msg.tx_data = spi_buf;
     msg.rx_data = spi_buf;
     
-    usbdevhal_bind (usbdev, &hal, m);
+    usbdevhal_bind (usbdev, &hal, 0, m);
 
 #ifdef ELVEES    
     MC_IRQM |= MC_IRQM_MODE(irqn);

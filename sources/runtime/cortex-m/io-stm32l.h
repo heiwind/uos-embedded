@@ -739,10 +739,11 @@ typedef struct
 #define GPIO_OD(n)      (1 << (n))      // Open drain
 
 // OSPEEDR values
-#define GPIO_2MHz(n)    (0 << (2 * n))  // Low speed
-#define GPIO_25MHz(n)   (1 << (2 * n))  // Medium speed
-#define GPIO_50MHz(n)   (2 << (2 * n))  // Fast speed
-#define GPIO_100MHz(n)  (3 << (2 * n))  // High speed
+#define GPIO_2MHz(n)        (0 << (2 * n))  // Low speed
+#define GPIO_25MHz(n)       (1 << (2 * n))  // Medium speed
+#define GPIO_50MHz(n)       (2 << (2 * n))  // Fast speed
+#define GPIO_100MHz(n)      (3 << (2 * n))  // High speed
+#define GPIO_OSPEED_MASK(n) (3 << (2 * n))  // Field mask
 
 // PUPDR values
 #define GPIO_NO_PULL(n)   (0 << (2 * n))  // No pull-up, no pull-down
@@ -793,6 +794,7 @@ typedef struct
 #define GPIO_AF_OTG_HS_FS(n) (0xC << (4 * ((n) & 7)))
 #define GPIO_AF_DCMI(n)     (0xD << (4 * ((n) & 7)))
 #define GPIO_AF_EVENTOUT(n) (0xF << (4 * ((n) & 7)))
+#define GPIO_AF_MASK(n)     (0xF << (4 * ((n) & 7)))
 
 
 /////////////////////////////////////////
