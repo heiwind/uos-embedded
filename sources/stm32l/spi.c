@@ -44,7 +44,7 @@ init_hw(stm32_spim_t *spi, unsigned freq, unsigned bits_per_word, unsigned mode)
         reg->CR1 = ( reg->CR1 & ~SPI_BR(7) ) | SPI_BR(br); // set baud rate
         spi->last_freq = freq;
     }
-    if (mode != spi->last_mode) {
+    if ((mode ^ spi->last_mode) & (SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_MODE_LSB_FIRST)) {
         reg->CR1 &= ~SPI_SPE;
 
         if (mode & SPI_MODE_CPOL)
