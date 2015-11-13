@@ -140,7 +140,7 @@ debug_printf("\n\n");
 			break;
 		}
     if (i == m->msg.word_count)
-        return FLASH_ERR_IO;
+        return FLASH_ERR_BAD_ANSWER;
 	return FLASH_ERR_OK;
 }
 
@@ -181,24 +181,32 @@ static int sd_connect(flashif_t *flash)
         return FLASH_ERR_IO;
     }
 
-    // Switch SD to SPI mode
-    m->databuf[0] = CMD_GO_IDLE_STATE;
-    m->databuf[1] = 0x00;
-    m->databuf[2] = 0x00;
-    m->databuf[3] = 0x00;
-    m->databuf[4] = 0x00;
-    m->databuf[5] = 0x95;
-    m->msg.mode &= ~(SPI_MODE_CS_HIGH | SPI_MODE_CS_HOLD);
-    m->msg.word_count = 16; // cmd + max Ncr + r1 + 1byte spare
-    res = send_command(m, &r1);
-    if (res != FLASH_ERR_OK) {
-        mutex_unlock(&flash->lock);
-        return res;
-    }
-    if (*r1 != IN_IDLE_STATE) {
-        mutex_unlock(&flash->lock);
-        return FLASH_ERR_NOT_CONN;
-    }
+    // Switch SD to SPI mode    
+    int nb_try = 100;
+	do {
+		nb_try--;
+
+		m->databuf[0] = CMD_GO_IDLE_STATE;
+		m->databuf[1] = 0x00;
+		m->databuf[2] = 0x00;
+		m->databuf[3] = 0x00;
+		m->databuf[4] = 0x00;
+		m->databuf[5] = 0x95;
+		m->msg.mode &= ~(SPI_MODE_CS_HIGH | SPI_MODE_CS_HOLD);
+		m->msg.word_count = 16; // cmd + max Ncr + r1 + 1byte spare
+		
+		res = send_command(m, &r1);
+		if (res == FLASH_ERR_BAD_ANSWER) {
+			continue;
+		} else if (res != FLASH_ERR_OK) {
+			mutex_unlock(&flash->lock);
+			return res;
+		}
+		
+		if (nb_try <= 0)
+			return FLASH_ERR_NOT_CONN;
+			
+    } while (*r1 != IN_IDLE_STATE);
     
     // Checking SD version
     m->msg.word_count = 20;
