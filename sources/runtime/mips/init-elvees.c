@@ -29,7 +29,12 @@ extern int main ();
  * Attribute "naked" skips function prologue.
  */
 
-void __attribute ((noreturn))_init_ (void)
+void __attribute ((noreturn))
+#ifdef ELVEES_INIT_SDRAM
+//!!! этот код должен лежать в памяти доступной по вектору сброса=прерываня, ибо положить в СДРАМ до ее настрйки не представляется нормальным
+CODE_ISR
+#endif
+_init_ (void)
 {
 	unsigned *dest, *limit;
 	unsigned int divisor;
@@ -443,6 +448,7 @@ uos_valid_memory_address (void *ptr)
 }
 
 void __attribute__ ((weak))
+CODE_ISR
 _irq_handler_ ()
 {
 	/* This is needed when no kernel is present. */

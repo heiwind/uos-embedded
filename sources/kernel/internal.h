@@ -20,6 +20,8 @@
 #ifndef __KERNEL_INTERNAL_H_
 #define	__KERNEL_INTERNAL_H_ 1
 
+#include <runtime/arch.h>
+
 #ifdef __AVR__
 #	include <kernel/avr/machdep.h>
 #endif
@@ -188,6 +190,7 @@ static inline bool_t mutex_recurcived_lock(mutex_t *m)
     return 0;
 }
 
+CODE_ISR 
 INLINE bool_t mutex_check_pended_irq (mutex_t *m)
 {
     /* On pending irq, we must call fast handler. */
@@ -221,6 +224,7 @@ INLINE bool_t task_is_waiting (task_t *task) {
 	return (task->lock || task->wait);
 }
 
+CODE_ISR 
 INLINE void task_activate (task_t *task) {
 	assert (! task_is_waiting (task));
 	list_append (&task_active, &task->item);
@@ -232,6 +236,7 @@ INLINE void task_activate (task_t *task) {
  * Task_active contains a list of all tasks, which are ready to run.
  * Find a task with the biggest priority. */
 	__attribute__ ((always_inline))
+	CODE_ISR 
 INLINE task_t *task_policy (void)
 {
 	task_t *t, *r;

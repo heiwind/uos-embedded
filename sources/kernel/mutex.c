@@ -41,6 +41,7 @@ void mutex_init (mutex_t *lock)
  * In the case the lock has associated IRQ number,
  * after acquiring the lock the IRQ will be disabled.
  */
+CODE_FAST 
 void
 mutex_lock (mutex_t *m)
 {
@@ -67,6 +68,7 @@ mutex_lock (mutex_t *m)
  * \return true - mutex succesfuly locked
  * \return false - if mutex not locked due to <waitfor> signalled
  * */
+CODE_FAST 
 bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg)
 {
     if (mutex_recurcived_lock(m))
@@ -85,6 +87,7 @@ bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg
     return res;
 }
 
+CODE_FAST 
 void mutex_slaved_yield(mutex_t *m){
     assert (task_current->lock == 0);
 #if RECURSIVE_LOCKS
@@ -115,6 +118,7 @@ void mutex_slaved_yield(mutex_t *m){
  * In the case the lock has associated IRQ number,
  * after acquiring the lock the IRQ will be disabled.
  */
+CODE_FAST 
 bool_t 
 mutex_trylock (mutex_t *m)
 {
@@ -140,6 +144,7 @@ mutex_trylock (mutex_t *m)
  * It must be the maximum of base priority,
  * and all slave lock priorities.
  */
+CODE_FAST 
 void
 task_recalculate_prio (task_t *t)
 {
@@ -181,6 +186,7 @@ task_recalculate_prio (task_t *t)
  * Recalculate the value of lock priority.
  * It must be the maximum of all slave task priorities.
  */
+CODE_FAST 
 void
 mutex_recalculate_prio (mutex_t *m)
 {
@@ -213,6 +219,7 @@ mutex_recalculate_prio (mutex_t *m)
  * In the case the lock has associated IRQ number,
  * the IRQ will be enabled.
  */
+CODE_FAST 
 void
 mutex_unlock (mutex_t *m)
 {
@@ -235,6 +242,7 @@ mutex_unlock (mutex_t *m)
 	arch_intr_restore (x);
 }
 
+CODE_FAST 
 void mutex_do_unlock(mutex_t *m){
     /* Remove this lock from the list of task slaves. */
     list_unlink (&m->item);

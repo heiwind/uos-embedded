@@ -14,6 +14,10 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 
+#ifndef CODE_ISR
+#define CODE_ISR
+#endif
+
 #if I386
 #   include <runtime/i386/i8253.h>
 #   define TIMER_IRQ        0   /* IRQ0 */
@@ -157,7 +161,8 @@
  * Проверка, прошло ли указанное количество миллисекунд `msec'.
  * Параметр `interval' содержит интервал времени, возможно, переходящий границу суток.
  */
-bool_t
+CODE_ISR 
+bool_t 
 interval_greater_or_equal (long interval, long msec)
 {
 #ifndef TIMER_NO_DAYS
@@ -180,12 +185,14 @@ interval_greater_or_equal (long interval, long msec)
  */
 #ifndef SW_TIMER
 
+CODE_ISR 
 inline void timer_mutex_note(mutex_t* t, unsigned long message){
     mutex_awake (t, (void*) message);
 }
-
-static inline
 #endif
+
+CODE_ISR 
+static inline
 void timer_update (timer_t *t)
 {
 /*debug_printf ("<ms=%ld> ", t->milliseconds);*/
@@ -301,7 +308,8 @@ void timer_update (timer_t *t)
 /*
  * Timer interrupt handler.
  */
-bool_t
+CODE_ISR 
+bool_t 
 timer_handler (timer_t *t)
 {
     timer_update (t);
@@ -460,7 +468,8 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
     list_init (&t->user_timers);
 #endif
 }
-#else
+
+#else //USEC_TIMER
 
 /**\~english
  * Create timer task.
@@ -468,7 +477,7 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
  * \~russian
  * Инициализация таймера.
  */
-void
+void CODE_ISR
 timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick)
 {
     t->msec_per_tick = msec_per_tick;

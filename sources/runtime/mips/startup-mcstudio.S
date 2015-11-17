@@ -56,7 +56,8 @@ _reset_vector_: .globl  _reset_vector_
 #endif
 
         lui     $gp, RAM_HI         # Set global pointer
-        j       _init_              # Jump to _init_()
+        la      $t0,_init_          # init code can be far away from reset/isr internal mem
+        jr      $t0                 # Jump to _init_()
         nop
 
 #ifdef BOOT_CHECKSUM
@@ -228,7 +229,8 @@ exception:
 
         .extern _exception_handler_
         lui     $gp, RAM_HI                 # Set global pointer
-        j       _exception_handler_         # Jump to C code, no return
+        la      $t0, _exception_handler_    #exception code can be far away from internal memory
+        jr      $t0                         # Jump to C code, no return
         nop
 
 #---------------------------------------

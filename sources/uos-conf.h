@@ -71,4 +71,14 @@
 
 
 
+/**\~russian
+  * эти атрибуты используются для указания размещения кода линкеру для систем с отдельной памятью для прерываний
+  *	и быстрого кода
+*/
+//#define CODE_FAST __attribute__((section(".text.hot")))
+//#define CODE_ISR  __attribute__((section(".text.isr_used")))
+//#define USED_ISR  __attribute__((section(".text.isr_used")))
+
+
+
 #endif /* UOS_CONF_H_ */

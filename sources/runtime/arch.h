@@ -1,6 +1,24 @@
 #ifndef __UOS_LIB_ARCH_H_
 #define __UOS_LIB_ARCH_H_
 
+
+
+/**\~rissian эти модификаторы предназначены для более аккуратной линковки кода:
+ * \value CODE_ISR - код вызывается из обработчика прерывания,вероятно его желательно 
+ *  положить в быструю память рядом с таблицей прерываний
+ * \value CODE_FAST - код критичен к скорости исполения,вероятно его желательно 
+ *  положить в быструю память
+ * */
+#ifndef CODE_FAST
+#define CODE_FAST
+#endif
+
+#ifndef CODE_ISR
+#define CODE_ISR
+#endif
+
+
+
 #if defined (__AVR__)
 #	include <stdarg.h>
 #	include <runtime/avr/types.h>
@@ -59,5 +77,7 @@
 #	include <runtime/ctype.h>
 #	define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
+
+
 
 #endif /* __UOS_LIB_ARCH_H_ */

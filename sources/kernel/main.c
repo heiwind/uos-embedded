@@ -35,6 +35,7 @@ bool_t task_need_schedule;
 /*
  * Switch to most priority task if needed.
  */
+CODE_ISR 
 void task_schedule ()
 {
 	task_t *new;
@@ -50,7 +51,8 @@ void task_schedule ()
 /*
  * Activate all waiters of the lock.
  */
-void
+CODE_ISR 
+void 
 mutex_activate (mutex_t *m, void *message)
 {
 	task_t *t;

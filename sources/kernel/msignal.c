@@ -23,7 +23,8 @@
  * Send the signal to the lock. All tasks waiting for the signal
  * on the lock are unblocked, possibly causing task switch.
  */
-void
+CODE_FAST 
+void 
 mutex_signal (mutex_t *m, void *message)
 {
 #if FASTER_LOCKS
@@ -162,6 +163,7 @@ bool_t mutex_wait_until (mutex_t *m
 // it is try to handle IRQ handler and then mutex_activate, if handler return true
 // \return 0 - no activation was pended
 // \return else - value of handler:
+CODE_ISR 
 bool_t mutex_awake (mutex_t *m, void *message)
 {
     if (m->irq) {
