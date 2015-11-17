@@ -124,6 +124,21 @@ INLINE list_t *list_first (const list_t *l)
 #define list_iterate(i, head)		for (i = (typeof(i)) (head)->next; \
 					     i != (typeof(i)) (head); \
 					     i = (typeof(i)) ((list_t*) i)->next)
+
+/*
+ * same as list_iterate, but preserves lookahed list item, so it possible to 
+ *  move/remove current list item safely, no breaking iterating process  
+ * Example:
+ *  struct my_list_type *i;
+ *  struct my_list_type *next;
+ *  list_safe_iterate (i, next, my_list) {
+ *      process_one_element (i);
+ *  }
+ */
+#define list_safe_iterate(i, next_i, head)  for (i = (typeof(i)) (head)->next, next_i = (typeof(next_i)) (((list_t*) i)->next);\
+                         i != (typeof(i)) (head); \
+                         i = (typeof(i))next_i, next_i = (typeof(next_i))(((list_t*)next_i)->next) )
+
 /*
  * Iterate through all list items, from last to first.
  * Example:
