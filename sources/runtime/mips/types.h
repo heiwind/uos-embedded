@@ -35,6 +35,8 @@ typedef int bool_t;
  */
 #ifndef _SIZE_T_DEFINED_ 
 typedef unsigned long size_t;
+typedef signed long     ssize_t;
+typedef signed long     __off_t;
 #define _SIZE_T_DEFINED_
 #endif
 

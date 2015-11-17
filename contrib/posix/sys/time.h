@@ -18,6 +18,13 @@ struct timespec {
 	long tv_nsec;		/* nanoseconds */
 };
 
+struct itimerspec {
+  struct timespec  it_interval;  /* Timer period */
+  struct timespec  it_value;     /* Timer expiration */
+};
+
+#define __time_t_defined
+
 struct timezone {
 	int tz_minuteswest;	/* Greenwitch offset */
 	int tz_dsttime;		/* time correction mode */
