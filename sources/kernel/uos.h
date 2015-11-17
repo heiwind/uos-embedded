@@ -106,7 +106,11 @@ bool_t mutex_lock_until (mutex_t *lock, scheduless_condition waitfor, void* wait
 
 void mutex_signal (mutex_t *lock, void *message);
 void *mutex_wait (mutex_t *lock);
-void *mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
+/*
+ * \return true - if signaled and therefore valid task_current->message
+ *          false - if timeout
+ * */
+bool_t mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
 
 /* Interrupt management. */
 void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);

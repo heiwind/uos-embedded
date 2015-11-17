@@ -44,6 +44,9 @@ void mutex_init (mutex_t *lock)
 void
 mutex_lock (mutex_t *m)
 {
+#ifndef UOS_MUTEX_FASTER
+    mutex_lock_until(m, NULL, NULL);
+#else
     if (mutex_recurcived_lock(m))
         return;
 
@@ -57,6 +60,7 @@ mutex_lock (mutex_t *m)
 
 	mutex_lock_yiedling(m);
 	arch_intr_restore (x);
+#endif
 }
 
 /** this lock is blocks until <waitfor> return true, or mutex locked.
@@ -76,18 +80,9 @@ bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg
     if (! m->item.next)
         mutex_init (m);
 
-    while (m->master && m->master != task_current) {
-        /* Monitor is locked, block the task. */
-        if (waitfor != NULL)
-        if ((*waitfor)(waitarg)) {
-            arch_intr_restore (x);
-            return false;
-        }
-        mutex_slaved_yield(m);
-    }
-    mutex_trylock_in(m);
+    bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
     arch_intr_restore (x);
-    return true;
+    return res;
 }
 
 void mutex_slaved_yield(mutex_t *m){

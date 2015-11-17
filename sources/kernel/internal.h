@@ -159,6 +159,22 @@ INLINE bool_t mutex_lock_yiedling(mutex_t *m)
     return mutex_trylock_in(m);
 }
 
+//wait mutex free and lock
+INLINE bool_t mutex_lock_yiedling_until(mutex_t *m
+        , scheduless_condition waitfor, void* waitarg
+        )
+{
+    while (m->master && m->master != task_current) {
+        if (waitfor != 0)
+        if ((*waitfor)(waitarg)) {
+            return 0;
+        }
+        /* Monitor is locked, block the task. */
+        mutex_slaved_yield(m);
+    }
+    return mutex_trylock_in(m);
+}
+
 static inline bool_t mutex_recurcived_lock(mutex_t *m)
 {
 #if FASTER_LOCKS > 0

@@ -17,6 +17,7 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
+#include <stddef.h> 
 
 /*
  * Send the signal to the lock. All tasks waiting for the signal
@@ -55,7 +56,9 @@ mutex_signal (mutex_t *m, void *message)
 void *
 mutex_wait (mutex_t *m)
 {
-	arch_state_t x;
+#ifdef UOS_MUTEX_FASTER
+
+    arch_state_t x;
 #if RECURSIVE_LOCKS
 	small_int_t deep;
 #endif
@@ -91,11 +94,69 @@ mutex_wait (mutex_t *m)
 #endif
     mutex_do_unlock(m);
 	task_schedule ();
-
 	mutex_lock_yiedling(m);
-
+#if RECURSIVE_LOCKS
+    m->deep = deep;
+#endif
+	
 	arch_intr_restore (x);
-	return task_current->message;
+    return task_current->message;
+#else //UOS_MUTEX_FASTER
+    mutex_wait_until(m, (scheduless_condition)NULL, NULL);
+    return task_current->message;
+#endif //UOS_MUTEX_FASTER
+}
+
+bool_t mutex_wait_until (mutex_t *m
+        , scheduless_condition waitfor, void* waitarg
+        )
+{
+    if (! m->item.next)
+        mutex_init (m);
+
+    arch_state_t x;
+#if RECURSIVE_LOCKS
+    small_int_t deep;
+#endif
+
+    arch_intr_disable (&x);
+    assert (STACK_GUARD (task_current));
+    assert (task_current->wait == 0);
+
+    /* On pending irq, we must call fast handler. */
+    if (mutex_check_pended_irq(m)){
+        if (task_need_schedule)
+            task_schedule ();
+        arch_intr_restore (x);
+        return 1;
+    }
+
+    task_current->wait = m;
+    list_append (&m->waiters, &task_current->item);
+    if (m->master != task_current) {
+        /* We do not keep this lock, so just wait for a signal. */
+        task_schedule ();
+        bool_t res = 1;
+        if (waitfor != NULL)
+            res = (*waitfor)(waitarg);
+        arch_intr_restore (x);
+        return res;
+    }
+
+    /* The lock is hold by the current task - release it. */
+#if RECURSIVE_LOCKS
+    assert (m->deep > 0);
+    deep = m->deep;
+    m->deep = 0;
+#endif
+    mutex_do_unlock(m);
+    task_schedule ();
+    bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
+#if RECURSIVE_LOCKS
+    m->deep = deep;
+#endif
+    arch_intr_restore (x);
+    return res;
 }
 
 // it is try to handle IRQ handler and then mutex_activate, if handler return true
