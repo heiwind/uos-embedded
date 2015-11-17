@@ -181,9 +181,7 @@ interval_greater_or_equal (long interval, long msec)
 #ifndef SW_TIMER
 
 inline void timer_mutex_note(mutex_t* t, unsigned long message){
-    if (list_is_empty (&t->waiters)) return;
-    if (list_is_empty (&t->groups)) return;
-    mutex_activate (t, (void*) message);
+    mutex_awake (t, (void*) message);
 }
 
 static inline
@@ -285,13 +283,15 @@ void timer_update (timer_t *t)
             if (now <= 0) continue;
             now  -= interval;
             if (now <= 0) {
-                timer_mutex_note(&ut->lock, msec);
 #ifdef USEC_TIMER
                     now += ut->usec_per_tick;
 #else
                     now += ut->msec_per_tick;
 #endif
+                ut->cur_time = now;
+                timer_mutex_note(&ut->lock, msec);
             }
+            else
             ut->cur_time = now;
         }
     }
