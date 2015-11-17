@@ -133,6 +133,11 @@
 			<locationURI>uOS_SRC/net</locationURI>
 		</link>
 		<link>
+			<name>posix</name>
+			<type>2</type>
+			<locationURI>uOS_ROOT/contrib/posix</locationURI>
+		</link>
+		<link>
 			<name>random</name>
 			<type>2</type>
 			<locationURI>uOS_SRC/random</locationURI>
