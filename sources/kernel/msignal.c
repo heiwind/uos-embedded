@@ -67,22 +67,12 @@ mutex_wait (mutex_t *m)
 		mutex_init (m);
 
 	/* On pending irq, we must call fast handler. */
-	if (m->irq) {
-	    mutex_irq_t *   irq = m->irq;
-		if (irq->pending) {
-			irq->pending = 0;
-			if ((irq->handler) (irq->arg) == 0) {
-				/* Unblock all tasks, waiting for irq. */
-				mutex_activate (m, 0);
-				if (task_need_schedule)
-					task_schedule ();
-				arch_intr_restore (x);
-				return 0;
-			}
-		}
-		else if (irq->irq >= 0)
-            arch_intr_allow (irq->irq);
-	}
+    if (mutex_check_pended_irq(m)){
+        if (task_need_schedule)
+            task_schedule ();
+        arch_intr_restore (x);
+        return 0;
+    }
 
 	task_current->wait = m;
 	list_append (&m->waiters, &task_current->item);
@@ -99,22 +89,7 @@ mutex_wait (mutex_t *m)
 	deep = m->deep;
 	m->deep = 0;
 #endif
-	list_unlink (&m->item);
-
-	/* Recalculate the value of task priority.
-	 * It must be the maximum of base priority,
-	 * and all slave lock priorities. */
-	if (task_current->prio <= m->prio && task_current->base_prio < m->prio)
-		task_recalculate_prio (task_current);
-
-	m->master = 0;
-	while (! list_is_empty (&m->slaves)) {
-		task_t *t = (task_t*) list_first (&m->slaves);
-		assert (t->lock == m);
-		t->lock = 0;
-		task_activate (t);
-	}
-	m->prio = 0;
+    mutex_do_unlock(m);
 	task_schedule ();
 
 	mutex_lock_yiedling(m);

@@ -40,43 +40,14 @@ mutex_unlock_irq (mutex_t *m)
 		return;
 	}
 #endif
-
-	/* Remove this lock from the list of task slaves. */
-	list_unlink (&m->item);
-
-	/* Recalculate the value of task priority.
-	 * It must be the maximum of base priority,
-	 * and all slave lock priorities. */
-	if (m->master->prio <= m->prio && m->master->base_prio < m->prio)
-		task_recalculate_prio (m->master);
-	m->master = 0;
-
-	/* On pending irq, we must call fast handler. */
-	if (m->irq) {
-	    mutex_irq_t* irq = m->irq;
-		if (irq->pending) {
-			irq->pending = 0;
-
-			/* Unblock all tasks, waiting for irq. */
-			if ((irq->handler) (irq->arg) == 0)
-				mutex_activate (m, 0);
-		}
-		if (irq->irq >= 0)
-		    arch_intr_unbind (irq->irq);
-		irq->lock = 0;
-		m->irq = 0;
-	}
-
-	if (! list_is_empty (&m->slaves)) {
-		do {
-			task_t *t = (task_t*) list_first (&m->slaves);
-			assert (t->lock == m);
-			t->lock = 0;
-			task_activate (t);
-		} while (! list_is_empty (&m->slaves));
-		m->prio = 0;
-	}
-
+    mutex_do_unlock(m);
+    if (m->irq) {
+        mutex_irq_t* irq = m->irq;
+        if (irq->irq >= 0)
+            arch_intr_unbind (irq->irq);
+        irq->lock = 0;
+        m->irq = 0;
+    }
 	if (task_need_schedule)
 		task_schedule ();
 	arch_intr_restore (x);

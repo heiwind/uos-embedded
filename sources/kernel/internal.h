@@ -172,6 +172,28 @@ static inline bool_t mutex_recurcived_lock(mutex_t *m)
     return 0;
 }
 
+INLINE bool_t mutex_check_pended_irq (mutex_t *m)
+{
+    /* On pending irq, we must call fast handler. */
+    if (m->irq) {
+        mutex_irq_t *   irq = m->irq;
+        if (irq->pending) {
+            irq->pending = 0;
+
+            /* Unblock all tasks, waiting for irq. */
+            if ((irq->handler) (irq->arg) == 0){
+                mutex_activate (m, (void*)(irq->irq));
+                return 1;
+            }
+        }
+        else if (irq->irq >= 0)
+            arch_intr_allow (irq->irq);
+    }
+    return 0;
+}
+
+void mutex_do_unlock(mutex_t *m);
+
 /* Recalculate task priority, based on priorities of acquired locks. */
 void task_recalculate_prio (task_t *t);
 
