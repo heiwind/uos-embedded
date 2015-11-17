@@ -21,6 +21,7 @@
 #define	__KERNEL_INTERNAL_H_ 1
 
 #include <runtime/arch.h>
+#include <runtime/assert.h>
 
 #ifdef __AVR__
 #	include <kernel/avr/machdep.h>

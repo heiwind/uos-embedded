@@ -25,9 +25,9 @@
  */
 
 #include <uos-conf.h>
+#include <runtime/arch.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
-#include <runtime/arch.h>
 #include <stddef.h>
 
 #ifdef USER_TIMERS
