@@ -3,6 +3,7 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <timer/timer.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,6 +14,7 @@ struct timeval {
 	long tv_usec;		/* microseconds */
 };
 
+#ifndef __timespec_defined
 struct timespec {
 	long tv_sec;		/* seconds */
 	long tv_nsec;		/* nanoseconds */
@@ -22,8 +24,7 @@ struct itimerspec {
   struct timespec  it_interval;  /* Timer period */
   struct timespec  it_value;     /* Timer expiration */
 };
-
-#define __time_t_defined
+#endif
 
 struct timezone {
 	int tz_minuteswest;	/* Greenwitch offset */
