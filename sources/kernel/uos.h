@@ -60,7 +60,7 @@ typedef bool_t (*handler_t) (void*);
 /* Task management. */
 task_t *task_create (void (*func)(void*), void *arg, const char *name, int priority,
 	array_t *stack, unsigned stacksz);
-void task_exit (void *status);
+void task_exit (void *status) __attribute__ ((__noreturn__));
 void task_delete (task_t *task, void *status);
 void *task_wait (task_t *task);
 int task_stack_avail (task_t *task);

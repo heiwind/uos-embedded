@@ -235,9 +235,10 @@ INLINE void task_activate (task_t *task) {
 /* Task policy, e.g. the scheduler.
  * Task_active contains a list of all tasks, which are ready to run.
  * Find a task with the biggest priority. */
-	__attribute__ ((always_inline))
-	CODE_ISR 
-INLINE task_t *task_policy (void)
+INLINE 
+__attribute__ ((always_inline))
+CODE_ISR 
+task_t *task_policy (void)
 {
 	task_t *t, *r;
 

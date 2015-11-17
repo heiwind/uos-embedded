@@ -102,6 +102,7 @@ uos_post_init ()
  * The idle task uses the default system stack.
  */
 int __attribute__ ((weak))
+__attribute ((noreturn))
 main (void)
 {
 	/* Create the idle task. */
