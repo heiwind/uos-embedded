@@ -93,4 +93,8 @@
  */
 //#define NDEBUG
 
+//#define MEM_DEBUG 0
+
+
+
 #endif /* UOS_CONF_H_ */
