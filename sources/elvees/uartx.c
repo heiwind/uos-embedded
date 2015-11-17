@@ -51,19 +51,19 @@ mutex_t uartx_lock;
  * Размер стека для задачи драйвера UART, в байтах.
  */
 #ifndef UART_STACKSZ
-#   if __AVR__
+#   ifdef __AVR__
 #      define UART_STACKSZ	0x100		/* 100 enough for AVR */
 #   endif
 #   if defined (__arm__) || defined (__thumb__)
 #      define UART_STACKSZ	0x200
 #   endif
-#   if MIPS32
+#   ifdef MIPS32
 #      define UART_STACKSZ	0x400
 #   endif
-#   if MSP430
+#   ifdef MSP430
 #      define UART_STACKSZ	0x100
 #   endif
-#   if LINUX386
+#   ifdef LINUX386
 #      define UART_STACKSZ	4000
 #   endif
 #endif

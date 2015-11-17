@@ -45,8 +45,6 @@ extern "C" {
 #endif
 
 struct _mem_pool_t;
-struct _stream_t *stream;
-
 typedef struct _eth_t {
 	netif_t netif;			/* common network interface part */
 	mutex_t tx_lock;		/* get tx interrupts here */
