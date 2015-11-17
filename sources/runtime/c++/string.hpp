@@ -61,10 +61,18 @@ namespace std {
     small_int_t strcmp (const char *s1, const char *s2)
         {return ::strcmp((const unsigned char*)s1, (const unsigned char*)s2);};
 
+    inline
+    small_int_t strcasecmp (const char *s1, const char *s2)
+        {return ::strcasecmp((const unsigned char*)s1, (const unsigned char*)s2);};
+
     /* Compare N characters of S1 and S2.  */
     inline 
     small_int_t strncmp (const char *s1, const char *s2, size_t n)
         {return ::strncmp((const unsigned char*)s1, (const unsigned char*)s2, n);};
+
+    inline
+    small_int_t strncasecmp (const char *s1, const char *s2, size_t n)
+        {return ::strncasecmp((const unsigned char*)s1, (const unsigned char*)s2, n);};
 
     /* Find the first occurrence of C in S.  */
     inline 
@@ -76,6 +84,34 @@ namespace std {
     char * strrchr (const char *src, char c)
         {return (char*)::strrchr((const unsigned char*)src, (unsigned char)c);};
 
+    inline 
+    char *strstr (const char *haystack, const char *needle)
+        {return (char*)::strstr((const unsigned char*)haystack
+                              , (unsigned char*)needle
+                              );
+        };
+
+    inline 
+    small_int_t strspn (const char *s, const char *accept)
+        {return ::strspn((const unsigned char*)s
+                              , (const unsigned char*)accept
+                              );
+        };
+
+    inline 
+    small_int_t strcspn (const char *s, const char *reject)
+        {return ::strspn((const unsigned char*)s
+                              , (const unsigned char*)reject
+                              );
+        };
+
+    inline 
+    const char *strmatch (const char* string, const char* pattern)
+        {return (const char*)::strmatch((unsigned char*)string
+                                    , (const unsigned char*)pattern
+                                    );
+        };
+    
   }// namespace string
   using namespace string;
 } // namespace std::string

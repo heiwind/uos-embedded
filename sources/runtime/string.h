@@ -95,6 +95,13 @@ strrchr (const unsigned char *src, unsigned char c);
 extern size_t
 strnlen (const unsigned char *string, size_t maxlen);
 
+unsigned char *strstr (const unsigned char *haystack, const unsigned char *needle);
+small_int_t strspn (const unsigned char *s, const unsigned char *accept);
+small_int_t strcspn (const unsigned char *s, const unsigned char *reject);
+
+extern const unsigned char *strmatch (const unsigned char* string, const unsigned char *pattern);
+small_int_t strcasecmp (const unsigned char*, const unsigned char*);
+small_int_t strncasecmp (const unsigned char*, const unsigned char*, size_t n);
 
 
 #ifdef __cplusplus
