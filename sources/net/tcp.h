@@ -1,6 +1,14 @@
 #ifndef __TCP_H_
 #define __TCP_H_ 1
 
+#include <net/ip.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 /*
  * TCP options
  */
@@ -271,7 +279,7 @@ int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len);
  */
 unsigned long tcp_inactivity (tcp_socket_t *s);
 
-#ifdef to_stream
+#if defined(to_stream)
 /*
  * Stream interface adapter for TCP socket.
  * To use it, you must include stream/stream.h before net/tcp.h.
@@ -432,5 +440,11 @@ tcp_list_remove (tcp_socket_t **socklist, tcp_socket_t *ns)
 	}
 	ns->next = 0;
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __TCP_H_ */

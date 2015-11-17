@@ -8,6 +8,10 @@
 #include <errno.h>
 /*#include <dirent.h>*/
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static inline int getpid()
 	{ return (int) task_current; }
 
@@ -70,5 +74,9 @@ static inline char *getwd (char *buf)
 	buf[1] = 0;
 	return buf;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

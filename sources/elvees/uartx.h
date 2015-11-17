@@ -1,3 +1,6 @@
+#ifndef __UOS_UARTX_H_
+#define __UOS_UARTX_H_
+
 /*
  * UART driver for external 3-channel controller.
  *
@@ -17,6 +20,12 @@
  * "COPY-UOS.txt" for details.
  */
 #include <stream/stream.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 
 /**\~english
  * Size of input buffer.
@@ -60,3 +69,9 @@ typedef struct _uartx_t {
 extern array_t uartx_rstack[];
 
 void uartx_init (uartx_t *u, int prio, unsigned int khz, unsigned long baud);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__UOS_UARTX_H_

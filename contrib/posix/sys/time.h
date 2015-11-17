@@ -4,6 +4,10 @@
 #include <kernel/uos.h>
 #include <timer/timer.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct timeval {
 	long tv_sec;		/* seconds */
 	long tv_usec;		/* microseconds */
@@ -36,5 +40,9 @@ static inline int gettimeofday (struct timeval *tv, struct timezone *tz)
 	}
 	return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

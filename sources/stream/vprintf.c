@@ -54,10 +54,11 @@ static unsigned char *ksprintn (unsigned char *buf, unsigned long v, unsigned ch
 	int width, unsigned char *lp);
 static unsigned char mkhex (unsigned char ch);
 
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 static int cvt (double number, int prec, int sharpflag, unsigned char *negp,
 	unsigned char fmtch, unsigned char *startp, unsigned char *endp);
 #endif
+
 
 int
 stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
@@ -225,7 +226,7 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 			goto number;
 
 		case 'S':
-#if __AVR__
+#ifdef __AVR__
 			s = va_arg (ap, const unsigned char*);
 			if (! s)
 				s = (const unsigned char*) "(null)";
@@ -397,7 +398,7 @@ number:		if (sign && ((long) ul != 0L)) {
 					PUTC (' ');
 				} while (--width > 0);
 			break;
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 		case 'e':
 		case 'E':
 		case 'f':
@@ -528,7 +529,7 @@ mkhex (unsigned char ch)
 	return ch + '0';
 }
 
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 static unsigned char *
 cvtround (double fract, int *exp, unsigned char *start, unsigned char *end, unsigned char ch,
 	unsigned char *negp)
