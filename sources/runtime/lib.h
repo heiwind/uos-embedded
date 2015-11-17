@@ -68,12 +68,37 @@ void debug_putchar (void *arg, short c);
 void debug_putc (char c);
 unsigned short debug_getchar (void);
 int debug_peekchar (void);
+
+#ifndef NDEBUG
+
 void debug_puts (const char *str);
 int debug_printf (const char *fmt, ...);
 int debug_vprintf (const char *fmt, va_list args);
 void debug_dump (const char *caption, void* data, unsigned len);
 void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee);
 void debug_redirect (void (*func) (void*, short), void *arg);
+
+#else
+
+INLINE
+void debug_puts (const char *str){};
+
+INLINE
+int debug_printf (const char *fmt, ...){return 0;};
+
+INLINE
+int debug_vprintf (const char *fmt, va_list args){return 0;};
+
+INLINE
+void debug_dump (const char *caption, void* data, unsigned len){};
+
+INLINE
+void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee){};
+
+INLINE
+void debug_redirect (void (*func) (void*, short), void *arg){};
+
+#endif
 
 /*
  * Call global C++ constructors.
