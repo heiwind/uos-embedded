@@ -8,26 +8,18 @@
 #define NULL 0
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 extern mem_pool_t *uos_memory;
 #define malloc(size)		mem_alloc (uos_memory, size)
 #define calloc(n,size)		mem_alloc (uos_memory, (n)*(size))
 #define realloc(ptr,size)	mem_realloc (ptr, size)
 #define free(ptr)		mem_free (ptr)
 #define strdup(str)		mem_strdup (uos_memory, str)
-
-#ifdef __cplusplus
-inline void operator delete (void *ptr)
-	{ mem_free (ptr); }
-
-inline void operator delete[] (void *ptr)
-	{ mem_free (ptr); }
-
-inline void *operator new (unsigned size)
-	{ return mem_alloc (uos_memory, size); }
-
-inline void *operator new[] (unsigned size)
-	{ return mem_alloc (uos_memory, size); }
-#endif
 
 static inline int atexit (void (*function)(void))
 	{ return 0; }
@@ -40,5 +32,29 @@ static inline int putenv (char *name)
 
 static inline void exit(int status)
 	{ uos_halt(0); }
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+
+#include <new>
+
+inline void operator delete (void *ptr)
+    { mem_free (ptr); }
+
+inline void operator delete[] (void *ptr)
+    { mem_free (ptr); }
+
+inline void *operator new (unsigned size)
+    { return mem_alloc (uos_memory, size); }
+
+inline void *operator new[] (unsigned size)
+    { return mem_alloc (uos_memory, size); }
+
+#endif
 
 #endif
