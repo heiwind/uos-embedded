@@ -40,7 +40,7 @@ mutex_signal (mutex_t *m, void *message)
 		mutex_init (m);
 
 	if (! list_is_empty (&m->waiters) || ! list_is_empty (&m->groups)) {
-		mutex_activate (m, message);
+	    mutex_awake(m, message);
 		if (task_need_schedule)
 			task_schedule ();
 	}
@@ -121,4 +121,35 @@ mutex_wait (mutex_t *m)
 
 	arch_intr_restore (x);
 	return task_current->message;
+}
+
+// it is try to handle IRQ handler and then mutex_activate, if handler return true
+// \return 0 - no activation was pended
+// \return else - value of handler:
+bool_t mutex_awake (mutex_t *m, void *message)
+{
+    if (m->irq) {
+        mutex_irq_t *   irq = m->irq;
+        if (irq->handler) {
+            /* If the lock is free -- call fast handler. */
+            if (m->master) { //(irq->lock->master)
+                /* Lock is busy -- remember pending irq.
+                 * Call fast handler later, in mutex_unlock(). */
+                irq->pending = 1;
+            }
+            else {
+                bool_t res = (irq->handler) (irq->arg);
+                if (res != 0) {
+                    /* The fast handler returns 1 when it fully
+                     * serviced an interrupt. In this case
+                     * there is no need to wake up the interrupt
+                     * servicing task, stopped on mutex_wait.
+                     * Task switching is not performed. */
+                    return res;
+                }
+            }
+        }
+    }
+    mutex_activate (m, message);
+    return 0;
 }

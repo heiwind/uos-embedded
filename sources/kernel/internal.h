@@ -108,6 +108,12 @@ void mutex_init (mutex_t *);
 /* Activate all waiters of the lock. */
 void mutex_activate (mutex_t *m, void *message);
 
+// it is try to handle IRQ handler and then mutex_activate,
+//  if handler return true
+// \return 0 - no activation was pended
+// \return else - value of handler:
+bool_t mutex_awake (mutex_t *m, void *message);
+
 // assign current task to m->slaves and schdule. priority adjusted
 void mutex_slaved_yield(mutex_t *m);
 // assign current task to m->master
