@@ -615,8 +615,9 @@ find_active_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 		assert (s->state != LISTEN);
 
 		if (s->local_port != h->dest || s->remote_port != h->src ||
-		    memcmp (s->remote_ip, iph->src, 4) != 0 ||
-		    memcmp (s->local_ip, iph->dest, 4) != 0)
+		    !ipadr_is_same_ucs(s->remote_ip, iph->src) ||
+		    !ipadr_is_same_ucs(s->local_ip, iph->dest)
+		   )
 			continue;
 
 		/* Move this PCB to the front of the list so that
@@ -642,8 +643,9 @@ find_closing_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (s=ip->tcp_closing_sockets; s; s=s->next) {
 		assert (s->state == TIME_WAIT);
 		if (s->local_port != h->dest || s->remote_port != h->src ||
-		    memcmp (s->remote_ip, iph->src, 4) != 0 ||
-		    memcmp (s->local_ip, iph->dest, 4) != 0)
+            !ipadr_is_same_ucs(s->remote_ip, iph->src) ||
+            !ipadr_is_same_ucs(s->local_ip, iph->dest)
+           )
 			continue;
 
 		/* We don't really care enough to move this PCB
@@ -664,8 +666,7 @@ find_listen_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (ls=ip->tcp_listen_sockets; ls; prev=ls, ls=ls->next) {
 		if (ls->local_port != h->dest)
 			continue;
-		if (memcmp (ls->local_ip, IP_ADDR(0), 4) != 0 &&
-		    memcmp (ls->local_ip, iph->dest, 4) != 0)
+		if ( !ipadr_is_same_ucs(ls->local_ip, iph->dest) )
 			continue;
 
 		/* Move this PCB to the front of the list so

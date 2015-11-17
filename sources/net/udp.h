@@ -20,17 +20,17 @@ typedef struct _udp_socket_queue_t {
 	unsigned short	port;
 } udp_socket_queue_t;
 
-typedef struct _udp_socket_t {
+typedef struct _udp_socket_t { //: base_socket_t
 	mutex_t		lock;
 	struct _ip_t	*ip;
 	struct _udp_socket_t *next;
 
+    unsigned char   *local_ip;
+    unsigned short  local_port;
 	unsigned char	peer_ip [4];
 	unsigned short	peer_port;
-	unsigned short	local_port;
 
 	struct _netif_t	*netif;
-	unsigned char	*local_ip;
 	unsigned char	*gateway;
 
 	/* queue of received packets */

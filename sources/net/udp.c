@@ -35,7 +35,7 @@ udp_queue_get (udp_socket_t *q, unsigned char *paddr,
 	head = q->head;
 	p = head->buf;
 	if (paddr)
-		memcpy (paddr, head->addr, 4);
+	    ipadr_assign_ucs(paddr, head->addr);
 	if (pport)
 		*pport = head->port;
 
@@ -104,7 +104,7 @@ udp_queue_put (udp_socket_t *q, buf_t *p,
 	/* Put the packet in. */
 	tail->buf = p;
 	tail->port = port;
-	memcpy (tail->addr, addr, 4);
+	ipadr_assign_ucs(tail->addr, addr);
 	++q->count;
 	/*debug_printf ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/
 }
@@ -165,8 +165,7 @@ drop:
 			continue;
 
 		/* Compare peer IP address (or broadcast). */
-		if (memcmp (s->peer_ip, IP_ADDR(0), 4) != 0 &&
-		     memcmp (s->peer_ip, iph->src, 4) != 0)
+		if (ipadr_not0_ucs(s->peer_ip) && ipadr_is_same_ucs(s->peer_ip, iph->src))
 			continue;
 
 		/* Put packet to socket. */
@@ -293,7 +292,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 {
 	/* To send packets using UDP socket, it must
 	 * have nonzero remote IP address and port number. */
-	if (! s->peer_port || memcmp (s->peer_ip, IP_ADDR(0), 4) == 0) {
+	if (! s->peer_port || !ipadr_not0_ucs(s->peer_ip) ) {
 		return 0;
 	}
 
@@ -371,7 +370,7 @@ udp_connect (udp_socket_t *s, unsigned char *ipaddr, unsigned short port)
 	mutex_lock (&s->lock);
 	s->peer_port = port;
 	if (ipaddr) {
-		memcpy (s->peer_ip, ipaddr, 4);
+		ipadr_assign_ucs(s->peer_ip, ipaddr);
 
 		/* Find the outgoing network interface. */
 		s->netif = route_lookup (s->ip, ipaddr, &s->gateway,

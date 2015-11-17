@@ -58,7 +58,7 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 	mutex_lock (&ip->lock);
 
 	s = tcp_alloc (ip);
-	memcpy (s->remote_ip, ipaddr, 4);
+	ipadr_assign_ucs(s->remote_ip, ipaddr);
 	s->remote_port = port;
 	if (s->local_port == 0) {
 		s->local_port = tcp_new_port (ip);
@@ -257,9 +257,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	/* Check if the address already is in use. */
 	for (cs = ip->tcp_listen_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if (memcmp (cs->local_ip, IP_ADDR(0), 4) == 0 ||
-			    memcmp (ipaddr, IP_ADDR(0), 4) == 0 ||
-			    memcmp (cs->local_ip, ipaddr, 4) == 0) {
+			if ( ipadr_is_same_ucs(cs->local_ip, ipaddr) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -268,9 +266,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	}
 	for (cs = ip->tcp_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if (memcmp (cs->local_ip, IP_ADDR(0), 4) == 0 ||
-			    memcmp (ipaddr, IP_ADDR(0), 4) == 0 ||
-			    memcmp (cs->local_ip, ipaddr, 4) == 0) {
+			if (ipadr_is_same_ucs(cs->local_ip, ipaddr) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -278,8 +274,8 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 		}
 	}
 
-	if (memcmp (ipaddr, IP_ADDR(0), 4) != 0) {
-		memcpy (s->local_ip, ipaddr, 4);
+	if ( ipadr_not0_ucs(ipaddr) ) {
+		ipadr_assign_ucs(s->local_ip, ipaddr);
 	}
 	s->local_port = port;
 	s->state = LISTEN;
@@ -330,9 +326,9 @@ again:
 	iph = ((ip_hdr_t*) p->payload) - 1;
 
 	/* Set up the new PCB. */
-	memcpy (ns->local_ip, iph->dest, 4);
+	ipadr_assign_ucs(ns->local_ip, iph->dest);
 	ns->local_port = s->local_port;
-	memcpy (ns->remote_ip, iph->src, 4);
+	ipadr_assign_ucs(ns->remote_ip, iph->src);
 	ns->remote_port = h->src;
 	ns->state = SYN_RCVD;
 	ns->rcv_nxt = s->ip->tcp_input_seqno + 1;
@@ -447,8 +443,8 @@ tcp_abort (tcp_socket_t *s)
 	}
 	seqno = s->snd_nxt;
 	ackno = s->rcv_nxt;
-	memcpy (local_ip, s->local_ip, 4);
-	memcpy (remote_ip, s->remote_ip, 4);
+	ipadr_assign_ucs(local_ip, s->local_ip);
+	ipadr_assign_ucs(remote_ip, s->remote_ip);
 	local_port = s->local_port;
 	remote_port = s->remote_port;
 	tcp_queue_free (s);

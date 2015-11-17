@@ -1,6 +1,14 @@
 #ifndef __IP_H_
 #define __IP_H_ 1
 
+//need types.h
+#include <runtime/arch.h>
+#include <runtime/sys/uosc.h>
+#include <kernel/uos.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -8,25 +16,166 @@ extern "C" {
 
 
 #ifndef IP_STACKSZ
-#   if __AVR__
+#   ifdef __AVR__
 #      define IP_STACKSZ	0x400
 #   endif
-#   if MSP430
+#   ifdef MSP430
 #      define IP_STACKSZ	500
 #   endif
-#   if I386
+#   ifdef I386
 #      define IP_STACKSZ	0x800
 #   endif
-#   if MIPS32
+#   ifdef MIPS32
 #      define IP_STACKSZ	1500
 #   endif
-#   if LINUX386
+#   ifdef LINUX386
 #      define IP_STACKSZ	4000
 #   endif
 #   if defined (__arm__) || defined (__thumb__)
 #      define IP_STACKSZ	0x600
 #   endif
 #endif
+
+
+
+struct _ip_t;
+
+typedef uint32_t ip_addr_t;
+typedef union _ip_addr{
+    ip_addr_t       val;
+    char            cs[4];
+    unsigned char   ucs[4];
+} ip_addr;
+
+//ip adress in network byte-order
+typedef ip_addr ip_naddr;
+
+INLINE __CONST 
+ip_addr ipadr_4l(uint32_t x) __THROW 
+{
+    ip_addr res;
+    res.val = x;
+    return res;
+}
+
+INLINE __CONST 
+ip_addr ipadr_4ucs(const unsigned char* x) __THROW 
+{
+    ip_addr res;
+    res.val = *((ip_addr_t*)x);
+    return res;
+}
+
+INLINE ip_addr ipadr_assign(        ip_addr* __restrict__ dst
+                            , const ip_addr* __restrict__ src
+                            ) __THROW
+{
+    dst->val = src->val;
+    return *src;
+}
+
+INLINE ip_addr ipadr_assign_ucs(        unsigned char* __restrict__ dst
+                                , const unsigned char* __restrict__ src
+                                ) __THROW
+{
+    ((ip_addr*)dst)->val = ((ip_addr*)src)->val;
+    return *((ip_addr*)src);
+}
+
+//!!! ip==0 - дает всегда true в сравнении
+INLINE 
+bool_t __CONST ipadr_is_same(     const ip_addr a_or0
+                                , const ip_addr b
+                                ) __THROW
+{
+        if (a_or0.val != 0)
+        if (b.val != 0)
+            return (a_or0.val == b.val);
+        return true;
+}
+
+INLINE 
+bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a_or0
+                        , const unsigned char* __restrict__ b
+                        ) __THROW
+{
+    const ip_addr* __restrict__ ipa = (const ip_addr*) a_or0;
+    const ip_addr* __restrict__ ipb = (const ip_addr*) b;
+    return ipadr_is_same(*ipa, *ipb);
+}
+
+// тоже самое, но false eсли  a==NULL
+INLINE 
+bool_t ipadr_or0_is_same( const ip_addr* __restrict__ a_or0
+                        , const ip_addr* __restrict__ b
+                        ) __THROW
+{
+    if (a_or0 != NULL)
+        return ipadr_is_same(*a_or0, *b);
+    else
+        return false;
+}
+
+INLINE 
+bool_t ipadr_or0_is_same_ucs( const unsigned char* __restrict__ a_or0
+                            , const unsigned char* __restrict__ b
+                            ) __THROW
+{
+    if (a_or0 != NULL)
+        return ipadr_is_same_ucs(a_or0, b);
+    else
+        return false;
+}
+
+// тоже самое, но true eсли  a==NULL
+INLINE 
+bool_t ipadr_is_same_or0( const ip_addr* __restrict__ a_or0
+                        , const ip_addr* __restrict__ b
+                        ) __THROW 
+{
+    if (a_or0 != NULL)
+        return ipadr_is_same(*a_or0, *b);
+    else
+        return true;
+}
+
+INLINE 
+bool_t ipadr_is_same_or0_ucs( const unsigned char* __restrict__ a_or0
+                            , const unsigned char* __restrict__ b
+                            ) __THROW
+{
+    if (a_or0 != NULL)
+        return ipadr_is_same_ucs(a_or0, b);
+    else
+        return true;
+}
+
+INLINE  
+bool_t __CONST ipadr_not0(const ip_addr a) __THROW
+{
+        return (a.val != 0)? true : false;
+}
+
+INLINE  
+bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
+{
+        return (((ip_addr*)a)->val != 0)? true : false;
+}
+
+/** надо стараться придерживаться этого шаблона сокета, для создания протокольных сокетов
+ * */
+typedef struct _base_socket_t {
+    mutex_t     lock;
+    struct _ip_t          *ip;
+    struct _base_socket_t *next;
+
+    ip_addr*        local_ip;
+    unsigned short  local_port;
+    ip_addr         peer_ip;
+    unsigned short  peer_port;
+} base_socket_t;
+
+
 
 typedef struct _ip_t {
 	mutex_t		lock;

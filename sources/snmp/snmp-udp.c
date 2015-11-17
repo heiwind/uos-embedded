@@ -42,8 +42,8 @@ find_socket (ip_t *ip, unsigned long addr, unsigned port)
 	udp_socket_t *s;
 
 	for (s=ip->udp_sockets; s; s=s->next)
-		if (s->local_port == port && (! s->local_ip ||
-		    memcmp (s->local_ip, &addr, 4) == 0))
+		if (s->local_port == port)
+		if ( ipadr_is_same_or0_ucs(s->local_ip, (unsigned char*)&addr) )
 			return 1;
 	return 0;
 }

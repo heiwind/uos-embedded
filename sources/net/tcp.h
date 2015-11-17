@@ -140,13 +140,16 @@ typedef struct _tcp_segment_t tcp_segment_t;
 /*
  * The TCP protocol control block
  */
-struct _tcp_socket_t {
+struct _tcp_socket_t {//: base_socket_t
 	mutex_t lock;
 	struct _ip_t *ip;
 	struct _tcp_socket_t *next;	/* for the linked list */
 
 	unsigned char local_ip [4];
 	unsigned short local_port;
+	//remote_ip for ordinary sockets only, LISTEN socket not demand it
+    unsigned char remote_ip [4];
+    unsigned short remote_port;
 
 	tcp_state_t state;		/* TCP state */
 
@@ -160,8 +163,6 @@ struct _tcp_socket_t {
 	 * Only above data are valid for sockets in LISTEN state.
 	 * All the following data are for ordinary sockets only.
 	 */
-	unsigned char remote_ip [4];
-	unsigned short remote_port;
 
 	/* receiver varables */
 	unsigned long rcv_nxt;		/* next seqno expected */
