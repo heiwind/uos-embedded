@@ -7,11 +7,16 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
+#include <posix-port.h>
+#if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
+#include <timer/etimer_threads.h>
+#include <errno.h>
+#endif
 
-#define pthread_t				task_t*
+typedef task_t* pthread_t;
 #define pthread_self()				task_current
 
-#define pthread_mutex_t				mutex_t
+typedef mutex_t pthread_mutex_t;
 
 #define pthread_mutex_lock(lock)		({ mutex_lock (lock); 0; })
 #define pthread_mutex_trylock(lock)		( mutex_trylock (lock) > 0 ? 0 : -1 )
@@ -29,7 +34,7 @@ static inline int pthread_mutex_destroy (pthread_mutex_t *mutex)
 /* TODO - no recursive mutexs in uOS. */
 #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP	{ 0 }
 
-#define pthread_key_t				int
+typedef int pthread_key_t;
 #define pthread_key_create(kp,x)		{ *kp = 0; }
 #define pthread_getspecific(key)		task_current->privatep
 #define pthread_setspecific(key,val)		task_set_private (task_current, val)
@@ -62,7 +67,7 @@ static inline int pthread_mutex_destroy (pthread_mutex_t *mutex)
 #define sched_yield()				task_yield()
 #define setpriority(a,b,c)			/* empty */
 
-#define pthread_cond_t				mutex_t*
+typedef mutex_t*    pthread_cond_t;
 
 #define pthread_cond_init(cond,x)		{ *cond = 0; }
 
@@ -76,10 +81,24 @@ static inline int pthread_mutex_destroy (pthread_mutex_t *mutex)
 
 #define pthread_cond_destroy(cond)		{ *cond = 0; }
 
-/* TODO - return ETIMEDOUT on timeout */
+#if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
+INLINE 
+int pthread_cond_timedwait(pthread_cond_t* __restrict__ cond
+                          , pthread_mutex_t* __restrict__ lock
+                          , unsigned timo
+                          )
+{
+    *cond = lock;
+    if (mutex_etimedwait (lock, timo))
+        return 0;
+    else
+        return ETIMEDOUT;
+}
+#else
 #define pthread_cond_timedwait(cond,lock,timo)	({ \
 	*cond = lock;				  \
 	mutex_wait (lock);			  \
 	0;					})
+#endif //UOS_USLEEP_STYLE
 
 #endif
