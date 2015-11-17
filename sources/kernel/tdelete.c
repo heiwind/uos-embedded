@@ -24,7 +24,11 @@
 void
 task_delete (task_t *t, void *message)
 {
-	arch_state_t x;
+#ifdef UOS_ON_DESTROY_TASK
+    UOS_ON_DESTROY_TASK(t, message);
+#endif
+
+    arch_state_t x;
 
 	arch_intr_disable (&x);
 
