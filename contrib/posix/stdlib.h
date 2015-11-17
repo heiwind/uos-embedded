@@ -21,6 +21,32 @@ extern mem_pool_t *uos_memory;
 #define free(ptr)		mem_free (ptr)
 #define strdup(str)		mem_strdup (uos_memory, str)
 
+/* Allocate SIZE bytes on a page boundary.  The storage cannot be freed.  */
+INLINE __attribute__((warning("uos can`t aligned memory alloc!!!")))
+void *valloc (size_t __size)  __THROW
+{
+    return mem_alloc (uos_memory, __size);
+}
+
+/* Allocate memory of SIZE bytes with an alignment of ALIGNMENT.  */
+INLINE __attribute__((warning("uos can`t aligned memory alloc!!!")))
+int posix_memalign (void **__memptr, size_t __alignment, size_t __size) __THROW
+{
+    void* res = mem_alloc (uos_memory, __size);
+    if ( res != NULL){
+        *__memptr = res;
+        return 0;
+    }
+    return -1;
+}
+
+/* ISO C variant of aligned allocation.  */
+INLINE __attribute__((warning("uos can`t aligned memory alloc!!!")))
+void *aligned_alloc (size_t __alignment, size_t __size) __THROW
+{
+    return mem_alloc (uos_memory, __size);
+}
+
 static inline int atexit (void (*function)(void))
 	{ return 0; }
 
