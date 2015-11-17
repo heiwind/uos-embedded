@@ -12,6 +12,16 @@ extern "C" {
 
 //#define __UOS_STDIO__ __UOS_STDIO_IS_???
 
+//#define POSIX_timer uos_timer
+
+//INLINE unixtime32_t time(unixtime32_t* t) __THROW ???
+//#define UOS_HAVE_UNIXTIME
+
+//#define TASK_PRIORITY_MAX 100
+//#define TASK_PRIORITY_MIN 0
+
+//#define _SC_PAGE_SIZE
+
 #ifdef __cplusplus
 }
 #endif

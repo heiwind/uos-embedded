@@ -92,6 +92,17 @@ static inline char *getwd (char *buf)
 	return buf;
 }
 
+
+#define sysconf(x) x
+
+#ifdef _SC_PAGE_SIZE
+INLINE __CONST int getpagesize(void) {
+    return sysconf(_SC_PAGE_SIZE);
+}
+
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif
