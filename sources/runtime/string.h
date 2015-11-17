@@ -21,7 +21,8 @@
  * "COPY-UOS.txt" for details.
  */
 
-#include "types.h"
+// need types.h
+#include "arch.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,6 +99,10 @@ strnlen (const unsigned char *string, size_t maxlen);
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+#include <runtime/c++/string.hpp>
 #endif
 
 #endif  // UOS_STRINGS_H

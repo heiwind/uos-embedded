@@ -26,7 +26,7 @@
 #elif defined (MIPS32)
 #	include <stdarg.h>
 #	include <runtime/mips/types.h>
-#	include <runtime/mips/string.h>
+#	include <runtime/string.h>
 #	include <runtime/mips/stdlib.h>
 #	include <runtime/mips/io.h>
 #	include <runtime/ctype.h>
