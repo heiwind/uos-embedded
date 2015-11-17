@@ -8,7 +8,7 @@
 
 #undef ARP_TRACE
 
-static const char BROADCAST[6] = "\377\377\377\377\377\377";
+static const char BROADCAST[6] = {'\xff','\xff','\xff','\xff','\xff','\xff'};
 
 /*
  * Initialize the ARP data strucure.

@@ -165,10 +165,10 @@ regexec2(regexp_t *progp,	/* program to run */
 	regexp_list_t *relist0, *relist1;
 
 	/* mark space */
-	relist0 = malloc(BIGLISTSIZE*sizeof(regexp_list_t));
+	relist0 = (regexp_list_t *)malloc(BIGLISTSIZE*sizeof(regexp_list_t));
 	if(! relist0)
 		return -1;
-	relist1 = malloc(BIGLISTSIZE*sizeof(regexp_list_t));
+	relist1 = (regexp_list_t *)malloc(BIGLISTSIZE*sizeof(regexp_list_t));
 	if(! relist1){
 		free(relist1);
 		return -1;

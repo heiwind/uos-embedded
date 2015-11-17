@@ -18,9 +18,23 @@
  */
 #include <runtime/lib.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void _etext();
 extern unsigned __data_start, _edata, _end, _estack[];
 extern int main ();
+
+void _init_ (void);
+void _irq_handler_ ();
+void _exception_handler_ (unsigned int context[]);
+void _pagefault_handler_ (unsigned int context[]);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * Initialize the system configuration, cache, intermal SRAM,

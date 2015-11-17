@@ -120,7 +120,7 @@ static unsigned char prec_table [] = {
 /*
  * Mapping from operator numbers to strings;  used for error messages.
  */
-static char *operator_strings[] = {
+static const char *operator_strings[] = {
 	"VALUE", "(", ")", "END", "UNKNOWN", "5", "6", "7",
 	"*", "/", "%", "+", "-", "<<", ">>", "<", ">", "<=",
 	">=", "==", "!=", "&", "^", "|", "&&", "||", "?", ":",
@@ -461,8 +461,7 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
     Interp *iPtr = (Interp *) interp;
     Value_t value2;			/* Second operand for current
 					 * operator.  */
-    int operator;			/* Current operator (either unary
-					 * or binary). */
+    int _operator;			/* Current operator (either unary or binary). */
     int badType;			/* Type of offending argument;  used
 					 * for error messages. */
     int gotOp;				/* Non-zero means already lexed the
@@ -513,13 +512,13 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 	     * Process unary operators.
 	     */
 
-	    operator = infoPtr->token;
+	    _operator = infoPtr->token;
 	    result = get_value(interp, infoPtr, prec_table[infoPtr->token],
 		    valuePtr);
 	    if (result != TCL_OK) {
 		goto done;
 	    }
-	    switch (operator) {
+	    switch (_operator) {
 		case UNARY_MINUS:
 		    if (valuePtr->type == TYPE_INT) {
 			valuePtr->int_value = -valuePtr->int_value;
@@ -562,17 +561,17 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 	}
     }
     while (1) {
-	operator = infoPtr->token;
+	_operator = infoPtr->token;
 	value2.pv.next = value2.pv.buffer;
-	if ((operator < MULT) || (operator >= UNARY_MINUS)) {
-	    if ((operator == END) || (operator == CLOSE_PAREN)) {
+	if ((_operator < MULT) || (_operator >= UNARY_MINUS)) {
+	    if ((_operator == END) || (_operator == CLOSE_PAREN)) {
 		result = TCL_OK;
 		goto done;
 	    } else {
 		goto syntaxError;
 	    }
 	}
-	if (prec_table[operator] <= prec) {
+	if (prec_table[_operator] <= prec) {
 	    result = TCL_OK;
 	    goto done;
 	}
@@ -583,21 +582,21 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 	 * second operand:  just parse.  Same style for ?: pairs.
 	 */
 
-	if ((operator == AND) || (operator == OR) || (operator == QUESTY)) {
+	if ((_operator == AND) || (_operator == OR) || (_operator == QUESTY)) {
 	    if (valuePtr->type == TYPE_STRING) {
 		badType = TYPE_STRING;
 		goto illegalType;
 	    }
-	    if (((operator == AND) && !valuePtr->int_value)
-		    || ((operator == OR) && valuePtr->int_value)) {
+	    if (((_operator == AND) && !valuePtr->int_value)
+		    || ((_operator == OR) && valuePtr->int_value)) {
 		iPtr->noEval++;
-		result = get_value(interp, infoPtr, prec_table[operator],
+		result = get_value(interp, infoPtr, prec_table[_operator],
 			&value2);
 		iPtr->noEval--;
-	    } else if (operator == QUESTY) {
+	    } else if (_operator == QUESTY) {
 		if (valuePtr->int_value != 0) {
 		    valuePtr->pv.next = valuePtr->pv.buffer;
-		    result = get_value(interp, infoPtr, prec_table[operator],
+		    result = get_value(interp, infoPtr, prec_table[_operator],
 			    valuePtr);
 		    if (result != TCL_OK) {
 			goto done;
@@ -607,12 +606,12 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 		    }
 		    value2.pv.next = value2.pv.buffer;
 		    iPtr->noEval++;
-		    result = get_value(interp, infoPtr, prec_table[operator],
+		    result = get_value(interp, infoPtr, prec_table[_operator],
 			    &value2);
 		    iPtr->noEval--;
 		} else {
 		    iPtr->noEval++;
-		    result = get_value(interp, infoPtr, prec_table[operator],
+		    result = get_value(interp, infoPtr, prec_table[_operator],
 			    &value2);
 		    iPtr->noEval--;
 		    if (result != TCL_OK) {
@@ -622,15 +621,15 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 			goto syntaxError;
 		    }
 		    valuePtr->pv.next = valuePtr->pv.buffer;
-		    result = get_value(interp, infoPtr, prec_table[operator],
+		    result = get_value(interp, infoPtr, prec_table[_operator],
 			    valuePtr);
 		}
 	    } else {
-		result = get_value(interp, infoPtr, prec_table[operator],
+		result = get_value(interp, infoPtr, prec_table[_operator],
 			&value2);
 	    }
 	} else {
-	    result = get_value(interp, infoPtr, prec_table[operator],
+	    result = get_value(interp, infoPtr, prec_table[_operator],
 		    &value2);
 	}
 	if (result != TCL_OK) {
@@ -649,7 +648,7 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 	 * if necessary.
 	 */
 
-	switch (operator) {
+	switch (_operator) {
 
 	    /*
 	     * For the operators below, no strings are allowed and
@@ -737,7 +736,7 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 	 * error.
 	 */
 
-	switch (operator) {
+	switch (_operator) {
 	    case MULT:
 		if (valuePtr->type == TYPE_INT) {
 		    valuePtr->int_value *= value2.int_value;
@@ -886,7 +885,7 @@ get_value (Tcl_Interp *interp,	/* Interpreter to use for error reporting. */
 
     illegalType:
     Tcl_AppendResult(interp, "can't use non-numeric string as operand of \"",
-            operator_strings[operator], "\"", 0);
+            operator_strings[_operator], "\"", 0);
     result = TCL_ERROR;
     goto done;
 }

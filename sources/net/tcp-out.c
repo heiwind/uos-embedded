@@ -71,7 +71,7 @@ tcp_enqueue (tcp_socket_t *s, void *arg, unsigned short len,
 		seglen = left > s->mss ? s->mss : left;
 
 		/* Allocate memory for tcp_segment, and fill in fields. */
-		seg = mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
+		seg = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
 		if (seg == 0) {
 			tcp_debug ("tcp_enqueue: cannot allocate tcp_segment\n");
 			goto memerr;

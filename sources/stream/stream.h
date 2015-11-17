@@ -1,6 +1,9 @@
 #ifndef __STREAM_H_
 #define __STREAM_H_ 1
- 
+
+// requested mutex_t
+#include <kernel/uos.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

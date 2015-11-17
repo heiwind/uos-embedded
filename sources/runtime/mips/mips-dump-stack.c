@@ -32,8 +32,8 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 	char c;
 	bool_t callee_seen;
 
-	from = sp;
-	to = frame;
+	from = (unsigned int *)sp;
+	to = (unsigned int *)frame;
 	if (! uos_valid_memory_address (to) && uos_valid_memory_address (from))
 		to = from;
 	if (uos_valid_memory_address (to) && ! uos_valid_memory_address (from))

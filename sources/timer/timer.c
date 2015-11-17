@@ -168,7 +168,7 @@ interval_greater_or_equal (long interval, long msec)
 #ifndef TIMER_NO_DAYS
     if (interval < 0)
         interval += TIMER_MSEC_PER_DAY;
-    else if (interval >= TIMER_MSEC_PER_DAY)
+    else if (interval >= (long)TIMER_MSEC_PER_DAY)
         interval -= TIMER_MSEC_PER_DAY;
     return (interval >= msec);
 #else
@@ -810,7 +810,7 @@ void user_timer_stop (user_timer_t *ut){
  * */
 void user_timer_restart (user_timer_t *ut){
 #ifdef USEC_TIMER
-    while (ut->cur_time != ut->usec_per_tick)
+    while (ut->cur_time != (long)ut->usec_per_tick)
         ut->cur_time = ut->usec_per_tick;
 #else
     while (ut->cur_time != ut->msec_per_tick)

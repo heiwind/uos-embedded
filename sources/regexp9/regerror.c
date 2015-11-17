@@ -4,7 +4,7 @@
 #include "regexp9.h"
 
 void
-regexp_error(char *s)
+regexp_error(const char *s)
 {
 	char buf[132];
 

@@ -38,13 +38,13 @@ bool_t task_need_schedule;
 CODE_ISR 
 void task_schedule ()
 {
-	task_t *new;
+	task_t *new_task;
 
 	task_need_schedule = 0;
-	new = task_policy ();
-	if (new != task_current) {
-		new->ticks++;
-		arch_task_switch (new);
+	new_task = task_policy ();
+	if (new_task != task_current) {
+		new_task->ticks++;
+		arch_task_switch (new_task);
 	}
 }
 

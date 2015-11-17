@@ -287,7 +287,7 @@ const_string:
 			base = 10;
 			if (lflag) {
 				ul = va_arg (ap, unsigned long);
-				if (ul == -1) {
+				if (ul == (unsigned long)-1) {
 cnt_unknown:				if (ladjust)
 						PUTC ('-');
 					while (--width > 0)
@@ -296,7 +296,7 @@ cnt_unknown:				if (ladjust)
 						PUTC ('-');
 					break;
 				}
-				if (ul >= -2) {
+				if (ul >= (unsigned long)-2) {
 					ul = -3;
 					neg = '>';
 					goto nosign;

@@ -413,7 +413,7 @@ void mem_init (mem_pool_t *m, size_t start, size_t stop)
 	h->magic = MEMORY_HOLE_MAGIC;
 #endif
 	mutex_lock (&m->lock);
-	NEXT(h) = m->free_list;
+	NEXT(h) = (mheader_t *)(m->free_list);
 	m->free_list = h;
 	m->free_size += h->size;
 	mutex_unlock (&m->lock);

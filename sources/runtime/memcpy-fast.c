@@ -52,11 +52,11 @@ QUICKREF
 void *
 memcpy(void *dst0, const void *src0, size_t len0)
 {
-  unsigned char *dst = dst0;
-  const unsigned char *src = src0;
+  unsigned char *dst = (unsigned char *)dst0;
+  const unsigned char *src = (unsigned char *)src0;
   long *aligned_dst;
   const long *aligned_src;
-  int   len =  len0;
+  size_t   len =  len0;
 
   /* If the size is small, or either SRC or DST is unaligned,
      then punt into the byte copy loop.  This should be rare.  */

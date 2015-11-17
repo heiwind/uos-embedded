@@ -31,7 +31,7 @@ const unsigned char *
 strmatch (const unsigned char *string, const unsigned char *pattern)
 {
 	const unsigned char *p = pattern, *n = string;
-	unsigned char c, c1, cstart, cend, not;
+	unsigned char c, c1, cstart, cend, is_not;
 
 	while ((c = *p++) != '\0') {
 		switch (c) {
@@ -61,8 +61,8 @@ strmatch (const unsigned char *string, const unsigned char *pattern)
 
 			/* `Not' is nonzero if the sense of the character
 			 * class is inverted.  */
-			not = (*p == '!' || *p == '^');
-			if (not)
+			is_not = (*p == '!' || *p == '^');
+			if (is_not)
 				++p;
 
 			c = *p++;
@@ -87,7 +87,7 @@ strmatch (const unsigned char *string, const unsigned char *pattern)
 				if (c == ']')
 					break;
 			}
-			if (! not)
+			if (! is_not)
 				return 0;
 			break;
 
@@ -99,7 +99,7 @@ matched:		/* Skip the rest of the [...] that already matched. */
 
 				c = *p++;
 			}
-			if (not)
+			if (is_not)
 				return 0;
 			break;
 

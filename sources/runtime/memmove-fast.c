@@ -54,11 +54,11 @@ QUICKREF
 void *
 memmove(void *dst_void, const void *src_void, size_t length)
 {
-  unsigned char *dst = dst_void;
-  const unsigned char *src = src_void;
+  unsigned char *dst = (unsigned char *)dst_void;
+  const unsigned char *src = (const unsigned char *)src_void;
   long *aligned_dst;
   const long *aligned_src;
-  int   len =  length;
+  size_t   len =  length;
 
   if (src < dst && dst < src + len)
     {

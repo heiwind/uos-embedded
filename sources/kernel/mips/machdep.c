@@ -89,7 +89,7 @@ _arch_task_switch_ ()
 "switch_task:");
 
 #ifdef ARCH_HAVE_FPU
-	if (task_current->fpu_state != ~0) {
+	if (task_current->fpu_state != (arch_fpu_t)~0) {
 		/* Save FPU state. */
 		task_current->fpu_state = mips_read_fpu_control (C1_FCSR);
 
@@ -121,7 +121,7 @@ _arch_task_switch_ ()
 	mips_set_stack_pointer (task_current->stack_context);
 
 #ifdef ARCH_HAVE_FPU
-	if (task_current->fpu_state != ~0) {
+	if (task_current->fpu_state != (arch_fpu_t)~0) {
 		/* Restore FPU state. */
 		asm volatile ("ldc1	$0, %0 ($sp)" : : "i" (0 * 4 + MIPS_FSPACE));
 		asm volatile ("ldc1	$2, %0 ($sp)" : : "i" (2 * 4 + MIPS_FSPACE));
@@ -921,7 +921,7 @@ arch_fpu_control (task_t *t, unsigned int mode, unsigned int mask)
 
 	if (mask != 0) {
 		/* Change FPU state. */
-		if (t != task_current && old == ~0) {
+		if (t != task_current && old == (arch_fpu_t)~0) {
 			debug_printf ("task_fpu_control: enabling FPU is allowed only for current task\n");
 			uos_halt (1);
 		}

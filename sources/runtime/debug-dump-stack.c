@@ -15,14 +15,15 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 	char c;
 	bool_t flag;
 
-	to = frame; from = sp;
+	to = (unsigned char *)frame; 
+	from = (unsigned char *)sp;
 	if (! uos_valid_memory_address (to) && uos_valid_memory_address (from))
 		to = from;
 	if (uos_valid_memory_address (to) && ! uos_valid_memory_address (from))
 		from = to;
 
 	to -= 16 * sizeof (void*);
-	if ((from - to) > 128 * sizeof (void *))
+	if ((from - to) > (int)(128 * sizeof (void *)))
 		from = to + 128 * sizeof (void*);
 
 	from = (unsigned char*) ((size_t) from & ~(sizeof (void *) - 1));
@@ -34,7 +35,7 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 		from = p;
 	}
 
-	if ((from - to) < 64 * sizeof (void*))
+	if ( (from - to) < (int)(64 * sizeof (void*)) )
 		from = to + 64 * sizeof (void*);
 
 	debug_printf ("%S.stack {%p/%p..%p/%p, %p, %p}\n", caption,

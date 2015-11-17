@@ -175,7 +175,7 @@ uart_peekchar (uart_t *u)
 static void
 uart_receiver (void *arg)
 {
-	uart_t *u = arg;
+	uart_t *u = (uart_t *)arg;
 	unsigned char c = 0, *newlast;
 
 	/*
@@ -246,12 +246,22 @@ uart_receive_lock (uart_t *u)
 	return &u->receiver;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] = 
+#define item(i) .i =
+#endif
+
 static stream_interface_t uart_interface = {
-	.putc = (void (*) (stream_t*, short))		uart_putchar,
-	.getc = (unsigned short (*) (stream_t*))	uart_getchar,
-	.peekc = (int (*) (stream_t*))			uart_peekchar,
-	.flush = (void (*) (stream_t*))			uart_fflush,
-	.receiver = (mutex_t *(*) (stream_t*))		uart_receive_lock,
+	item(putc) (void (*) (stream_t*, short))		uart_putchar,
+	item(getc) (unsigned short (*) (stream_t*))	uart_getchar,
+	item(peekc) (int (*) (stream_t*))			uart_peekchar,
+	item(flush) (void (*) (stream_t*))			uart_fflush,
+	item(eof)   (bool_t (*) (stream_t*))        0,
+	item(close) (void (*) (stream_t*))          0,
+	item(receiver) (mutex_t *(*) (stream_t*))		uart_receive_lock,
 };
 
 void
