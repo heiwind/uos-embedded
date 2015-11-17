@@ -246,12 +246,18 @@ mutex_unlock (mutex_t *m)
 	m->master = 0;
 
 	/* On pending irq, we must call fast handler. */
-	if (m->irq && m->irq->pending) {
-		m->irq->pending = 0;
+	if (m->irq) {
+        mutex_irq_t *   irq = m->irq;
+        if (irq->pending) {
+            irq->pending = 0;
 
-		/* Unblock all tasks, waiting for irq. */
-		if ((m->irq->handler) (m->irq->arg) == 0)
-			mutex_activate (m, 0);
+            /* Unblock all tasks, waiting for irq. */
+            if ((irq->handler) (irq->arg) == 0)
+                mutex_activate (m, 0);
+
+        }
+        else if (irq->irq >= 0)
+            arch_intr_allow (irq->irq);
 	}
 
 	if (! list_is_empty (&m->slaves)) {

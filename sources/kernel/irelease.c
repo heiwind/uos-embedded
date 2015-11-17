@@ -53,15 +53,17 @@ mutex_unlock_irq (mutex_t *m)
 
 	/* On pending irq, we must call fast handler. */
 	if (m->irq) {
-		if (m->irq->pending) {
-			m->irq->pending = 0;
+	    mutex_irq_t* irq = m->irq;
+		if (irq->pending) {
+			irq->pending = 0;
 
 			/* Unblock all tasks, waiting for irq. */
-			if ((m->irq->handler) (m->irq->arg) == 0)
+			if ((irq->handler) (irq->arg) == 0)
 				mutex_activate (m, 0);
 		}
-		arch_intr_unbind (m->irq->irq);
-		m->irq->lock = 0;
+		if (irq->irq >= 0)
+		    arch_intr_unbind (irq->irq);
+		irq->lock = 0;
 		m->irq = 0;
 	}
 

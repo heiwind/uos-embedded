@@ -68,9 +68,10 @@ mutex_wait (mutex_t *m)
 
 	/* On pending irq, we must call fast handler. */
 	if (m->irq) {
-		if (m->irq->pending) {
-			m->irq->pending = 0;
-			if ((m->irq->handler) (m->irq->arg) == 0) {
+	    mutex_irq_t *   irq = m->irq;
+		if (irq->pending) {
+			irq->pending = 0;
+			if ((irq->handler) (irq->arg) == 0) {
 				/* Unblock all tasks, waiting for irq. */
 				mutex_activate (m, 0);
 				if (task_need_schedule)
@@ -79,7 +80,8 @@ mutex_wait (mutex_t *m)
 				return 0;
 			}
 		}
- 		arch_intr_allow (m->irq->irq);
+		else if (irq->irq >= 0)
+            arch_intr_allow (irq->irq);
 	}
 
 	task_current->wait = m;
