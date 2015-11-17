@@ -7,7 +7,10 @@
  * в соответствующий класс символов, в противном случае возвращается ноль.
  */
 
-#include "runtime/lib.h"
+// need fetches
+#include <runtime/sys/uosc.h>
+// need types
+#include <runtime/arch.h>
 
 #ifdef __cplusplus
 extern "C" {

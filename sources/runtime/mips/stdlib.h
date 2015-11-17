@@ -20,7 +20,7 @@
  */
 
 #ifndef INLINE
-#include <runtime/lib.h>
+#include <runtime/sys/uosc.h>
 #endif
 
 #include "types.h"
