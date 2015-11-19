@@ -204,7 +204,8 @@ arp_input (netif_t *netif, buf_t *p)
 			/* ARP request. If it asked for our address,
 			 * we send out a reply. */
 			ipaddr = route_lookup_ipaddr (netif->arp->ip,
-				ah->src_ipaddr, netif);
+				ah->dst_ipaddr, netif);
+
 			if (! ipaddr || memcmp (ipaddr, ah->dst_ipaddr, 4) != 0) {
 				buf_free (p);
 				return 0;
