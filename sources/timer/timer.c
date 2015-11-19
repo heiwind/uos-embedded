@@ -315,10 +315,19 @@ void timer_update (timer_t *t)
 /*
  * Timer interrupt handler.
  */
+#ifndef UOS_ON_TIMER
+#define UOS_ON_TIMER(t)
+#else
+__attribute__((weak, noinline))
+void uos_on_timer_hook(timer_t *t)
+{}
+#endif
+
 CODE_ISR 
 bool_t 
 timer_handler (timer_t *t)
 {
+    UOS_ON_TIMER(t);
     timer_update (t);
 
     arch_intr_allow (TIMER_IRQ);

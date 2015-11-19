@@ -22,6 +22,15 @@
 
 
 
+#ifndef UOS_ON_SWITCH_TOTASK
+#define UOS_ON_SWITCH_TOTASK(t)
+#else
+__attribute__((weak, noinline)) 
+void uos_on_task_switch(task_t *t)
+{}
+#endif
+
+
 /*
  * Perform the task switch.
  * The call is performed via the assembler label,
@@ -112,6 +121,9 @@ _arch_task_switch_ ()
 		asm volatile ("sdc1	$30, %0 ($sp)" : : "i" (30 * 4 + MIPS_FSPACE));
 	}
 #endif
+	
+    UOS_ON_SWITCH_TOTASK(target);
+
 	/* Save current task stack. */
 	task_current->stack_context = mips_get_stack_pointer ();
 

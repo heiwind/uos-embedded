@@ -88,14 +88,15 @@
  */
 //#define NDEBUG
 
-//#define MEM_DEBUG 0
+//#define MEM_DEBUG 1
 
 /**************************************************************************
  *                              Task Hooks
  ************************************************************************** */
 //#define UOS_ON_NEW_TASK(t)
 //#define UOS_ON_DESTROY_TASK(t, message)
-
+//#define UOS_ON_SWITCH_TOTASK(t) uos_on_task_switch(t)
+//#define UOS_ON_TIMER(t)         uos_on_timer_hook(t)
 
 
 /**\~russian
