@@ -67,6 +67,8 @@ extern "C" {
  * | slaves --> M -> M -> M...
  * ---------- <-/----/----/
  */
+#define UOS_STACK_ALIGN     sizeof(void*)
+
 struct _task_t {
 	list_t		item;		/* double linked list pointers */
 	mutex_t *	lock;		/* lock, blocking the task */
@@ -83,8 +85,8 @@ struct _task_t {
 #ifdef ARCH_HAVE_FPU
 	arch_fpu_t	fpu_state;	/* per-task state of FP coprocessor */
 #endif
-	unsigned char	stack [1]	/* stack area is placed here */
-		__attribute__((aligned(sizeof(void*))));
+	unsigned char stack [1]	/* stack area is placed here */
+		__attribute__((aligned(UOS_STACK_ALIGN)));
 };
 
 /* The table of interrupt handlers. */

@@ -861,8 +861,10 @@ arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg,
 	//extern void _gp;
 	extern unsigned char _gp;
 
-	if ((unsigned) sp & 4)
-		*--sp = 0;		/* align of double word boundary */
+    /* align of double word boundary */
+	const unsigned UOS_DOUBLE_ALIGN = sizeof(double);
+	sp = (unsigned*)((unsigned) sp & ~(UOS_DOUBLE_ALIGN-1));
+
 	*--sp = 0;			/* 16 bytes of frame space: arg4 */
 	*--sp = 0;			/* arg3 */
 	*--sp = 0;			/* arg2 */

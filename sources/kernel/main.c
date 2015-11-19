@@ -27,9 +27,9 @@ mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 #define IDLE_TASK_STACKSZ   256
 #endif
 
-#define ALIGNED_IDLE_TASK_STACKSZ ((IDLE_TASK_STACKSZ + sizeof(void *) - 1) & ~(sizeof(void *) - 1))
+#define ALIGNED_IDLE_TASK_STACKSZ ((IDLE_TASK_STACKSZ + UOS_STACK_ALIGN - 1) & ~(UOS_STACK_ALIGN - 1))
 
-static ARRAY (task_idle_data, sizeof(task_t) + ALIGNED_IDLE_TASK_STACKSZ - sizeof(void *));
+static ARRAY (task_idle_data, sizeof(task_t) + ALIGNED_IDLE_TASK_STACKSZ - UOS_STACK_ALIGN);
 bool_t task_need_schedule;
 
 /*
@@ -111,7 +111,9 @@ main (void)
 	assert (STACK_GUARD (task_idle));
 	
 	/* Move stack pointer to task_idle stack area */
-	set_stack_pointer (&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
+    unsigned sp = (unsigned)(&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
+    /* stack pointer should align to doubles */
+    set_stack_pointer ((void *)( sp & ~(sizeof(double)-1) ));
 
 	task_idle->name = "idle";
 	list_init (&task_idle->item);
