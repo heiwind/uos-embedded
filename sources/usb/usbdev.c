@@ -35,7 +35,9 @@ static void set_configuration (usbdev_t *u, int conf_num)
                 u->ep_in[ep].interval = pep->bInterval;
                 u->ep_in[ep].state = EP_STATE_NACK;
             }
-            u->hal->ep_attr (ep, dir, pep->bmAttributes, pep->wMaxPacketSize, pep->bInterval);
+            u->hal->ep_attr (ep, dir, pep->bmAttributes, pep->wMaxPacketSize, pep->bInterval, u->hal_arg);
+			if ((dir == USBDEV_DIR_OUT) && u->ep_out[ep].specific_handler)
+				u->hal->ep_wait_out(ep, 0, u->hal_arg);
             pchar += sizeof (usb_ep_desc_t);
             pep = (usb_ep_desc_t *) pchar;
         }
@@ -58,7 +60,7 @@ static void do_in (usbdev_t *u, unsigned ep)
                 epi->state = EP_STATE_WAIT_IN_LAST;
     }
     u->hal->ep_wait_in (ep, epi->pid, epi->ptr, in_sz,
-        epi->state == EP_STATE_WAIT_IN_ACK || epi->state == EP_STATE_WAIT_IN_LAST);
+        epi->state == EP_STATE_WAIT_IN_ACK || epi->state == EP_STATE_WAIT_IN_LAST, u->hal_arg);
     epi->ptr += in_sz;
     if (in_sz == 0) epi->rest_load = -1;
     else epi->rest_load -= in_sz;
@@ -83,14 +85,14 @@ static void start_in (usbdev_t *u, unsigned ep, int start_pid, const void *data,
     if (start_pid != 0)
         epi->pid = start_pid;
     while ((epi->state & EP_WAIT_IN_STATES) && epi->rest_load >= 0 && 
-        u->hal->in_avail (ep) > 0)
+        u->hal->in_avail (ep, u->hal_arg) > 0)
             do_in (u, ep);
 }
 
 static void set_address (usbdev_t *u, unsigned ep, int dir, void *tag)
 {
     unsigned addr = (unsigned) tag;
-    u->hal->set_addr (addr);
+    u->hal->set_addr (addr, u->hal_arg);
     usbdev_remove_ack_handler (u, ep, dir);
 }
 
@@ -133,14 +135,14 @@ static void process_std_req (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup)
             if (u->qualif_desc)
                 start_in (u, ep, PID_DATA1, u->qualif_desc, setup->wLength, u->qualif_desc->bLength);
             else
-                u->hal->ep_stall (ep, USBDEV_DIR_IN);
+                u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
             break;
         case USB_DESC_TYPE_CONFIG:
         {
             int conf_n = setup->wValue & 0xFF;
 //debug_printf ("USB_DESC_TYPE_CONFIG, wLength = %d, wValue = %X\n", setup->wLength, conf_n);
             if (conf_n >= USBDEV_NB_CONF) {
-                u->hal->ep_stall (ep, USBDEV_DIR_IN);
+                u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
             }
             usb_conf_desc_t *conf = u->conf_desc[conf_n];
             start_in (u, ep, PID_DATA1, conf, setup->wLength, conf->wTotalLength);
@@ -155,7 +157,7 @@ static void process_std_req (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup)
         }
         default:
 //debug_printf ("stall process_std_req default\n");
-            u->hal->ep_stall (ep, USBDEV_DIR_IN);
+            u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
             break;
         }
         break;
@@ -163,7 +165,7 @@ static void process_std_req (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup)
 //debug_printf ("USB_SR_GET_CONFIGURATION, wLength = %d\n", setup->wLength);
         if (setup->wLength != 1) {
             u->rx_bad_req++;
-            u->hal->ep_stall (ep, USBDEV_DIR_IN);
+            u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
         }
         else start_in (u, ep, PID_DATA1, &u->cur_conf, setup->wLength, 1);
         break;
@@ -171,7 +173,7 @@ static void process_std_req (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup)
 //debug_printf ("USB_SR_SET_CONFIGURATION, wValue = %X\n", setup->wValue);
         if (setup->wValue > USBDEV_NB_CONF) {
             u->rx_bad_req++;
-            u->hal->ep_stall (ep, USBDEV_DIR_IN);
+            u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
         } else {
             set_configuration (u, setup->wValue);
             start_in (u, ep, PID_DATA1, 0, 0, 0);
@@ -233,7 +235,7 @@ static void process_setup (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup, voi
                 (setup->bmRequestType & USB_REQ_FROM_DEV) ? setup->wLength : 0, res_size);
             return;
         case USBDEV_STALL:
-            u->hal->ep_stall (ep, USBDEV_DIR_IN);
+            u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
             u->ep_out[ep].state = EP_STATE_WAIT_SETUP;
             return;
         case USBDEV_NACK:
@@ -242,7 +244,7 @@ static void process_setup (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup, voi
     }
 }
 
-void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, mutex_t *hal_mutex)
+void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, void *arg, mutex_t *hal_mutex)
 {
     assert (hal);
     assert (hal->set_addr);
@@ -253,11 +255,13 @@ void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, mutex_t *hal_mutex)
     assert (hal->in_avail);
     
     u->hal = hal;
+    u->hal_arg = arg;
     u->hal_lock = hal_mutex;
 }
 
 void usbdevhal_reset (usbdev_t *u)
 {
+//debug_printf("usbdevhal_reset\n");
     int i;
     for (i = 0; i < USBDEV_NB_ENDPOINTS; ++i) {
         u->ep_out[i].state = EP_STATE_DISABLED;
@@ -271,7 +275,7 @@ void usbdevhal_reset (usbdev_t *u)
 #else
     u->first_device_descr = 1;
 #endif
-    u->hal->ep_wait_out(0, 0);
+    u->hal->ep_wait_out(0, 0, u->hal_arg);
 }
 
 void usbdevhal_suspend (usbdev_t *u)
@@ -284,13 +288,13 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
     int req_state;
     uint8_t *hdl_data;
     int hdl_size;
-//debug_printf ("usbdevhal_in_done, ep = %d, size = %d, EP0 state = 0x%03X\n", ep, size, epi->state);
+//debug_printf ("usbdevhal_in_done, ep = %d, size = %d, EP state = 0x%03X, attr %X\n", ep, size, epi->state, epi->attr);
 
     switch (epi->state) {
     case EP_STATE_NACK:   	// Основное состояние конечной точки IN до подготовки данных для отправки
     	if (ep==0) {
             u->ctrl_failed++; // не есть правильно отвечать STALL при энумерации
-            u->hal->ep_stall (ep, USBDEV_DIR_IN);
+            u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
     	}
     	break;
     case EP_STATE_WAIT_IN:
@@ -302,7 +306,7 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
         epi->state = EP_STATE_NACK;
         if ((epi->attr & EP_ATTR_TRANSFER_MASK) == EP_ATTR_CONTROL) {
             u->ep_out[ep].state = EP_STATE_WAIT_OUT_ACK;
-            u->hal->ep_wait_out (ep, 1);
+            u->hal->ep_wait_out (ep, 1, u->hal_arg);
         } else if (epi->specific_handler) {
             req_state = epi->specific_handler(u, epi->specific_tag, 0, 
                 &hdl_data, &hdl_size);
@@ -312,7 +316,7 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
                     break;
                 case USBDEV_STALL:
                     epi->state = EP_STATE_STALL;
-                    u->hal->ep_stall (ep, USBDEV_DIR_IN);
+                    u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
                     return;
                 case USBDEV_NACK:
                 default:
@@ -324,18 +328,18 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
     case EP_STATE_WAIT_IN_ACK:
         assert ((epi->attr & EP_ATTR_TRANSFER_MASK) == EP_ATTR_CONTROL);
         //if (u->state == USBDEV_STATE_ADDRESS)
-        //    u->hal->set_addr (u->usb_addr);
+        //    u->hal->set_addr (u->usb_addr, u->hal_arg);
         u->ep_out[ep].state = EP_STATE_WAIT_SETUP;
         epi->state = EP_STATE_NACK;
         if (u->ack_handlers[ep][USBDEV_DIR_OUT])
             u->ack_handlers[ep][USBDEV_DIR_OUT](u, ep, USBDEV_DIR_OUT,
                 u->ack_handler_tags[ep][USBDEV_DIR_OUT]);
-        u->hal->ep_wait_out (ep, 0);
+        u->hal->ep_wait_out (ep, 0, u->hal_arg);
         break;
         
     default:
         u->ctrl_failed++;
-        u->hal->ep_stall (ep, USBDEV_DIR_IN);
+        u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
         break;
     }
 }
@@ -375,13 +379,13 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
         if (trans_type != USBDEV_TRANSACTION_SETUP) {
 //debug_printf ("bad_trans 1: %d\n", trans_type);
             u->rx_bad_trans++;
-            u->hal->ep_wait_out (ep, 0);
+            u->hal->ep_wait_out (ep, 0, u->hal_arg);
             break;
         }
         if (size != 8) {
 //debug_printf("bad size: %d\n", size);
             u->rx_bad_len++;
-            u->hal->ep_stall (ep, USBDEV_DIR_OUT);
+            u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
             break;
         }
         psetup = data;
@@ -398,12 +402,12 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
 //debug_printf("no memory!\n");
                 u->out_of_memory++;
                 u->rx_discards++;
-                u->hal->ep_stall (ep, USBDEV_DIR_OUT);
+                u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
                 break;
             }
             setup_data_cnt = 0;
             epo->state = EP_STATE_SETUP_DATA_OUT;
-            u->hal->ep_wait_out (ep, 0);
+            u->hal->ep_wait_out (ep, 0, u->hal_arg);
         }
         break;
         
@@ -413,7 +417,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
 //debug_printf ("bad_trans 2\n");
             u->rx_bad_trans++;
             epo->state = EP_STATE_WAIT_SETUP;
-            u->hal->ep_stall (ep, USBDEV_DIR_OUT);
+            u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
             break;
         }
         memcpy (setup_data + setup_data_cnt, data, size);
@@ -423,7 +427,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
             mem_free (setup_data);
             setup_data = 0;
         } else {
-            u->hal->ep_wait_out (ep, 0);
+            u->hal->ep_wait_out (ep, 0, u->hal_arg);
         }
         break;
         
@@ -432,7 +436,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
         if (trans_type != USBDEV_TRANSACTION_OUT) {
 //debug_printf ("bad_trans 3\n");
             u->rx_bad_trans++;
-            u->hal->ep_stall (ep, USBDEV_DIR_OUT);
+            u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
             break;
         }
         /*
@@ -440,7 +444,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
         if (! buf) {
             u->out_of_memory++;
             u->rx_discards++;
-            u->hal->ep_stall (ep, USBDEV_DIR_OUT);
+            u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
             break;
         }
         memcpy (buf, data, size);
@@ -459,10 +463,10 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
                 0, (unsigned char **) &data, &size);
             switch (req_state) {
                 case USBDEV_ACK:
-                    u->hal->ep_wait_out (ep, 0);
+                    u->hal->ep_wait_out (ep, 0, u->hal_arg);
                     break;
                 case USBDEV_STALL:
-                    u->hal->ep_stall (ep, USBDEV_DIR_OUT);
+                    u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
                     break;
                 case USBDEV_NACK:
                     break;
@@ -478,7 +482,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
         if (u->ack_handlers[ep][USBDEV_DIR_IN])
             u->ack_handlers[ep][USBDEV_DIR_IN](u, ep, USBDEV_DIR_IN,
                 u->ack_handler_tags[ep][USBDEV_DIR_IN]);
-        u->hal->ep_wait_out (ep, 0);
+        u->hal->ep_wait_out (ep, 0, u->hal_arg);
         break;
         
     default:
@@ -554,7 +558,7 @@ void usbdev_ack_in (usbdev_t *u, unsigned ep_n, const void *data, int size)
     
     ep_in_t *epi = &u->ep_in[ep_n];
     
-//debug_printf ("usbdev_ack_in, ep%d, epi->state = %d, in_avail = %d\n", ep_n, epi->state, u->hal->in_avail(ep_n));
+//debug_printf ("usbdev_ack_in, ep%d, epi->state = %d, in_avail = %d\n", ep_n, epi->state, u->hal->in_avail(ep_n, u->hal_arg));
 //char *d = (char *) data;
 //debug_printf ("%d %d %d\n", d[0], d[1], d[2]);
     mutex_lock(u->hal_lock);
@@ -589,7 +593,7 @@ void usbdev_set_ack (usbdev_t *u, unsigned ep_n)
 				break;
 			case USBDEV_STALL:
 				epi->state = EP_STATE_STALL;
-				u->hal->ep_stall (ep_n, USBDEV_DIR_IN);
+				u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
 				return;
 			case USBDEV_NACK:
 				break;
@@ -614,7 +618,7 @@ int usbdev_recv (usbdev_t *u, unsigned ep_n, void *data, int size)
     mem_queue_get (&epo->rxq, &q_item);
     if (epo->state == EP_STATE_NACK) {
         epo->state = EP_STATE_WAIT_OUT;
-        u->hal->ep_wait_out (ep_n, 0);
+        u->hal->ep_wait_out (ep_n, 0, u->hal_arg);
     }
     mutex_unlock (&epo->lock);
     

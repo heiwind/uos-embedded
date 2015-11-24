@@ -85,7 +85,9 @@ typedef enum
   EXT_INT1_IRQn               = 28,  /* EXT_INT1 Interrupt */
   EXT_INT2_IRQn               = 29,  /* EXT_INT2 Interrupt */
   EXT_INT3_IRQn               = 30,  /* EXT_INT3 Interrupt */
-  EXT_INT4_IRQn               = 31   /* EXT_INT4 Interrupt */
+  EXT_INT4_IRQn               = 31,  /* EXT_INT4 Interrupt */
+  ARCH_TIMER_IRQ              = 32,	 /* SysTick */
+  ARCH_INTERRUPTS
 } IRQn_t;
 
 /*------------------------------------------------------

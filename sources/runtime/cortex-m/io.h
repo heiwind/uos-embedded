@@ -27,7 +27,7 @@
 #ifdef ARM_STM32F4
 #   include <runtime/cortex-m/io-stm32f4.h>
 #endif
-#ifdef ARM_STM32L152RC
+#if defined(ARM_STM32L151RC) || defined(ARM_STM32L152RC)
 #   include <runtime/cortex-m/io-stm32l.h>
 #endif
 

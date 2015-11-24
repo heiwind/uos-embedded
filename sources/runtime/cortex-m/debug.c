@@ -186,7 +186,7 @@ debug_peekchar (void)
 #endif /* ARM_1986BE1 || ARM_1986BE9 */
 
 
-#if defined(ARM_STM32F4) || defined(ARM_STM32L152RC)
+#if defined(ARM_STM32F4) || defined(ARM_STM32L151RC) || defined(ARM_STM32L152RC)
 
 #if defined(USE_USART1)
 #	define DBG_USART	USART1
@@ -269,7 +269,7 @@ debug_peekchar (void)
 	debug_char = c;
 	return c;
 }
-#endif /* ARM_STM32F4 || ARM_STM32L152RC */
+#endif /* ARM_STM32F4 || ARM_STM32L151RC || ARM_STM32L152RC */
 
 
 void

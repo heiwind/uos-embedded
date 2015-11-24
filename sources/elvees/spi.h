@@ -14,6 +14,9 @@
 #define SPI_TSCK_OUT        (1 << 12)
 #define SPI_RSCK_OUT        (1 << 13)
 
+#define SPI_SS0_ACTIVE_HIGH	(1 << 14)
+#define SPI_SS1_ACTIVE_HIGH	(1 << 15)
+
 struct _elvees_spim_t {
     spimif_t        spimif;
     mutex_t         irq_lock;

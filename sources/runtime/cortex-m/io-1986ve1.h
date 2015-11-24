@@ -109,7 +109,9 @@ typedef enum
   EXT_INT1_IRQn               = 28,  /* EXT_INT1 Interrupt */
   EXT_INT2_IRQn               = 29,  /* EXT_INT2 Interrupt */
   EXT_INT3_IRQn               = 30,  /* EXT_INT3 Interrupt */
-  EXT_INT4_IRQn               = 31   /* EXT_INT4 Interrupt */
+  EXT_INT4_IRQn               = 31,  /* EXT_INT4 Interrupt */
+  ARCH_TIMER_IRQ              = 32,	 /* SysTick */
+  ARCH_INTERRUPTS
 } IRQn_t;
 
 /*------------------------------------------------------
@@ -2098,24 +2100,24 @@ typedef struct
  /* Поле управления передачи пакета - 32-разрядное целое - длина пакета в байтах */
 
  /* Поле состояния передачи пакета - 32-разрядное целое */
- #define ARM_ETH_PKT_RCOUNT(x)		((x) << 16)
- #define ARM_ETH_PKT_RL				(1 << 20)
- #define ARM_ETH_PKT_LC				(1 << 21)
- #define ARM_ETH_PKT_UR				(1 << 22)
+ #define ARM_ETH_PKT_RCOUNT(x)      ((x) << 16)
+ #define ARM_ETH_PKT_RL             (1 << 20)
+ #define ARM_ETH_PKT_LC             (1 << 21)
+ #define ARM_ETH_PKT_UR             (1 << 22)
 
  /* Поле состояния приёма пакета - 32-разрядное целое */
- #define ARM_ETH_PKT_LENGTH(x)		((x) & 0xFFFF)
- #define ARM_ETH_PKT_PF_ERR			(1 << 16)
- #define ARM_ETH_PKT_CF_ERR			(1 << 17)
- #define ARM_ETH_PKT_LF_ERR			(1 << 18)
- #define ARM_ETH_PKT_SF_ERR			(1 << 19)
- #define ARM_ETH_PKT_LEN_ERR		(1 << 20)
- #define ARM_ETH_PKT_DN_ERR			(1 << 21)
- #define ARM_ETH_PKT_CRC_ERR		(1 << 22)
- #define ARM_ETH_PKT_SMB_ERR		(1 << 23)
- #define ARM_ETH_PKT_MCA_ERR		(1 << 24)
- #define ARM_ETH_PKT_BCA_ERR		(1 << 25)
- #define ARM_ETH_PKT_UCA_ERR		(1 << 24)
+ #define ARM_ETH_PKT_LENGTH(x)      ((x) & 0xFFFF)
+ #define ARM_ETH_PKT_PF_ERR         (1 << 16)
+ #define ARM_ETH_PKT_CF_ERR         (1 << 17)
+ #define ARM_ETH_PKT_LF_ERR         (1 << 18)
+ #define ARM_ETH_PKT_SF_ERR         (1 << 19)
+ #define ARM_ETH_PKT_LEN_ERR        (1 << 20)
+ #define ARM_ETH_PKT_DN_ERR         (1 << 21)
+ #define ARM_ETH_PKT_CRC_ERR        (1 << 22)
+ #define ARM_ETH_PKT_SMB_ERR        (1 << 23)
+ #define ARM_ETH_PKT_MCA_ERR        (1 << 24)
+ #define ARM_ETH_PKT_BCA_ERR        (1 << 25)
+ #define ARM_ETH_PKT_UCA_ERR        (1 << 24)
 
 /*------------------------------------------------------------------------
  * Макроопределения для возможности указания привязки сигналов к контактам

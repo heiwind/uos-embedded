@@ -27,10 +27,9 @@ struct _flashif_t
         unsigned nb_sectors);
     int (* write)(flashif_t *flash, unsigned page_num,
         void *data, unsigned size);
-    // required if direct_read is false, otherwise optional
     int (* read)(flashif_t *flash, unsigned page_num,
         void *data, unsigned size);
-    unsigned (*min_address)(flashif_t *flash);
+    unsigned long (*min_address)(flashif_t *flash);
     int (* flush)(flashif_t *flash);
 };
 

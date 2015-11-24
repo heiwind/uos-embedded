@@ -71,6 +71,7 @@ static int write_fat(fat32_fw_t *fat, unsigned start_sector)
 
 static inline int write_root_dir(fat32_fw_t *fat, const char * volume_id, unsigned start_sector)
 {
+	int res;
     fat_dir_ent_t *entry = (fat_dir_ent_t *)fat->sector;
 
     memset(fat->sector, 0, sizeof(fat->sector));
@@ -78,7 +79,17 @@ static inline int write_root_dir(fat32_fw_t *fat, const char * volume_id, unsign
     memcpy(entry->name, volume_id, 11);
     entry->attr = FAT_ATTR_VOLUME_ID;
 
-    return fat_write_sector(fat, start_sector, FAT_SECTOR_SIZE);
+    res = fat_write_sector(fat, start_sector, FAT_SECTOR_SIZE);
+    if (res != FS_ERR_OK) return res;
+    
+    memset(fat->sector, 0, sizeof(fat_dir_ent_t));
+    int i;
+    for (i = 1; i < FAT_SEC_PER_CLUSTER; ++i) {
+		res = fat_write_sector(fat, start_sector + i, FAT_SECTOR_SIZE);
+		if (res != FS_ERR_OK) return res;
+	}
+	
+	return FS_ERR_OK;
 }
 
 void fat32_fw_format(fat32_fw_t *fat, unsigned nb_sectors, const char * volume_id)
@@ -315,8 +326,7 @@ void fat32_fw_create(fat32_fw_t *fat, fs_entry_t *entry)
 
     entry->parent_pos = fat->nb_entries++ * sizeof(fat_dir_ent_t);
     
-    fat->last_error = fat_write_sector(fat, nb_sec, 
-        (entry->parent_pos  & (FAT_SECTOR_SIZE-1)) + sizeof(fat_dir_ent_t));
+    fat->last_error = fat_write_sector(fat, nb_sec, FAT_SECTOR_SIZE);
     if (fat->last_error != FS_ERR_OK) return;
 
     fat->last_error = FS_ERR_OK;
