@@ -91,7 +91,7 @@ mutex_activate (mutex_t *m, void *message)
  * user initialization. Needed for some processor 
  * architectures.
  */
-void __attribute__ ((weak))
+void __attribute__ ((weak, noinline))
 uos_post_init ()
 {
 }

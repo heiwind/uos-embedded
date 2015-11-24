@@ -469,6 +469,7 @@ _irq_handler_ ()
 }
 
 #if defined (ELVEES)
+__attribute__((noreturn))
 static void dump_of_death (unsigned int context[])
 {
 	debug_printf ("                t0 = %8x   s0 = %8x   t8 = %8x   lo = %8x\n",
@@ -497,9 +498,11 @@ static void dump_of_death (unsigned int context[])
 		context [CONTEXT_R23], context [CONTEXT_RA]);
 
 	debug_printf ("\nHalt...\n\n");
-	asm volatile ("1: j 1b; nop");
+	//asm volatile ("1: j 1b; nop");
+    while(1);
 }
 
+__attribute__((noreturn))
 void _exception_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
@@ -537,6 +540,7 @@ void _exception_handler_ (unsigned int context[])
 	dump_of_death (context);
 }
 
+__attribute__((noreturn))
 void _pagefault_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
