@@ -1,6 +1,8 @@
 /*
  * Machine-dependent part of uOS for MIPS32: Elvees Multicore.
  *
+ *UTF8 ru
+ *
  * Copyright (C) 2008-2010 Serge Vakulenko, <serge@vak.ru>
  *
  * This file is distributed in the hope that it will be useful, but WITHOUT
@@ -31,6 +33,16 @@ void uos_on_task_switch(task_t *t)
 #endif
 
 
+#ifdef ELVEES_SAFE_LW_MXC0
+//suspects that commands lw, sw, mtc0, mfc0 are completed after next tackt, 
+//      so inserts nop to sure thir value
+#define SAFE_NOP()  asm volatile ("nop")
+#else
+#define SAFE_NOP()
+#endif
+
+
+
 /*
  * Perform the task switch.
  * The call is performed via the assembler label,
@@ -45,8 +57,6 @@ _arch_task_switch_ ()
 	/* Save all registers in stack. */
 	asm volatile (
 "arch_task_switch: .globl arch_task_switch");
-	asm volatile ("move	%0, $a0" : "=r" (target));
-
 	asm volatile ("addi	$sp, $sp, -%0" : : "i" (CONTEXT_WORDS * 4 + MIPS_FSPACE));
 	asm volatile (".set	noat");
 	asm volatile ("sw	$1, %0 ($sp)" : : "i" (CONTEXT_R1 * 4 + MIPS_FSPACE));
@@ -80,14 +90,19 @@ _arch_task_switch_ ()
 	/* Skip $29 - SP*/
 	asm volatile ("sw	$30, %0 ($sp)" : : "i" (CONTEXT_FP * 4 + MIPS_FSPACE));
 	asm volatile ("sw	$31, %0 ($sp)" : : "i" (CONTEXT_RA * 4 + MIPS_FSPACE));
-	asm volatile (".set	at");
+
+    asm volatile ("move %0, $a0" : "=r" (target));
+
+    asm volatile (".set	at");
 
 	/* Save special registers. */
 	asm volatile ("mfhi	$a0" : : : "a0");
 	asm volatile ("sw	$a0, %0 ($sp)" : : "i" (CONTEXT_HI * 4 + MIPS_FSPACE));
+	SAFE_NOP();
 
 	asm volatile ("mflo	$a0" : : : "a0");
 	asm volatile ("sw	$a0, %0 ($sp)" : : "i" (CONTEXT_LO * 4 + MIPS_FSPACE));
+    SAFE_NOP();
 
 	asm volatile ("mfc0	$a0, $%0" : : "i" (C0_STATUS) : "a0");
 	asm volatile ("sw	$a0, %0 ($sp)" : : "i" (CONTEXT_STATUS * 4 + MIPS_FSPACE));

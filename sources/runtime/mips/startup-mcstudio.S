@@ -27,6 +27,17 @@
         .set    noreorder
         .set    mips32
 
+
+    .macro SAFE_NOP
+#ifdef ELVEES_SAFE_LW_MXC0
+//suspects that commands lw, mtc0, tfc0 are completed after next tackt, 
+//      so inserts nop to sure thir value
+#ifndef NDEBUG 
+    nop
+#endif
+#endif
+    .endm
+
 #---------------------------------------
 # Macro: flush cache
 #
@@ -36,10 +47,10 @@
         lw  $k1, 0($k0)
         ori $k1, 0x5000
         sw  $k1, 0($k0)
+        SAFE_NOP
         lw  $k1, 0($k0)
 #endif
     .endm
-
 #---------------------------------------
 # Reset vector at 0xBFC00000
 #
@@ -52,6 +63,7 @@ _reset_vector_: .globl  _reset_vector_
 #if 1
         lui     $gp, 0xb840         # Set global pointer
         mfc0    $a0, $C0_COUNT          # Get CPU tick counter
+        SAFE_NOP
         sw      $a0, ($gp)          # Store start time to XYRAM0
 #endif
 
@@ -118,15 +130,19 @@ _reset_vector_: .globl  _reset_vector_
 
         mfhi    $a0                     # Save special registers
         sw      $a0, (CONTEXT_HI * 4) ($sp)
+        SAFE_NOP
 
         mflo    $a0
         sw      $a0, (CONTEXT_LO * 4) ($sp)
+        SAFE_NOP
 
         mfc0    $a0, $C0_EPC
         sw      $a0, (CONTEXT_PC * 4) ($sp)
+        SAFE_NOP
 
         mfc0    $a0, $C0_STATUS
         sw      $a0, (CONTEXT_STATUS * 4) ($sp)
+        SAFE_NOP
         .endm
 
 #ifndef MIPS_NOBEV
@@ -162,12 +178,14 @@ _exception_vector_: .globl _exception_vector_
 
         FLUSH_CACHE
         mfc0    $k0, $C0_CAUSE          # Get CAUSE
+        SAFE_NOP
         andi    $k0, CA_EXC_CODE        # Extract exception code
         li      $k1, CA_Sys             # Is it syscall?
         bne     $k1, $k0, exception     # No - jump to handler.
         nop                             # (delay slot)
 
         mfc0    $k0, $C0_EPC            # Get EPC
+        SAFE_NOP
         add     $k0, 4                  # Return to next instruction
         mtc0    $k0, $C0_EPC            # Put EPC back
 
@@ -175,6 +193,7 @@ _exception_vector_: .globl _exception_vector_
         # Инструкция SYSCALL: чтение регистра STATUS и запрет прерываний.
         #
         mfc0    $a0, $C0_STATUS         # Get SR
+        SAFE_NOP
         li      $k0, -1 - ST_IE         # Prepare bitmask
         and     $k0, $a0                # Clear IE bit
         mtc0    $k0, $C0_STATUS         # Put SR back
@@ -191,11 +210,26 @@ _exception_vector_: .globl _exception_vector_
         nop                             # just to be safe
         nop
         nop
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        and     $k0, $a0                # Clear EXL bit
+        mtc0    $k0, $C0_STATUS         # Put SR back
+        nop  
+        jr    $27                       #go continue
+        nop  
+        nop                             # just to be safe
+        nop
         nop
 #else
         sync                            # Settle things down
         eret                            # PC <= EPC; EXL <= 0
-        nop                             # just to be safe
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        and     $k0, $a0                # Clear IE bit
+        mtc0    $k0, $C0_STATUS         # Put EXL back
+        nop
+        jr    $27                       #go continue
+        nop  
 #endif
         .set mips0
 
@@ -304,11 +338,26 @@ _restore_regs_: .globl _restore_regs_
         nop                             # just to be safe
         nop
         nop
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        xori    $k0, ST_EXL             # allow interupts after eret
+        mtc0    $k0, $C0_STATUS         # Put SR back
+        SAFE_NOP
+        jr    $27                       #go continue
+        nop  
+        nop                             # just to be safe
+        nop
         nop
 #else
         sync                            # settle things down
         eret                            # PC <= EPC; EXL <= 0
-        nop                             # just to be safe
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        xori    $k0, ST_EXL             # allow interupts after eret
+        mtc0    $k0, $C0_STATUS         # Put SR back
+        SAFE_NOP
+        jr    $27                       #go continue
+        nop  
 #endif
         .set mips0
 
