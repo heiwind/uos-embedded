@@ -127,8 +127,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             int i;
             const int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
 
-            for (i=0; i<wordsCount; ++i)
-            	mil->rx_buf[index + i] = mil->reg->DATA[index + i];
+//            for (i=0; i<wordsCount; ++i)
+//            	mil->rx_buf[index + i] = mil->reg->DATA[index + i];
 #if RT_DEBUG
             debug_printf("MSG_DATARECV__BC_RT__SINGLE n=%u\n", wordsCount);
             for (i=0; i<wordsCount; ++i)
@@ -155,8 +155,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             debug_printf("STATUS(F3,8 in)=%x", status);
 #endif
 
-            for (i=0; i<wordsCount; ++i)
-                mil->rx_buf[index + i] = mil->reg->DATA[index + i];
+//            for (i=0; i<wordsCount; ++i)
+//                mil->rx_buf[index + i] = mil->reg->DATA[index + i];
 
 #if RT_DEBUG
             for (i=0; i<wordsCount; ++i)
@@ -183,8 +183,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             debug_printf("\n");
 #endif
 
-			for (i=0; i<wordsCount; ++i)
-				mil->reg->DATA[index + i] = mil->tx_buf[index + i];
+//			for (i=0; i<wordsCount; ++i)
+//				mil->reg->DATA[index + i] = mil->tx_buf[index + i];
 
         }
         break;
@@ -213,8 +213,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             int i;
             int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr2);
 
-                for (i=0; i<wordsCount2; ++i)
-                    mil->reg->DATA[index + i] = mil->tx_buf[index + i];
+//                for (i=0; i<wordsCount2; ++i)
+//                    mil->reg->DATA[index + i] = mil->tx_buf[index + i];
         }
         break;
     // команда управления 0-15 от КШ без слов данных, формат сообщения 9
