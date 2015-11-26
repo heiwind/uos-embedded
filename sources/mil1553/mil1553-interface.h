@@ -132,7 +132,6 @@ struct _mil_slot_t
     mil_slot_t          *next;
 };
 
-
 //
 // Базовый тип интерфейса MIL-STD 1553
 //

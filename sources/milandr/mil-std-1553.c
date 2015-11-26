@@ -24,8 +24,9 @@ static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
             return;
         }
         mem_queue_put(&mil->rxq, que_elem);
-        // Копируем номер слота
-        memcpy(que_elem, &mil->cur_slot, 4);
+        // Номер слота всегда 0
+        *que_elem = 0;
+        *(que_elem + 1) = 0;
         // Копируем дескриптор слота
         memcpy(que_elem + 2, &slot, 4);
         // Копируем данные слота
@@ -34,6 +35,32 @@ static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
         while (wrc) {
             *que_elem++ = *preg++;
             wrc--;
+        }
+    }
+}
+
+static void copy_to_rt_rxq(milandr_mil1553_t *mil, uint8_t subaddr, uint8_t wordscount)
+{
+    if (mem_queue_is_full(&mil->rt_rxq)) {
+        mil->nb_lost++;
+    } else {
+        uint16_t *que_elem = mem_alloc_dirty(mil->pool, 2*wordscount + 4);
+        if (!que_elem) {
+            mil->nb_lost++;
+            return;
+        }
+        mem_queue_put(&mil->rt_rxq, que_elem);
+        *que_elem = wordscount;
+        *(que_elem + 1) = subaddr;
+        // Копируем данные слота
+        arm_reg_t *preg = &mil->reg->DATA[subaddr * MIL_SUBADDR_WORDS_COUNT];
+        que_elem += 2;  // Область данных
+#if RT_DEBUG
+        debug_printf("wc=%d\n", wordscount);
+#endif
+        while (wordscount) {
+            *que_elem++ = *preg++;
+            wordscount--;
         }
     }
 }
@@ -111,6 +138,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
 
     unsigned short answerWord = MIL_STD_STATUS_ADDR_OU(mil->addr_self);
 
+    mil1553_lock(&mil->milif);
+
     switch (msg)
     {
     // приём данных от КШ (КШ-ОУ), формат сообщения 7
@@ -124,16 +153,15 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             // Установить ответное слово
             mil->reg->StatusWord1 = answerWord;
 
+            copy_to_rt_rxq(mil, subaddr, wordsCount);
+
+#if RT_DEBUG
             int i;
             const int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-
-//            for (i=0; i<wordsCount; ++i)
-//            	mil->rx_buf[index + i] = mil->reg->DATA[index + i];
-#if RT_DEBUG
             debug_printf("MSG_DATARECV__BC_RT__SINGLE n=%u\n", wordsCount);
-            for (i=0; i<wordsCount; ++i)
-                debug_printf(" %x", mil->rx_buf[index + i]);
-            debug_printf("\n");
+//            for (i=0; i<wordsCount; ++i)
+//                debug_printf(" %x", mil->rx_buf[index + i]);
+//            debug_printf("\n");
 #endif
         }
         break;
@@ -148,20 +176,18 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             // Установить ответное слово
             mil->reg->StatusWord1 = answerWord;
 
+#if RT_DEBUG
             int i;
             int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-
-#if RT_DEBUG
             debug_printf("STATUS(F3,8 in)=%x", status);
 #endif
 
-//            for (i=0; i<wordsCount; ++i)
-//                mil->rx_buf[index + i] = mil->reg->DATA[index + i];
+            copy_to_rt_rxq(mil, subaddr, wordsCount);
 
 #if RT_DEBUG
-            for (i=0; i<wordsCount; ++i)
-                debug_printf(" %x", mil->rx_buf[index + i]);
-            debug_printf("\n");
+//            for (i=0; i<wordsCount; ++i)
+//                debug_printf(" %x", mil->rx_buf[index + i]);
+//            debug_printf("\n");
 #endif
         }
         break;
@@ -183,8 +209,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             debug_printf("\n");
 #endif
 
-//			for (i=0; i<wordsCount; ++i)
-//				mil->reg->DATA[index + i] = mil->tx_buf[index + i];
+			for (i=0; i<wordsCount; ++i)
+				mil->reg->DATA[index + i] = mil->tx_buf[index + i];
 
         }
         break;
@@ -213,8 +239,8 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             int i;
             int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr2);
 
-//                for (i=0; i<wordsCount2; ++i)
-//                    mil->reg->DATA[index + i] = mil->tx_buf[index + i];
+            for (i=0; i<wordsCount2; ++i)
+            	mil->reg->DATA[index + i] = mil->tx_buf[index + i];
         }
         break;
     // команда управления 0-15 от КШ без слов данных, формат сообщения 9
@@ -332,6 +358,7 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
         }
         break;
     } // switch (msg)
+    mil1553_unlock(&mil->milif);
 } // static void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
 
 void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
@@ -635,8 +662,11 @@ void milandr_mil1553_init(milandr_mil1553_t *_mil, int port, mem_pool_t *pool, u
     ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(2) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 4
 
     mil->pool = pool;
-    if (nb_rxq_msg)
+    if (nb_rxq_msg) {
         mem_queue_init(&mil->rxq, pool, nb_rxq_msg);
+        mem_queue_init(&mil->rt_rxq, pool, nb_rxq_msg);
+    }
+
     
     mil->tim_reg = timer;
     if (timer == ARM_TIMER1) {

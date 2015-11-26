@@ -29,8 +29,8 @@ typedef struct _milandr_mil1553_t
     uint16_t            urgent_data[MIL_SUBADDR_WORDS_COUNT];
     int                 is_running;
     
-    //uint16_t rx_buf[MIL_DATA_LENGTH];	// только для RT
-    //uint16_t tx_buf[MIL_DATA_LENGTH];   // только для RT
+    mem_queue_t         rt_rxq;			// только для RT
+    uint16_t tx_buf[MIL_DATA_LENGTH];   // только для RT
 
     // Статистика
     unsigned            nb_lost;
