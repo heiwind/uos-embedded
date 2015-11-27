@@ -42,6 +42,9 @@ void _pagefault_handler_ (unsigned int context[]);
  * _init_ is called from startup.S.
  * Attribute "naked" skips function prologue.
  */
+#ifndef DEBUG_UARTBAUD
+#define DEBUG_UARTBAUD 115200
+#endif
 
 void __attribute ((noreturn))
 #ifdef ELVEES_INIT_SDRAM
@@ -391,7 +394,7 @@ _init_ (void)
 	 * Setup UART registers.
 	 * Compute the divisor for 115.2 kbaud.
 	 */
-	divisor = MC_DL_BAUD (KHZ * 1000, 115200);
+	divisor = MC_DL_BAUD (KHZ * 1000, DEBUG_UARTBAUD);
 
 	MC_LCR = MC_LCR_8BITS | MC_LCR_DLAB;
 	MC_DLM = divisor >> 8;
