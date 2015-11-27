@@ -29,6 +29,7 @@ static int debug_char = -1;
 void
 debug_putchar (void *arg, short c)
 {
+#ifndef DEBUG_SIMULATE 
 	int x = 0;
 	int in_exception = mips_read_c0_register (C0_STATUS) & (ST_EXL | ST_ERL);
 
@@ -51,8 +52,9 @@ again:
 		c = '\r';
 		goto again;
 	}
-	if (! in_exception)
-		mips_intr_restore (x);
+    if (! in_exception)
+        mips_intr_restore (x);
+#endif// ! DEBUG_SIMULATE
 }
 
 /*

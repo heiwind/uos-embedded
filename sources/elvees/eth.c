@@ -79,6 +79,7 @@ phy_write (eth_t *u, unsigned address, unsigned data)
 static unsigned
 phy_read (eth_t *u, unsigned address)
 {
+#ifndef DEBUG_SIMULATE
 	unsigned status, i;
 
 	/* Issue the command to PHY. */
@@ -97,6 +98,9 @@ phy_read (eth_t *u, unsigned address)
 		"phy_read(%d, 0x%02x) returned 0x%04x\n",
 		u->phy, address, status & MD_STATUS_DATA);*/
 	return status & MD_STATUS_DATA;
+#else  //DEBUG_SIMULATE
+    return PHY_ID_KS8721BL;
+#endif //DEBUG_SIMULATE
 }
 
 /*
@@ -125,7 +129,9 @@ chip_init (eth_t *u)
 			retry++;
 			if (retry > 3) {
 				debug_printf ("eth_init: no PHY detected\n");
+#ifndef DEBUG_SIMULATE
 				uos_halt (0);
+#endif
 			}
 		}
 	}
