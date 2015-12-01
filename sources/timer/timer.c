@@ -238,6 +238,10 @@ void timer_update (timer_t *t)
 #ifdef USEC_TIMER
     unsigned long usec = t->usec_in_msec;
     usec += interval;
+    while (usec > t->usec_per_tick_msprec){
+        usec -= t->usec_per_tick_msprec;
+        msec += t->msec_per_tick;
+    }
     while (usec > TIMER_USEC_PER_MSEC) {
         msec++;
         usec -= TIMER_USEC_PER_MSEC;
@@ -249,7 +253,7 @@ void timer_update (timer_t *t)
 
 #ifndef TIMER_NO_DAYS
     if (msec >= TIMER_MSEC_PER_DAY) {
-        ++t->days;
+        t->days++;
         msec -= TIMER_MSEC_PER_DAY;
         nextdec -= TIMER_MSEC_PER_DAY;
     }
@@ -382,11 +386,13 @@ timer_passed (timer_t *t, unsigned long t0, unsigned int msec)
 
 static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
     //res = khz*usec_per_tick /1000
-    unsigned long long res = khz*usec_per_tick;
-    res = khz>>3;
+    unsigned long long res = khz>>3;
+    res = res * usec_per_tick;
     const long Nmod = 128*128; 
-    res = khz*(Nmod/125);
-    return res/Nmod; 
+    //res = res*(Nmod/125);
+    //return res/Nmod;
+    res = res / 125;
+    return res;
 } 
 
 /**\~english
@@ -399,6 +405,12 @@ void
 timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 {
     t->usec_per_tick = usec_per_tick;
+    unsigned tick_ms = usec_per_tick/1000;
+    t->msec_per_tick = tick_ms;
+    if (tick_ms > 0)
+        t->usec_per_tick_msprec = tick_ms*1000;
+    else
+        t->usec_per_tick_msprec = ~0;
     t->khz = khz;
 
 #ifndef SW_TIMER

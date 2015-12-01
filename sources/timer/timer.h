@@ -77,9 +77,9 @@ struct _timer_t {
 #ifdef USEC_TIMER
     unsigned long usec_per_tick;
     volatile unsigned long usec_in_msec;
-#else
-    small_uint_t msec_per_tick;
+    small_uint_t usec_per_tick_msprec;
 #endif
+    small_uint_t msec_per_tick;
     volatile unsigned long milliseconds; /* real time counter */
 
 #if PIC32MX
