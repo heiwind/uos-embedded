@@ -155,7 +155,9 @@ _pagefault_vector_: .globl _pagefault_vector_
         FLUSH_CACHE
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
+#if MIPS_FSPACE > 0
         addi    $sp, -MIPS_FSPACE       # Make an arg frame
+#endif
 
         .extern _pagefault_handler_
         lui     $gp, RAM_HI             # Set global pointer
@@ -246,12 +248,23 @@ _interrupt_vector_: .globl _interrupt_vector_
 
         FLUSH_CACHE
         SAVE_REGS                       # Save all registers in stack
-        addi    $sp, -MIPS_FSPACE       # Make an arg frame
-
-        .extern _irq_handler_
         lui     $gp, RAM_HI             # Set global pointer
+#if MIPS_FSPACE > 0
+        .extern _irq_handler_
+        addi    $sp, -MIPS_FSPACE       # Make an arg frame
         j       _irq_handler_           # Jump to C code, no return
         nop
+#else
+        .extern _arch_interrupt_
+        .extern switch_task
+        jal     _arch_interrupt_
+        beq     $v0, $zero, _restore_regs_
+        nop
+        //j       _restore_regs_
+        j       switch_task
+        nop 
+#endif
+
 
 #---------------------------------------
 # Hangle exceptions
@@ -259,7 +272,9 @@ _interrupt_vector_: .globl _interrupt_vector_
 exception:
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
+#if MIPS_FSPACE > 0
         addi    $sp, -MIPS_FSPACE       # Make an arg frame
+#endif
 
         .extern _exception_handler_
         lui     $gp, RAM_HI                 # Set global pointer
@@ -270,7 +285,9 @@ exception:
 #---------------------------------------
 # Restore CPU state and return from interrupt
 _restore_regs_: .globl _restore_regs_
+#if MIPS_FSPACE > 0
         addi    $sp, MIPS_FSPACE        # Remove an arg frame
+#endif
 
         lw      $a0, (CONTEXT_LO * 4) ($sp) # Load HI, LO registers
         mtlo    $a0

@@ -24,7 +24,8 @@ task_t *task_idle;			/* background system task */
 mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 
 #ifndef IDLE_TASK_STACKSZ
-#define IDLE_TASK_STACKSZ   256
+#define IDLE_TASK_STACKSZ   (256+MIPS_FSPACE)
+
 #endif
 
 #define ALIGNED_IDLE_TASK_STACKSZ ((IDLE_TASK_STACKSZ + UOS_STACK_ALIGN - 1) & ~(UOS_STACK_ALIGN - 1))
@@ -136,8 +137,12 @@ main (void)
 
 	/* Switch to the most priority task. */
 	assert (task_current == task_idle);
+
+    arch_state_t x;
+    arch_intr_disable (&x);
 	task_schedule ();
-	
+	arch_intr_restore(x);
+
 	/* Idle task activity. */
 	for (;;) {
 		arch_idle ();
