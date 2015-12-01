@@ -45,6 +45,13 @@ void task_schedule ()
 	new_task = task_policy ();
 	if (new_task != task_current) {
 		new_task->ticks++;
+#ifndef NDEBUG
+        unsigned sp = (unsigned)mips_get_stack_pointer ();
+        sp -= (MIPS_FSPACE+CONTEXT_WORDS*4);
+        if (task_current->fpu_state != ~0)
+            sp -= 32*4;
+        assert(sp > (unsigned)(task_current->stack));
+#endif
 		arch_task_switch (new_task);
 	}
 }

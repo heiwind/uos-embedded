@@ -142,10 +142,13 @@ _arch_task_switch_ ()
 	/* Save current task stack. */
 	task_current->stack_context = mips_get_stack_pointer ();
 
+	unsigned sp = (unsigned)(target->stack_context);
+	assert(sp > (unsigned)(target->stack));
+	
 	task_current = target;
 
 	/* Switch to the new task. */
-	mips_set_stack_pointer (task_current->stack_context);
+	mips_set_stack_pointer ((void*)sp);
 
 #ifdef ARCH_HAVE_FPU
 	if (task_current->fpu_state != (arch_fpu_t)~0) {
