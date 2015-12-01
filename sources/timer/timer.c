@@ -399,7 +399,7 @@ timer_passed (timer_t *t, unsigned long t0, unsigned int msec)
 
 #ifdef USEC_TIMER
 
-static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
+static inline unsigned long umuldiv1000(unsigned long khz, unsigned long usec_per_tick){
     //res = khz*usec_per_tick /1000
     unsigned long long res = khz>>3;
     res = res * usec_per_tick;
@@ -409,6 +409,22 @@ static inline unsigned long timer_period_byus(unsigned long khz, unsigned long u
     res = res / 125;
     return res;
 } 
+
+static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
+    return umuldiv1000(khz, usec_per_tick);
+}
+
+unsigned long timer_seconds (timer_t *t){
+    unsigned long ms;
+    unsigned long days = 0;
+#ifndef TIMER_NO_DAYS
+    days = timer_days (t, &ms);
+#else
+    ms = timer_miliseconds(t);
+#endif
+    unsigned long secs = umuldiv1000(TIMER_MSEC_PER_DAY, days) + umuldiv1000(ms, 1);
+    return secs;
+}
 
 /**\~english
  * Nanosecond Timer initialization.

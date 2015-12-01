@@ -154,6 +154,8 @@ INLINE unsigned long timer_milliseconds (timer_t *t){
     return t->milliseconds;
 };
 
+unsigned long timer_seconds (timer_t *t);
+
 /**\~english
  * Check that `msec' milliseconds passed since the `t0' moment.
  *
