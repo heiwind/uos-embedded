@@ -4,6 +4,11 @@
 #include <net/netif.h>
 #include <net/ip.h>
 
+#ifdef DEBUG_NET_ROUTE
+#define ROUTE_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define ROUTE_printf(...)
+#endif
 /*
  * Compare the IP address with the route address/netmask.
  * Return 1 on match, 0 on failure.
@@ -73,7 +78,7 @@ void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
 	unsigned long net, bcast;	/* host byte order */
 	route_t *s, *best;
 
-	memcpy (r->ipaddr, ipaddr, 4);
+	ipadr_assign_ucs(r->ipaddr, ipaddr);
 	r->masklen = masklen;
 
 	net = 0xfffffffful >> masklen;
@@ -82,11 +87,11 @@ void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
 		(unsigned short) ipaddr[2] << 8 | ipaddr[3];
 	net ^= bcast;
 
-	memset (r->gateway, 0, 4);
-	memset (r->gwifaddr, 0, 4);
+	ipadr_assignl_ucs(r->gateway, 0);
+	ipadr_assignl_ucs(r->gwifaddr, 0);
 	if (gateway) {
-		memcpy (r->gateway, gateway, 4);
-		memset (r->broadcast, 0, 4);
+	    ipadr_assign_ucs(r->gateway, gateway);
+		ipadr_assignl_ucs(r->broadcast, 0);
 
 		/* Find the ip address of the target interface. */
 		best = 0;
@@ -110,12 +115,12 @@ void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
 				s->masklen); */
 		}
 		if (best)
-			memcpy (r->gwifaddr, best->ipaddr, 4);
+		    ipadr_assign_ucs(r->gwifaddr, best->ipaddr);
 	}
 	bcast = HTONL (bcast);
-	memcpy (r->broadcast, &bcast, 4);
+	ipadr_assignl_ucs (r->broadcast, bcast);
 	net = HTONL (net);
-	memcpy (r->netaddr, &net, 4);
+	ipadr_assignl_ucs (r->netaddr, net);
 	/* debug_printf ("route: setup net %d.%d.%d.%d bcast %d.%d.%d.%d\n",
 		r->netaddr[0], r->netaddr[1], r->netaddr[2], r->netaddr[3],
 		r->broadcast[0], r->broadcast[1], r->broadcast[2], r->broadcast[3]); */
@@ -131,6 +136,9 @@ void route_add_netif (ip_t *ip, route_t *r, unsigned char *ipaddr,
 	r->netif = netif;
 	r->next = ip->route;
 	ip->route = r;
+    ROUTE_printf ("route: add netif on %d.%d.%d.%d for %s\n",
+              r->ipaddr[0], r->ipaddr[1], r->ipaddr[2], r->ipaddr[3]
+            , r->netif->name);
 }
 
 /*
@@ -240,9 +248,12 @@ unsigned char *route_lookup_ipaddr (ip_t *ip, unsigned char *ipaddr,
 	route_t *r, *best;
 
 	best = 0;
-	/* debug_printf ("route: lookup ipaddr %d.%d.%d.%d for %s\n",
-		ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3], netif->name); */
+	ROUTE_printf ("route: lookup ipaddr %d.%d.%d.%d for %s\n",
+		ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3], netif->name);
 	for (r=ip->route; r; r=r->next) {
+	    ROUTE_printf ("route: lookup gateaway %d.%d.%d.%d for %s\n",
+	              r->gateway[0], r->gateway[1], r->gateway[2], r->gateway[3]
+	            , r->netif->name);
 		/* Search through all interface records. */
 		if (r->netif != netif || r->gateway[0])
 			continue;
@@ -256,10 +267,10 @@ unsigned char *route_lookup_ipaddr (ip_t *ip, unsigned char *ipaddr,
 			continue;
 
 		best = r;
-		/* debug_printf ("route match: %d.%d.%d.%d with %d.%d.%d.%d / %d\n",
+		ROUTE_printf ("route match: %d.%d.%d.%d with %d.%d.%d.%d / %d\n",
 			ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
 			r->ipaddr[0], r->ipaddr[1], r->ipaddr[2], r->ipaddr[3],
-			r->masklen); */
+			r->masklen);
 	}
 	if (! best)
 		return 0;

@@ -5,10 +5,24 @@
 #include <net/netif.h>
 #include <net/route.h>
 #include <net/arp.h>
+#include <net/ip.h>
 
-#undef ARP_TRACE
+//#undef ARP_TRACE
+#ifdef DEBUG_NET_ARPTABLE
+#define ARPTABLE_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define ARPTABLE_printf(...)
+#endif
 
-static const char BROADCAST[6] = {'\xff','\xff','\xff','\xff','\xff','\xff'};
+#ifdef ARP_TRACE
+#define ARPTRACE_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define ARPTRACE_printf(...)
+#endif
+
+
+
+static const unsigned char BROADCAST[6] = {'\xff','\xff','\xff','\xff','\xff','\xff'};
 
 /*
  * Initialize the ARP data strucure.
@@ -44,14 +58,14 @@ arp_lookup (netif_t *netif, unsigned char *ipaddr)
 	arp_entry_t *e;
 
 	for (e = arp->table; e < arp->table + arp->size; ++e)
-		if (e->netif == netif && memcmp (e->ipaddr, ipaddr, 4) == 0) {
+		if (e->netif == netif && ipadr_is_same_ucs(e->ipaddr.ucs, ipaddr) ) {
 			/*debug_printf ("arp_lookup: %d.%d.%d.%d -> %02x-%02x-%02x-%02x-%02x-%02x\n",
 				ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
 				e->ethaddr[0], e->ethaddr[1], e->ethaddr[2],
 				e->ethaddr[3], e->ethaddr[4], e->ethaddr[5]);*/
 			/* LY-TODO: не нужно сбрасывать age. */
 			e->age = 0;
-			return e->ethaddr;
+			return e->ethaddr.ucs;
 		}
 	/*debug_printf ("arp_lookup failed: ipaddr = %d.%d.%d.%d\n",
 		ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3]);*/
@@ -80,9 +94,9 @@ arp_add_entry (netif_t *netif, unsigned char *ipaddr, unsigned char *ethaddr)
 			continue;
 
 		/* IP address match? */
-		if (memcmp (e->ipaddr, ipaddr, 4) == 0) {
+		if (ipadr_is_same_ucs(e->ipaddr.ucs, ipaddr)) {
 			/* An old entry found, update this and return. */
-			if (memcmp (e->ethaddr, ethaddr, 6) != 0 ||
+			if (macadr_is_same_ucs(e->ethaddr.ucs, ethaddr) ||
 			    e->netif != netif) {
 				/* debug_printf ("arp: entry %d.%d.%d.%d changed from %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
 					ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
@@ -93,7 +107,7 @@ arp_add_entry (netif_t *netif, unsigned char *ipaddr, unsigned char *ethaddr)
 					ethaddr[0], ethaddr[1], ethaddr[2],
 					ethaddr[3], ethaddr[4], ethaddr[5],
 					netif->name); */
-				memcpy (e->ethaddr, ethaddr, 6);
+				macadr_assign_ucs(e->ethaddr.ucs, ethaddr);
 				e->netif = netif;
 			}
 			e->age = 0;
@@ -117,22 +131,23 @@ arp_add_entry (netif_t *netif, unsigned char *ipaddr, unsigned char *ethaddr)
 			if (q->age > e->age)
 				e = q;
 		}
-		/* debug_printf ("arp: delete entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x netif %s age %d\n",
-			e->ipaddr[0], e->ipaddr[1], e->ipaddr[2], e->ipaddr[3],
-			e->ethaddr[0], e->ethaddr[1], e->ethaddr[2],
-			e->ethaddr[3], e->ethaddr[4], e->ethaddr[5],
-			e->netif->name, e->age); */
+		ARPTABLE_printf ("arp: delete entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x netif %s age %d\n",
+			e->ipaddr.ucs[0], e->ipaddr.ucs[1], e->ipaddr.ucs[2], e->ipaddr.ucs[3],
+			e->ethaddr.ucs[0], e->ethaddr.ucs[1], e->ethaddr.ucs[2],
+			e->ethaddr.ucs[3], e->ethaddr.ucs[4], e->ethaddr.ucs[5],
+			e->netif->name, e->age);
 	}
 
 	/* Now, fill this table entry with the new information. */
-	memcpy (e->ipaddr, ipaddr, 4);
-	memcpy (e->ethaddr, ethaddr, 6);
+	ipadr_assign_ucs(e->ipaddr.ucs, ipaddr);
+	macadr_assign_ucs(e->ethaddr.ucs, ethaddr);
 	e->netif = netif;
 	e->age = 0;
-	/* debug_printf ("arp: create entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
-		e->ipaddr[0], e->ipaddr[1], e->ipaddr[2], e->ipaddr[3],
-		e->ethaddr[0], e->ethaddr[1], e->ethaddr[2],
-		e->ethaddr[3], e->ethaddr[4], e->ethaddr[5], e->netif->name); */
+	ARPTABLE_printf ("arp: create entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
+        e->ipaddr.ucs[0], e->ipaddr.ucs[1], e->ipaddr.ucs[2], e->ipaddr.ucs[3],
+        e->ethaddr.ucs[0], e->ethaddr.ucs[1], e->ethaddr.ucs[2],
+        e->ethaddr.ucs[3], e->ethaddr.ucs[4], e->ethaddr.ucs[5],
+		e->netif->name);
 }
 
 /*
@@ -193,14 +208,15 @@ arp_input (netif_t *netif, buf_t *p)
 			return 0;
 
 		case ARP_REQUEST:
-#ifdef ARP_TRACE
-			debug_printf ("arp: got request for %d.%d.%d.%d\n",
+			ARPTRACE_printf ("arp: got request for %d.%d.%d.%d\n",
 				ah->dst_ipaddr[0], ah->dst_ipaddr[1], ah->dst_ipaddr[2], ah->dst_ipaddr[3]);
-			debug_printf ("     from %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
+			ARPTRACE_printf ("     from %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
 				ah->src_ipaddr[0], ah->src_ipaddr[1], ah->src_ipaddr[2], ah->src_ipaddr[3],
 				ah->src_hwaddr[0], ah->src_hwaddr[1], ah->src_hwaddr[2],
 				ah->src_hwaddr[3], ah->src_hwaddr[4], ah->src_hwaddr[5]);
-#endif
+
+			//arp_add_entry (netif, ah->src_ipaddr, ah->src_hwaddr);
+
 			/* ARP request. If it asked for our address,
 			 * we send out a reply. */
 			ipaddr = route_lookup_ipaddr (netif->arp->ip,
@@ -222,16 +238,16 @@ arp_input (netif_t *netif, buf_t *p)
 			memcpy (ah->eth.src, netif->ethaddr, 6);
 
 			ah->eth.proto = PROTO_ARP;
-#ifdef ARP_TRACE
-			debug_printf ("arp: send reply %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
+
+			ARPTRACE_printf ("arp: send reply %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
 				ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
 				netif->ethaddr[0], netif->ethaddr[1], netif->ethaddr[2],
 				netif->ethaddr[3], netif->ethaddr[4], netif->ethaddr[5]);
-			debug_printf ("     to %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
+			ARPTRACE_printf ("     to %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
 				ah->dst_ipaddr[0], ah->dst_ipaddr[1], ah->dst_ipaddr[2], ah->dst_ipaddr[3],
 				ah->dst_hwaddr[0], ah->dst_hwaddr[1], ah->dst_hwaddr[2],
 				ah->dst_hwaddr[3], ah->dst_hwaddr[4], ah->dst_hwaddr[5]);
-#endif
+
 			netif->interface->output (netif, p, 0);
 			return 0;
 
@@ -275,8 +291,8 @@ arp_request (netif_t *netif, buf_t *p, unsigned char *ipdest,
 
 	ah = (struct arp_hdr*) p->payload;
 	ah->eth.proto = PROTO_ARP;
-	memcpy_flash (ah->eth.dest, BROADCAST, 6);
-	memcpy (ah->eth.src, netif->ethaddr, 6);
+	macadr_assign_ucs(ah->eth.dest, BROADCAST);
+	macadr_assign_ucs(ah->eth.src, netif->ethaddr);
 
 	ah->opcode = ARP_REQUEST;
 	ah->hwtype = HWTYPE_ETHERNET;
@@ -286,9 +302,9 @@ arp_request (netif_t *netif, buf_t *p, unsigned char *ipdest,
 
 	/* Most implementations set dst_hwaddr to zero. */
 	memset (ah->dst_hwaddr, 0, 6);
-	memcpy (ah->src_hwaddr, netif->ethaddr, 6);
-	memcpy (ah->dst_ipaddr, ipdest, 4);
-	memcpy (ah->src_ipaddr, ipsrc, 4);
+	macadr_assign_ucs (ah->src_hwaddr, netif->ethaddr);
+	ipadr_assign_ucs(ah->dst_ipaddr, ipdest);
+	ipadr_assign_ucs(ah->src_ipaddr, ipsrc);
 
 	/* debug_printf ("arp: send request for %d.%d.%d.%d\n",
 		ipdest[0], ipdest[1], ipdest[2], ipdest[3]); */
@@ -310,7 +326,7 @@ arp_add_header (netif_t *netif, buf_t *p, unsigned char *ipdest,
 	struct eth_hdr *h;
 
 	/* Make room for Ethernet header. */
-	if (! buf_add_header (p, 14)) {
+	if (! buf_add_header (p, sizeof (struct eth_hdr) )) {
 		/* No space for header, deallocate packet. */
 		buf_free (p);
 		/*debug_printf ("arp_output: no space for header\n");*/
@@ -324,7 +340,7 @@ arp_add_header (netif_t *netif, buf_t *p, unsigned char *ipdest,
 	 * ARP table. */
 	if (! ipdest) {
 		/* Broadcast. */
-		memcpy_flash (h->dest, BROADCAST, 6);
+	    macadr_assign_ucs(h->dest, BROADCAST);
 
 	} else if ((ipdest[0] & 0xf0) == 0xe0) {
 		/* Hash IP multicast address to MAC address. */
@@ -336,11 +352,11 @@ arp_add_header (netif_t *netif, buf_t *p, unsigned char *ipdest,
 		h->dest[5] = ipdest[3];
 
 	} else {
-		memcpy (h->dest, ethdest, 6);
+		macadr_assign_ucs(h->dest, ethdest);
 	}
 
 	h->proto = PROTO_IP;
-	memcpy (h->src, netif->ethaddr, 6);
+	macadr_assign_ucs (h->src, netif->ethaddr);
 	return 1;
 }
 

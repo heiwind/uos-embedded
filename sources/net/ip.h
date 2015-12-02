@@ -38,10 +38,11 @@ extern "C" {
 
 
 
-struct _ip_t;
-
+//*****************************************************************************
+//                               IP4 adress
+//*****************************************************************************
 typedef uint32_t ip_addr_t;
-typedef union _ip_addr{
+typedef union  __attribute__ ((packed,aligned(4))) _ip_addr{
     ip_addr_t       val;
     char            cs[4];
     unsigned char   ucs[4];
@@ -58,11 +59,19 @@ ip_addr ipadr_4l(uint32_t x) __THROW
     return res;
 }
 
-INLINE __CONST 
+INLINE 
 ip_addr ipadr_4ucs(const unsigned char* x) __THROW 
 {
     ip_addr res;
-    res.val = *((ip_addr_t*)x);
+#if CPU_ACCESSW_ALIGNMASK > 0
+    if (( (uintptr_t)x &CPU_ACCESSW_ALIGNMASK) == 0){
+        res.val = *((const ip_addr_t*)x);
+        return res;
+    }
+#endif
+    // на платформе с адресацией слов с обязательным выраниванием
+    //  невыравненые данные вызовут исключение 
+    res.val = x[0]|(x[1]<<8)|(x[2]<<16)|(x[3]<<24);
     return res;
 }
 
@@ -71,15 +80,49 @@ INLINE ip_addr ipadr_assign(        ip_addr* __restrict__ dst
                             ) __THROW
 {
     dst->val = src->val;
-    return *src;
+    return *dst;
 }
 
-INLINE ip_addr ipadr_assign_ucs(        unsigned char* __restrict__ dst
+INLINE ip_addr ipadr_assign_l(        ip_addr*  dst
+                            , const ip_addr_t x
+                            ) __THROW
+{
+    dst->val = x;
+    return *dst;
+}
+
+INLINE unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
                                 , const unsigned char* __restrict__ src
                                 ) __THROW
 {
-    ((ip_addr*)dst)->val = ((ip_addr*)src)->val;
-    return *((ip_addr*)src);
+#if CPU_ACCESSW_ALIGNMASK > 0
+    if ((((uintptr_t)dst|(uintptr_t)src)&CPU_ACCESSW_ALIGNMASK) == 0){
+        ((ip_addr*)dst)->val = ((ip_addr*)src)->val;
+        return dst;
+    }
+#endif
+    memcpy(dst, src, 4);
+    return dst;
+}
+
+INLINE unsigned char* ipadr_assignl_ucs( unsigned char* __restrict__ dst
+                                        , ip_addr_t x
+                                ) __THROW
+{
+#if CPU_ACCESSW_ALIGNMASK > 0
+    if ( ((uintptr_t)dst & CPU_ACCESSW_ALIGNMASK) == 0){
+        ((ip_addr*)dst)->val = x;
+        return dst;
+    }
+#endif
+    dst[0] = x&0xff;
+    x >>= 8;
+    dst[1] = x&0xff;
+    x >>= 8;
+    dst[2] = x&0xff;
+    x >>= 8;
+    dst[3] = x&0xff;
+    return dst;
 }
 
 //!!! ip==0 - дает всегда true в сравнении
@@ -95,13 +138,34 @@ bool_t __CONST ipadr_is_same(     const ip_addr a_or0
 }
 
 INLINE 
-bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a_or0
+bool_t __CONST ipadr_is_same_l(   const ip_addr a
+                                , const ip_addr_t b
+                                ) __THROW
+{
+        if (a.val != 0)
+        if (b != 0)
+            return (a.val == b);
+        return true;
+}
+
+INLINE 
+bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
                         , const unsigned char* __restrict__ b
                         ) __THROW
 {
-    const ip_addr* __restrict__ ipa = (const ip_addr*) a_or0;
-    const ip_addr* __restrict__ ipb = (const ip_addr*) b;
-    return ipadr_is_same(*ipa, *ipb);
+#if CPU_ACCESSW_ALIGNMASK > 0
+    if ( (((uintptr_t)a|(uintptr_t)b)&CPU_ACCESSW_ALIGNMASK) == 0){
+        const ip_addr* __restrict__ ipa = (const ip_addr*) a;
+        const ip_addr* __restrict__ ipb = (const ip_addr*) b;
+        return ipadr_is_same(*ipa, *ipb);
+    }
+#endif
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+        return true;
+    return false;
 }
 
 // тоже самое, но false eсли  a==NULL
@@ -159,11 +223,24 @@ bool_t __CONST ipadr_not0(const ip_addr a) __THROW
 INLINE  
 bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
 {
+#if CPU_ACCESSW_ALIGNMASK > 0
+    if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){
         return (((ip_addr*)a)->val != 0)? true : false;
+    }
+#endif
+    if (*a++ == 0)
+    if (*a++ == 0)
+    if (*a++ == 0)
+    if (*a++ == 0)
+        return false;
+    return true;
 }
 
 /** надо стараться придерживаться этого шаблона сокета, для создания протокольных сокетов
  * */
+
+struct _ip_t;
+
 typedef struct _base_socket_t {
     mutex_t     lock;
     struct _ip_t          *ip;

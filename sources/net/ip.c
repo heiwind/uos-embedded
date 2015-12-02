@@ -259,8 +259,8 @@ ip_output_netif (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	iphdr->id_h = ip->id >> 8;
 	iphdr->id_l = ip->id;
 
-	memcpy (iphdr->dest, dest, 4);
-	memcpy (iphdr->src, src ? src : netif_ipaddr, 4);
+	ipadr_assign_ucs(iphdr->dest, dest);
+	ipadr_assign_ucs(iphdr->src, src ? src : netif_ipaddr);
 
 	iphdr->chksum_h = 0;
 	iphdr->chksum_l = 0;

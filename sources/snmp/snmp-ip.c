@@ -820,7 +820,7 @@ find_arp_by_addr (ip_t *ip, unsigned nif, unsigned long addr)
 	if (! netif)
 		return 0;
 	for (e=arp->table; e<arp->table+arp->size; ++e)
-		if (e->netif == netif && memcmp (e->ipaddr, &addr, 4) == 0)
+		if (e->netif == netif && ipadr_is_same_l(e->ipaddr, addr))
 			return e;
 	return 0;
 }
@@ -847,7 +847,7 @@ find_first_arp_by_addr (ip_t *ip, unsigned *nif, unsigned long *addr)
 		if (! e->netif)
 			continue;
 
-		a = LONG (e->ipaddr);
+		a = e->ipaddr.val;
 		n = get_netif_index_by_netif (ip, e->netif);
 		if (! found || n < found_nif ||
 		    (n == found_nif && a < found_addr)) {
@@ -888,7 +888,7 @@ find_next_arp_by_addr (ip_t *ip, unsigned *nif, unsigned long *addr)
 		if (n < *nif)
 			continue;
 
-		a = LONG (e->ipaddr);
+		a = e->ipaddr.val;
 		if (n == *nif && a <= *addr)
 			continue;
 
@@ -961,7 +961,7 @@ snmp_set_ipNetToMediaNetAddress (snmp_t *snmp, asn_t *val, unsigned nif, unsigne
 		return SNMP_NO_SUCH_NAME;
 	if (val->type != ASN_IP_ADDRESS)
 		return SNMP_BAD_VALUE;
-	memcpy (e->ipaddr, &val->int32.val, 4);
+	ipadr_assign_l(&e->ipaddr, val->int32.val);
 	return SNMP_NO_ERROR;
 }
 
@@ -996,7 +996,7 @@ asn_t *snmp_get_ipNetToMediaPhysAddress (snmp_t *snmp, unsigned nif, unsigned lo
 	e = find_arp_by_addr (snmp->ip, nif, addr);
 	if (! e)
 		return 0;
-	return asn_make_stringn (snmp->pool, e->ethaddr, 6);
+	return asn_make_stringn (snmp->pool, e->ethaddr.ucs, 6);
 }
 
 asn_t *snmp_next_ipNetToMediaPhysAddress (snmp_t *snmp, bool_t nextflag, unsigned *nif, unsigned long *addr, ...)
@@ -1007,7 +1007,7 @@ asn_t *snmp_next_ipNetToMediaPhysAddress (snmp_t *snmp, bool_t nextflag, unsigne
 		find_first_arp_by_addr (snmp->ip, nif, addr);
 	if (! e)
 		return 0;
-	return asn_make_stringn (snmp->pool, e->ethaddr, 6);
+	return asn_make_stringn (snmp->pool, e->ethaddr.ucs, 6);
 }
 
 small_uint_t
@@ -1020,6 +1020,6 @@ snmp_set_ipNetToMediaPhysAddress (snmp_t *snmp, asn_t *val, unsigned nif, unsign
 		return SNMP_NO_SUCH_NAME;
 	if (val->type != ASN_STRING || val->type != 6)
 		return SNMP_BAD_VALUE;
-	memcpy (e->ethaddr, &val->string.str, 6);
+	macadr_assign_ucs (e->ethaddr.ucs, &(val->string.str[0]));
 	return SNMP_NO_ERROR;
 }

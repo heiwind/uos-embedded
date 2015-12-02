@@ -33,6 +33,12 @@
 #   endif
 #endif
 
+#ifdef MIPS32
+//архитектура МИПС не умеет адресоваться к невыравненым словам, тоесть адресацию
+//таких данных надо вести побайтово!
+#define CPU_ACCESSW_ALIGNMASK 3
+#endif
+
 #ifndef __nonnull
 #define __nonnull(seq) __attribute__((nonull seq )) 
 #endif
