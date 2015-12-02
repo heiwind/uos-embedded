@@ -33,6 +33,9 @@
 #elif defined (MIPS32)
 #   define __BYTE_ORDER __LITTLE_ENDIAN
 #   define __FLOAT_WORD_ORDER __LITTLE_ENDIAN
+#   if UOS_FOR_SPEED > 0
+#   define CPU_HARD_MISALIGN  1
+#   endif
 #	include <stdarg.h>
 #	include <runtime/mips/types.h>
 #	include <runtime/string.h>
