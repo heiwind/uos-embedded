@@ -4,10 +4,10 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996" moduleId="org.eclipse.cdt.core.settings" name="Default">
 				<macros>
-					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="${MCS4_HOME}/ToolsMGCC"/>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="${ProjDirPath}/uOS"/>
+					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/MCStudio4/ToolsMGCC"/>
 					<stringMacro name="CHIP" type="VALUE_TEXT" value="ELVEES_NVCOM02T"/>
-					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
+					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}"/>
 				</macros>
 				<externalSettings/>
 				<extensions>
@@ -32,14 +32,15 @@
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostdlibs.476934725" name="No startup or default libs (-nostdlib)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostdlibs" value="true" valueType="boolean"/>
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.paths.1367884024" name="Library search path (-L)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-gc-sections"/>
 								</option>
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.ldflags.1391039803" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.ldflags" valueType="stringList">
 									<listOptionValue builtIn="false" value="-T code-cram-data-cram-i-d-cache.ld"/>
 								</option>
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.other.1410031542" name="Other options (-Xlinker [option])" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-Map=${BuildArtifactFileName}.map"/>
-									<listOptionValue builtIn="false" value="--gc-sections"/>
 									<listOptionValue builtIn="false" value="--cref"/>
+									<listOptionValue builtIn="false" value="-gc-sections"/>
 								</option>
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.libs.1351518759" name="Libraries (-l)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="gcc"/>
@@ -122,7 +123,7 @@
 								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.inputType.921363744" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.inputType"/>
 							</tool>
 							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.1147264163" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker"/>
-							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.1411574630" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c">
+							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.1411574630" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c">
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.includes.paths.1430467730" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.includes.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
@@ -146,6 +147,7 @@
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level.2077644344" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level.max" valueType="enumerated"/>
 								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.misc.other.356708581" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.misc.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch  -Xassembler --mc24r2"/>
+									<listOptionValue builtIn="false" value="-fno-builtin"/>
 									<listOptionValue builtIn="false" value="-ffunction-sections"/>
 									<listOptionValue builtIn="false" value="-fdata-sections"/>
 								</option>
@@ -155,7 +157,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="uOS/runtime/strrchr.c|uOS/runtime/strncpy.c|uOS/runtime/strncmp.c|uOS/runtime/strncat.c|uOS/runtime/strlen.c|uOS/runtime/strcpy.c|uOS/runtime/strcmp.c|uOS/runtime/strchr.c|uOS/runtime/strcat.c|uOS/runtime/memset.c|uOS/runtime/memmove.c|uOS/runtime/memcpy.c|uOS/runtime/memcmp.c|uOS/runtime/memchr.c|uOS/nvram|uOS/stream/good-print.c|uOS/runtime/debug-dump-stack.c|uOS/crc/test16-inet.c|uOS/runtime/math/jn.c|uOS/runtime/math/j1.c|uOS/runtime/math/j0.c|uOS/cs8900|uOS/enc28j60|uOS/dozor|uOS/gpanel|uOS/lcd2|uOS/lcd|uOS/microchip|uOS/kernel/msp430|uOS/kernel/linux386|uOS/kernel/i386|uOS/kernel/cortex-m|uOS/kernel/avr|uOS/kernel/arm|uOS/milandr|uOS/net/udp-example.c|uOS/net/tcp-example.c|uOS/nvram/nvram-avr.c|uOS/runtime/mips/startup-nobev.S|uOS/runtime/mips/startup-pic32.S|uOS/runtime/mips/startup-malta.S|uOS/runtime/mips/startup.S|uOS/runtime/mips/init-pic32.c|uOS/runtime/mips/init-malta.c|uOS/regexp/try.c|uOS/tap|uOS/uart/uart-msp430.c|uOS/uart/uart-linux.c|uOS/runtime/msp430|uOS/runtime/linux386|uOS/runtime/i386|uOS/runtime/cortex-m|uOS/runtime/avr|uOS/runtime/arm|uOS/tcl|uOS/smc91c111|uOS/s3c4530|uOS/regexp9|uOS/pic32|uOS/pci|uOS/i8042|uOS/vesa|whetstone.c|test-usbdev.c|test-udp-client.c|test-uda1380.c|test-uart.c|test-tswitch.c|test-tlv320aic32.c|test-timer.c|test-tcp-serv.c|test-tcp-client.c|test-tcl.c|test-task.c|test-spw.c|test-sdhc-fast.c|test-ram.c|test-mcb-eth.c|test-mac.c|test-latency.c|test-i2c-ad7416.c|test-i2c.c|test-hid.c|test-fpu.c|test-flash.c|test-fat32-fw.c|test-eth-mdb.c|test-eth.c|test-debug.c|test-dcache.c|print-fat32.c|philosophers.c|livermore.c|linpack.c|eth-to-swic.c|dhrystone.c|coremark.c|out" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="test-telnetd.c|uOS/runtime/strrchr.c|uOS/runtime/strncpy.c|uOS/runtime/strncmp.c|uOS/runtime/strncat.c|uOS/runtime/strlen.c|uOS/runtime/strcpy.c|uOS/runtime/strcmp.c|uOS/runtime/strchr.c|uOS/runtime/strcat.c|uOS/runtime/memset.c|uOS/runtime/memmove.c|uOS/runtime/memcpy.c|uOS/runtime/memcmp.c|uOS/runtime/memchr.c|uOS/nvram|uOS/stream/good-print.c|uOS/runtime/debug-dump-stack.c|uOS/crc/test16-inet.c|uOS/runtime/math/jn.c|uOS/runtime/math/j1.c|uOS/runtime/math/j0.c|uOS/cs8900|uOS/enc28j60|uOS/dozor|uOS/gpanel|uOS/lcd2|uOS/lcd|uOS/microchip|uOS/kernel/msp430|uOS/kernel/linux386|uOS/kernel/i386|uOS/kernel/cortex-m|uOS/kernel/avr|uOS/kernel/arm|uOS/milandr|uOS/net/udp-example.c|uOS/net/tcp-example.c|uOS/nvram/nvram-avr.c|uOS/runtime/mips/startup-nobev.S|uOS/runtime/mips/startup-pic32.S|uOS/runtime/mips/startup-malta.S|uOS/runtime/mips/startup.S|uOS/runtime/mips/init-pic32.c|uOS/runtime/mips/init-malta.c|uOS/regexp/try.c|uOS/tap|uOS/uart/uart-msp430.c|uOS/uart/uart-linux.c|uOS/runtime/msp430|uOS/runtime/linux386|uOS/runtime/i386|uOS/runtime/cortex-m|uOS/runtime/avr|uOS/runtime/arm|uOS/tcl|uOS/smc91c111|uOS/s3c4530|uOS/regexp9|uOS/pic32|uOS/pci|uOS/i8042|uOS/vesa|whetstone.c|test-usbdev.c|test-udp-client.c|test-uda1380.c|test-uart.c|test-tswitch.c|test-tlv320aic32.c|test-timer.c|test-tcp-serv.c|test-tcp-client.c|test-tcl.c|test-task.c|test-spw.c|test-sdhc-fast.c|test-ram.c|test-mcb-eth.c|test-mac.c|test-latency.c|test-i2c-ad7416.c|test-i2c.c|test-hid.c|test-fpu.c|test-flash.c|test-fat32-fw.c|test-eth-mdb.c|test-eth.c|test-debug.c|test-dcache.c|print-fat32.c|philosophers.c|livermore.c|linpack.c|eth-to-swic.c|dhrystone.c|coremark.c|out" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

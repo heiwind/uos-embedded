@@ -6,11 +6,13 @@ OUTPUT_FORMAT("elf32-littlemips", "elf32-bigmips",
 	      "elf32-littlemips")
 OUTPUT_ARCH(mips)
 /* ENTRY(_start_) */
+ENTRY(_reset_vector_)
+
 MEMORY
 {
   /*flash  (rx)   : ORIGIN = 0x9fc00000,	LENGTH = 16M*/
-  ccode	 (rx)   : ORIGIN = 0x98000000,  LENGTH = 68K
-  cdata	 (rw!x) : ORIGIN = 0x98011000,  LENGTH = 60K
+  ccode	 (rx)   : ORIGIN = 0x98000000,  LENGTH = 72K
+  cdata	 (rw!x) : ORIGIN = 0x98012000,  LENGTH = 56K
   xyram0 (rw!x) : ORIGIN = 0xb8400000,	LENGTH = 128K
   pram0  (rw!x) : ORIGIN = 0xb8440000,	LENGTH = 32K
   xyram1 (rw!x) : ORIGIN = 0x98800000,	LENGTH = 128K
@@ -63,7 +65,7 @@ SECTIONS
 
   .text           :
   {
-    *(.init)
+    KEEP(*(.init))
     *(.text .stub .text.* .gnu.linkonce.t.*)
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
