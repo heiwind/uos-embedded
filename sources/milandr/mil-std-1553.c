@@ -17,7 +17,7 @@ static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
     if (mem_queue_is_full(&mil->rxq)) {
         mil->nb_lost++;
     } else {
-        unsigned wrc = slot.words_count;
+        unsigned wrc = (slot.words_count == 0 ? 32 : slot.words_count);
         uint16_t *que_elem = mem_alloc_dirty(mil->pool, 2*wrc + 8);
         if (!que_elem) {
             mil->nb_lost++;
@@ -79,7 +79,7 @@ static void start_slot(milandr_mil1553_t *mil, mil_slot_desc_t slot, uint16_t *p
 
         arm_reg_t *preg = &mil->reg->DATA[slot.subaddr * MIL_SUBADDR_WORDS_COUNT];
         if (pdata) {
-            unsigned wrdc = slot.words_count;
+            unsigned wrdc = (slot.words_count == 0 ? 32 : slot.words_count);
             while (wrdc) {
                 *preg++ = *pdata++;
                 wrdc--;
@@ -609,7 +609,8 @@ static int mil_bc_urgent_send(mil1553if_t *_mil, mil_slot_desc_t descr, void *da
     mil_lock(_mil);
     mil->urgent_desc = descr;
     mil->urgent_desc.reserve = 0;
-    memcpy(mil->urgent_data, data, 2*descr.words_count);
+    int wc = (descr.words_count == 0 ? 32 : descr.words_count);
+    memcpy(mil->urgent_data, data, 2*wc);
     mil_unlock(_mil);
     return MIL_ERR_OK;
 }
