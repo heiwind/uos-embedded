@@ -96,15 +96,18 @@ struct _timer_t {
 };
 
 #ifdef USER_TIMERS
+typedef small_uint_t usertimer_time_t;
+
 struct _user_timer_t {
     list_t item;
     mutex_t lock;
 #ifdef USEC_TIMER
-	unsigned long usec_per_tick;
+    usertimer_time_t usec_per_tick;
+    volatile long int cur_time;
 #else
     small_uint_t msec_per_tick;
-#endif
     volatile long int cur_time;
+#endif
 };
 #endif
 
@@ -122,7 +125,8 @@ typedef struct _user_timer_t user_timer_t;
 #ifdef USEC_TIMER
 // Микросекудный таймер. Поддерживается пока только для миландровских контроллеров
 void timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick);
-inline void timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick){
+INLINE 
+void timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick){
     timer_init_us (t, khz, msec_per_tick*TIMER_USEC_PER_MSEC);
 };
 #else
@@ -142,7 +146,7 @@ void timer_delay (timer_t *t, unsigned long msec);
  * \~russian
  * Запрос времени в миллисекундах.
  */
-static inline unsigned long timer_milliseconds (timer_t *t){
+INLINE unsigned long timer_milliseconds (timer_t *t){
     return t->milliseconds;
 };
 
@@ -178,7 +182,7 @@ void timer_delay_ticks (timer_t *t, clock_time_t ticks);
  * \~russian
  * Запрос времени в тиках.
  */
-static inline unsigned long timer_tick(timer_t *t){
+INLINE unsigned long timer_tick(timer_t *t){
     return t->tick;
 };
 
@@ -188,7 +192,7 @@ static inline unsigned long timer_tick(timer_t *t){
  * \~russian
  * Проверка временного события.
  */
-static inline bool_t timer_passed_tick(timer_t *t, clock_time_t t0, clock_time_t ticks)
+INLINE bool_t timer_passed_tick(timer_t *t, clock_time_t t0, clock_time_t ticks)
 {
     unsigned long now = timer_tick(t);
     return (now - t0) > ticks;
@@ -197,16 +201,138 @@ static inline bool_t timer_passed_tick(timer_t *t, clock_time_t t0, clock_time_t
 
 
 #ifdef USER_TIMERS
+
+/**\~russian
+ * пользовательский таймер.
+ * он тикает от системного таймера, если его период не кратен системному, то время
+ *  тика выставляется с погрешностью  - с шагом системного таймера в наиближайшей 
+ *  точке к пользовательскому интервалу.
+ * в отличие от системного таймера - пользовательский таймер может останавливаться
+ * */
 #ifdef USEC_TIMER
 void user_timer_init_us (user_timer_t *ut, unsigned long usec_per_tick);
-inline void user_timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick){
-    user_timer_init_us (t, khz, msec_per_tick*TIMER_USEC_PER_MSEC);
+void user_timer_set_us  (user_timer_t *ut, usertimer_time_t usec_interval);
+void user_timer_arm_us  (user_timer_t *ut, usertimer_time_t usec_interval);
+bool_t user_timer_rearm_us  (user_timer_t *ut, usertimer_time_t usec_interval);
+void user_timer_restart_interval_us (user_timer_t *ut, usertimer_time_t usec_interval);
+
+INLINE 
+void user_timer_init (user_timer_t *ut, unsigned long msec_per_tick){
+    user_timer_init_us (ut, msec_per_tick*TIMER_USEC_PER_MSEC);
 };
+
+INLINE 
+void user_timer_set     (user_timer_t *ut, usertimer_time_t msec_interval){
+    user_timer_set_us(ut, msec_interval*1000ul);
+}
+
+/**\~russian
+ * запускает одноразовый таймер с текущего момента.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+INLINE 
+void user_timer_arm  (user_timer_t *ut, usertimer_time_t msec_interval){
+    user_timer_arm_us(ut, msec_interval*1000ul);
+}
+
+/**\~russian
+ * запускает одноразовый таймер с момента предыдущего события.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * !!! если вновь выставленное событие уже просрочено - возвращается true
+ * return false - если запущеное событие еще ожидается  
+ * */
+INLINE 
+bool_t user_timer_rearm  (user_timer_t *ut, usertimer_time_t msec_interval){
+    return user_timer_rearm_us(ut, msec_interval*1000ul);
+}
+
+/**\~russian
+ * перезапускает периодический таймер с момента предыдущего события.
+ * xsec_interval - новый период событий таймера
+ * вызов   user_timer_restart_interval(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+INLINE 
+void user_timer_restart_interval (user_timer_t *ut, usertimer_time_t msec_interval){
+    user_timer_restart_interval_us(ut, msec_interval*1000ul);
+}
+
 #else
 void user_timer_init (user_timer_t *ut, small_uint_t msec_per_tick);
+
+/**\~russian
+ * запускает периодический таймер с текущего момента.
+ * xsec_interval - период событий таймера
+ * вызов   user_timer_set(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_set  (user_timer_t *ut, usertimer_time_t msec_interval);
+
+/**\~russian
+ * запускает одноразовый таймер с текущего момента.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_arm  (user_timer_t *ut, usertimer_time_t msec_interval);
+
+/**\~russian
+ * запускает одноразовый таймер с момента предыдущего события.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * !!! если вновь выставленное событие уже просрочено - возвращается true
+ * return false - если запущеное событие еще ожидается  
+ * */
+bool_t user_timer_rearm  (user_timer_t *ut, usertimer_time_t msec_interval);
+
+/**\~russian
+ * перезапускает периодический таймер с момента предыдущего события.
+ * xsec_interval - новый период событий таймера
+ * вызов   user_timer_restart_interval(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_restart_interval (user_timer_t *ut, usertimer_time_t msec_interval);
+
 #endif
 void user_timer_add (timer_t *t, user_timer_t *ut);
+void user_timer_remove (timer_t *t, user_timer_t *ut);
 void user_timer_wait (user_timer_t *ut);
+
+/**\~russian
+ * останавливает активность таймера.
+ * при этом теряются его параметры - точка старта, период  
+ * */
+void user_timer_stop (user_timer_t *ut);
+
+//void user_timer_reset   (user_timer_t *ut);
+
+/**\~russian
+ * перезапускает периодический таймер с текущего момента.
+ * */
+void user_timer_restart (user_timer_t *ut);
+
+/**\~russian
+ * true - если таймер остановлен. 
+ * !!!не действителен для периодического таймера, работает только с одноразовыми. 
+ * */
+INLINE 
+bool_t user_timer_expired (user_timer_t *ut)
+{
+    return (ut->cur_time <= 0);
+}
+
+/**\~russian
+ * возвращает время следующего события таймера 
+ * */
+//usertimer_time_t user_timer_expiration_time(user_timer_t *ut)
+
+/**\~russian
+ * возвращает интервал времени до следующего события таймера 
+ * */
+INLINE 
+usertimer_time_t user_timer_expiration_timeout(user_timer_t *ut)
+{
+    return ut->cur_time;
+}
+
 #endif
 
 #ifdef __cplusplus
