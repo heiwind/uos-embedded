@@ -90,7 +90,7 @@
 #   define TIMER_IRQ        82  /* Systick */
 #endif
 
-#if ARM_STM32L152RC
+#if ARM_STM32L151RC || ARM_STM32L152RC
 #   if defined(RTC_TIMER)
 #       define TIMER_IRQ        IRQ_RTC_WKUP    /* RTC */
 #   else
@@ -215,7 +215,7 @@ void timer_update (timer_t *t)
     } while ((int) (compare - mips_read_c0_register (C0_COUNT)) < 0);
 #endif
 #if defined (RTC_TIMER)
-#   if defined (ARM_STM32L152RC)
+#   if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
         RTC->ISR &= ~RTC_WUTF;
         PWR->CR |= PWR_CWUF;
         EXTI->PR = EXTI_RTC_WKUP;
@@ -527,7 +527,7 @@ timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick)
 #endif
 #if ARM_CORTEX_M3 || ARM_CORTEX_M4
 #   if defined (RTC_TIMER)
-#       if defined (ARM_STM32L152RC)
+#       if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
             /* Clear write protection for RTC registers */
             RCC->APB1ENR |= RCC_PWREN;
             PWR->CR |= PWR_DBP;

@@ -186,7 +186,14 @@ debug_peekchar (void)
 #endif /* ARM_1986BE1 || ARM_1986BE9 */
 
 
-#if defined(ARM_STM32F4) || defined(ARM_STM32L152RC)
+#if defined(ARM_STM32F4) || defined(ARM_STM32L151RC) || defined(ARM_STM32L152RC)
+
+#if defined(USE_USART1)
+#	define DBG_USART	USART1
+#else
+#	define DBG_USART	USART3
+#endif
+
 void
 debug_putchar (void *arg, short c)
 {
@@ -195,14 +202,13 @@ debug_putchar (void *arg, short c)
 	arm_intr_disable (&x);
 
     /* Wait for transmitter holding register empty. */ 
-    while (! (USART3->SR & USART_TC));
-    
+    while (! (DBG_USART->SR & USART_TC));
+
 again:
 	/* Send byte. */
-	USART3->DR = c;
-
+	DBG_USART->DR = c;
     /* Wait for transmitter holding register empty. */
-	while (! (USART3->SR & USART_TC));
+	while (! (DBG_USART->SR & USART_TC));
 
 	watchdog_alive ();
 	if (debug_onlcr && c == '\n') {
@@ -227,13 +233,13 @@ debug_getchar (void)
 	arm_intr_disable (&x);
 
 	/* Wait until receive data available. */
-	while (! (USART3->SR & USART_RXNE)) {
+	while (! (DBG_USART->SR & USART_RXNE)) {
 		watchdog_alive ();
 		arm_intr_restore (x);
 		arm_intr_disable (&x);
 	}
 
-	c = USART3->DR;
+	c = DBG_USART->DR;
 
 	arm_intr_restore (x);
 	return c;
@@ -252,18 +258,18 @@ debug_peekchar (void)
 	arm_intr_disable (&x);
 
 	/* Check if receive data available. */
-	if (! (USART3->SR & USART_RXNE)) {
+	if (! (DBG_USART->SR & USART_RXNE)) {
 		arm_intr_restore (x);
 		return -1;
 	}
 
-	c = USART3->DR;
+	c = DBG_USART->DR;
 
 	arm_intr_restore (x);
 	debug_char = c;
 	return c;
 }
-#endif /* ARM_STM32F4 || ARM_STM32L152RC */
+#endif /* ARM_STM32F4 || ARM_STM32L151RC || ARM_STM32L152RC */
 
 
 void

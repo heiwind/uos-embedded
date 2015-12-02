@@ -16,11 +16,15 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
- 
+
+#ifdef ARM_STM32L151RC
+#   define STM32L_CAT3
+#endif
+
 #ifdef ARM_STM32L152RC
 #   define STM32L_CAT3
 #endif
- 
+
 typedef volatile unsigned int arm_reg_t;
 
 
@@ -59,8 +63,8 @@ typedef volatile unsigned int arm_reg_t;
 #define STM_UART5_BASE          0x40005000
 #define STM_I2C1_BASE           0x40005400
 #define STM_I2C2_BASE           0x40005800
-#define STM_USB_DEV_FS          0x40005C00
-#define STM_USB_DEV_FS_SRAM     0x40006000
+#define STM_USB_DEV_FS_BASE     0x40005C00
+#define STM_USB_DEV_FS_SRAM_BASE 0x40006000
 #define STM_PWR_BASE            0x40007000
 #define STM_DAC_BASE            0x40007400
 #define STM_COMP_BASE           0x40007C00
@@ -272,7 +276,14 @@ typedef struct
 // ICSCR
 #define RCC_MSITRIM(n)          ((n) << 24)
 #define RCC_MSICAL(n)           ((n) << 16)
-#define RCC_MSIRANGE(n)         ((n) << 13)
+#define RCC_MSIRANGE_65536      (0 << 13)
+#define RCC_MSIRANGE_131072     (1 << 13)
+#define RCC_MSIRANGE_262144     (2 << 13)
+#define RCC_MSIRANGE_524288     (3 << 13)
+#define RCC_MSIRANGE_1048K      (4 << 13)
+#define RCC_MSIRANGE_2097K      (5 << 13)
+#define RCC_MSIRANGE_4194K      (6 << 13)
+#define RCC_MSIRANGE_MASK       (7 << 13)
 #define RCC_HSITRIM(n)          ((n) << 8)
 #define RCC_HSICAL(n)           ((n))
 
@@ -533,18 +544,18 @@ typedef struct
 /////////////////////////////////////////
 typedef struct
 {
-    arm_reg_t ACR;
-    arm_reg_t PECR;
-    arm_reg_t PDKEYR;
-    arm_reg_t PEKEYR;
-    arm_reg_t PRGKEYR;
-    arm_reg_t OPTKEYR;
-    arm_reg_t SR;
-    arm_reg_t OBR;
-    arm_reg_t WRPR1;
-    arm_reg_t WRPR2;
-    arm_reg_t WRPR3;
-    arm_reg_t WRPR4;
+    arm_reg_t ACR;      // Access control
+    arm_reg_t PECR;     // Program/erase control
+    arm_reg_t PDKEYR;   // Power down key
+    arm_reg_t PEKEYR;   // Program/erase key
+    arm_reg_t PRGKEYR;  // Program memory key
+    arm_reg_t OPTKEYR;  // Option byte key
+    arm_reg_t SR;       // Status
+    arm_reg_t OBR;      // Option byte
+    arm_reg_t WRPR1;    // Write protection
+    arm_reg_t WRPR2;    // Write protection
+    arm_reg_t WRPR3;    // Write protection
+    arm_reg_t WRPR4;    // Write protection
 } FLASH_t;
 
 #define FLASH     ((FLASH_t*) STM_FLASH_IFACE_BASE)
@@ -673,6 +684,22 @@ typedef struct
 
 
 /////////////////////////////////////////
+// CRC calculation
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t DR;    // Data
+    arm_reg_t IDR;   // Independent data
+    arm_reg_t CR;    // Control
+} CRC_t;
+
+#define CRC         ((CRC_t*) STM_CRC_BASE)
+
+// CRC_CR values
+#define CRC_RESET       (1 << 0)
+
+
+/////////////////////////////////////////
 // General purpose I/O
 /////////////////////////////////////////
 typedef struct
@@ -712,10 +739,11 @@ typedef struct
 #define GPIO_OD(n)      (1 << (n))      // Open drain
 
 // OSPEEDR values
-#define GPIO_2MHz(n)    (0 << (2 * n))  // Low speed
-#define GPIO_25MHz(n)   (1 << (2 * n))  // Medium speed
-#define GPIO_50MHz(n)   (2 << (2 * n))  // Fast speed
-#define GPIO_100MHz(n)  (3 << (2 * n))  // High speed
+#define GPIO_2MHz(n)        (0 << (2 * n))  // Low speed
+#define GPIO_25MHz(n)       (1 << (2 * n))  // Medium speed
+#define GPIO_50MHz(n)       (2 << (2 * n))  // Fast speed
+#define GPIO_100MHz(n)      (3 << (2 * n))  // High speed
+#define GPIO_OSPEED_MASK(n) (3 << (2 * n))  // Field mask
 
 // PUPDR values
 #define GPIO_NO_PULL(n)   (0 << (2 * n))  // No pull-up, no pull-down
@@ -766,6 +794,50 @@ typedef struct
 #define GPIO_AF_OTG_HS_FS(n) (0xC << (4 * ((n) & 7)))
 #define GPIO_AF_DCMI(n)     (0xD << (4 * ((n) & 7)))
 #define GPIO_AF_EVENTOUT(n) (0xF << (4 * ((n) & 7)))
+#define GPIO_AF_MASK(n)     (0xF << (4 * ((n) & 7)))
+
+
+/////////////////////////////////////////
+// SYSCFG
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t MEMRMP;   // memory remap
+    arm_reg_t PMC;      // peripheral mode configuration
+    arm_reg_t EXTICR1;  // external interrupt configuration 1
+    arm_reg_t EXTICR2;  // external interrupt configuration 2
+    arm_reg_t EXTICR3;  // external interrupt configuration 3
+    arm_reg_t EXTICR4;  // external interrupt configuration 4
+} SYSCFG_t;
+
+#define SYSCFG      ((SYSCFG_t*) STM_SYSCFG_BASE)
+
+// SYSCFG_MEMRMP values
+#define SYSCFG_BOOT_MAIN_FLASH      (0 << 8)
+#define SYSCFG_BOOT_SYSTEM_FLASH    (1 << 8)
+#define SYSCFG_BOOT_EMB_SRAM        (3 << 8)
+#define SYSCFG_MEM_MAIN_FLASH       (0 << 8)
+#define SYSCFG_MEM_SYSTEM_FLASH     (1 << 8)
+#define SYSCFG_MEM_FSMC             (2 << 8)
+#define SYSCFG_MEM_SRAM             (3 << 8)
+
+// SYSCFG_PMC values
+#define SYSCFG_LCD_CAPA_PE12        (1 << 5)
+#define SYSCFG_LCD_CAPA_PE11        (1 << 4)
+#define SYSCFG_LCD_CAPA_PB0         (1 << 3)
+#define SYSCFG_LCD_CAPA_PB12        (1 << 2)
+#define SYSCFG_LCD_CAPA_PB2         (1 << 1)
+#define SYSCFG_USB_PU               (1 << 0)
+
+// SYSCFG_EXTICRx values
+#define SYSCFG_PA(x)                (0 << (((x) & 3) * 4))
+#define SYSCFG_PB(x)                (1 << (((x) & 3) * 4))
+#define SYSCFG_PC(x)                (2 << (((x) & 3) * 4))
+#define SYSCFG_PD(x)                (3 << (((x) & 3) * 4))
+#define SYSCFG_PE(x)                (4 << (((x) & 3) * 4))
+#define SYSCFG_PH(x)                (5 << (((x) & 3) * 4))
+#define SYSCFG_PF(x)                (6 << (((x) & 3) * 4))
+#define SYSCFG_PG(x)                (7 << (((x) & 3) * 4))
 
 
 /////////////////////////////////////////
@@ -773,33 +845,33 @@ typedef struct
 /////////////////////////////////////////
 typedef struct
 {
-    arm_reg_t SR;
-    arm_reg_t CR1;
-    arm_reg_t CR2;
-    arm_reg_t SMPR1;
-    arm_reg_t SMPR2;
-    arm_reg_t SMPR3;
-    arm_reg_t JOFR1;
-    arm_reg_t JOFR2;
-    arm_reg_t JOFR3;
-    arm_reg_t JOFR4;
-    arm_reg_t HTR;
-    arm_reg_t LTR;
-    arm_reg_t SQR1;
-    arm_reg_t SQR2;
-    arm_reg_t SQR3;
-    arm_reg_t SQR4;
-    arm_reg_t SQR5;
-    arm_reg_t JSQR;
-    arm_reg_t JDR1;
-    arm_reg_t JDR2;
-    arm_reg_t JDR3;
-    arm_reg_t JDR4;
-    arm_reg_t DR;
-    arm_reg_t SMPR0;
+    arm_reg_t SR;       // status
+    arm_reg_t CR1;      // control 1
+    arm_reg_t CR2;      // control 2
+    arm_reg_t SMPR1;    // sample time 1
+    arm_reg_t SMPR2;    // sample time 2
+    arm_reg_t SMPR3;    // sample time 3
+    arm_reg_t JOFR1;    // injected channel data offset 1
+    arm_reg_t JOFR2;    // injected channel data offset 2
+    arm_reg_t JOFR3;    // injected channel data offset 3
+    arm_reg_t JOFR4;    // injected channel data offset 4
+    arm_reg_t HTR;      // watchdog higher threshold
+    arm_reg_t LTR;      // watchdog lower threshold
+    arm_reg_t SQR1;     // regular sequence 1
+    arm_reg_t SQR2;     // regular sequence 2
+    arm_reg_t SQR3;     // regular sequence 3
+    arm_reg_t SQR4;     // regular sequence 4
+    arm_reg_t SQR5;     // regular sequence 5
+    arm_reg_t JSQR;     // injected sequence
+    arm_reg_t JDR1;     // injected data 1
+    arm_reg_t JDR2;     // injected data 2
+    arm_reg_t JDR3;     // injected data 3
+    arm_reg_t JDR4;     // injected data 4
+    arm_reg_t DR;       // regular data
+    arm_reg_t SMPR0;    // sample time 0
     arm_reg_t gap0[168];
-    arm_reg_t CSR;
-    arm_reg_t CCR;
+    arm_reg_t CSR;      // common status
+    arm_reg_t CCR;      // common control
 } ADC_t;
 
 #define ADC   ((ADC_t*) STM_ADC_BASE)
@@ -969,90 +1041,99 @@ typedef struct
 
 
 /////////////////////////////////////////
-// USART
+// DAC
 /////////////////////////////////////////
 typedef struct
 {
-    arm_reg_t SR;
-    arm_reg_t DR;
-    arm_reg_t BRR;
-    arm_reg_t CR1;
-    arm_reg_t CR2;
-    arm_reg_t CR3;
-    arm_reg_t GTPR;
-} USART_t;
+    arm_reg_t CR;       // control
+    arm_reg_t SWTRIGR;  // software trigger
+    arm_reg_t DHR12R1;  // channel1 12-bit right-aligned data
+    arm_reg_t DHR12L1;  // channel1 12-bit left aligned data
+    arm_reg_t DHR8R1;   // channel1 8-bit right aligned data
+    arm_reg_t DHR12R2;  // channel2 12-bit right aligned data
+    arm_reg_t DHR12L2;  // channel2 12-bit left aligned data
+    arm_reg_t DHR8R2;   // channel2 8-bit right-aligned data
+    arm_reg_t DHR12RD;  // dual DAC 12-bit right-aligned data
+    arm_reg_t DHR12LD;  // dual DAC 12-bit left aligned data
+    arm_reg_t DHR8RD;   // dual DAC 8-bit right aligned data
+    arm_reg_t DOR1;     // channel1 data output
+    arm_reg_t DOR2;     // channel2 data output
+    arm_reg_t SR;       // status
+} DAC_t;
 
-#define USART1   ((USART_t*) STM_USART1_BASE)
-#define USART2   ((USART_t*) STM_USART2_BASE)
-#define USART3   ((USART_t*) STM_USART3_BASE)
-#define UART4    ((USART_t*) STM_UART4_BASE)
-#define UART5    ((USART_t*) STM_UART5_BASE)
-#define USART6   ((USART_t*) STM_USART6_BASE)
+#define DAC   ((DAC_t*) STM_DAC_BASE)
 
-// SR values
-#define USART_CTS           (1 << 9)
-#define USART_LBD           (1 << 8)
-#define USART_TXE           (1 << 7)
-#define USART_TC            (1 << 6)
-#define USART_RXNE          (1 << 5)
-#define USART_IDLE          (1 << 4)
-#define USART_ORE           (1 << 3)
-#define USART_NF            (1 << 2)
-#define USART_FE            (1 << 1)
-#define USART_PE            (1 << 0)
+// DAC_CR values
+#define DMA_DMAUDRIE2           (1 << 29)
+#define DMA_DMAEN2              (1 << 28)
+#define DMA_MAMP2(n)            ((n) << 24)
+#define DMA_WAVE2(n)            ((n) << 22)
+#define DMA_TSEL2(n)            ((n) << 19)
+#define DMA_TEN2                (1 << 18)
+#define DMA_BOFF2               (1 << 17)
+#define DMA_EN2                 (1 << 16)
+#define DMA_DMAUDRIE1           (1 << 13)
+#define DMA_DMAEN1              (1 << 12)
+#define DMA_MAMP1(n)            ((n) << 8)
+#define DMA_WAVE1(n)            ((n) << 6)
+#define DMA_TSEL1(n)            ((n) << 3)
+#define DMA_TEN1                (1 << 2)
+#define DMA_BOFF1               (1 << 1)
+#define DMA_EN1                 (1 << 0)
 
-// BRR values
-#define USART_DIV_MANTISSA(n)   ((n) << 4)
-#define USART_DIV_FRACTION(n)   (n)
+// DAC_SWTRIGR values
+#define DAC_SWTRIG2             (1 << 1)
+#define DAC_SWTRIG1             (1 << 0)
 
-// CR1 values
-#define USART_OVER8         (1 << 15)
-#define USART_UE            (1 << 13)
-#define USART_M             (1 << 12)
-#define USART_WAKE          (1 << 11)
-#define USART_PCE           (1 << 10)
-#define USART_PS            (1 << 9)
-#define USART_PEIE          (1 << 8)
-#define USART_TXEIE         (1 << 7)
-#define USART_TCIE          (1 << 6)
-#define USART_RXNEIE        (1 << 5)
-#define USART_IDLEIE        (1 << 4)
-#define USART_TE            (1 << 3)
-#define USART_RE            (1 << 2)
-#define USART_RWU           (1 << 1)
-#define USART_SBK           (1 << 0)
+// DAC_SR values
+#define DAC_DMAUDR2             (1 << 29)
+#define DAC_DMAUDR1             (1 << 13)
 
-// CR2 values
-#define USART_LINEN         (1 << 14)
-#define USART_STOP_1        (0 << 12)
-#define USART_STOP_05       (1 << 12)
-#define USART_STOP_2        (2 << 12)
-#define USART_STOP_15       (3 << 12)
-#define USART_CLKEN         (1 << 11)
-#define USART_CPOL          (1 << 10)
-#define USART_CPHA          (1 << 9)
-#define USART_LBCL          (1 << 8)
-#define USART_LBDIE         (1 << 6)
-#define USART_LBDL          (1 << 5)
-#define USART_ADD(n)        (n)
 
-// CR3 values
-#define USART_ONEBIT        (1 << 11)
-#define USART_CTSIE         (1 << 10)
-#define USART_CTSE          (1 << 9)
-#define USART_RTSE          (1 << 8)
-#define USART_DMAT          (1 << 7)
-#define USART_DMAR          (1 << 6)
-#define USART_SCEN          (1 << 5)
-#define USART_NACK          (1 << 4)
-#define USART_HDSEL         (1 << 3)
-#define USART_IRLP          (1 << 2)
-#define USART_IREN          (1 << 1)
-#define USART_EIE           (1 << 0)
+/////////////////////////////////////////
+// Comparators (COMP)
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CSR;      // control and status
+} COMP_t;
 
-// GTPR values
-#define USART_GT(n)         ((n) << 8)
-#define USART_PSC(n)        (n)
+#define COMP   ((COMP_t*) STM_COMP_BASE)
+
+// COMP_CSR values
+#define COMP_TSUSP                  (1 << 31)
+#define COMP_CAIF                   (1 << 30)
+#define COMP_CAIE                   (1 << 29)
+#define COMP_RCH13                  (1 << 28)
+#define COMP_FCH8                   (1 << 27)
+#define COMP_FCH3                   (1 << 26)
+#define COMP_OUTSEL_TIM2_INP_CAP4   (0 << 21)
+#define COMP_OUTSEL_TIM2_OCREF_CLR  (1 << 21)
+#define COMP_OUTSEL_TIM3_INP_CAP4   (2 << 21)
+#define COMP_OUTSEL_TIM3_OCREF_CLR  (3 << 21)
+#define COMP_OUTSEL_TIM4_INP_CAP4   (4 << 21)
+#define COMP_OUTSEL_TIM4_OCREF_CLR  (5 << 21)
+#define COMP_OUTSEL_TIM10_INP_CAP1  (6 << 21)
+#define COMP_OUTSEL_NO_REDIR        (7 << 21)
+#define COMP_INSEL_NO_SEL           (0 << 18)
+#define COMP_INSEL_EXT_IO           (1 << 18)
+#define COMP_INSEL_VREFINT          (2 << 18)
+#define COMP_INSEL_3_4_VREFINT      (3 << 18)
+#define COMP_INSEL_1_2_VREFINT      (4 << 18)
+#define COMP_INSEL_1_4_VREFINT      (5 << 18)
+#define COMP_INSEL_DAC_OUT1         (6 << 18)
+#define COMP_INSEL_DAC_OUT2         (7 << 18)
+#define COMP_WNDWE                  (1 << 17)
+#define COMP_VREFOUTEN              (1 << 16)
+#define COMP_CMP2OUT                (1 << 13)
+#define COMP_SPEED                  (1 << 12)
+#define COMP_CMP1OUT                (1 << 7)
+#define COMP_SW1                    (1 << 5)
+#define COMP_CMP1EN                 (1 << 4)
+#define COMP_400KPD                 (1 << 3)
+#define COMP_10KPD                  (1 << 2)
+#define COMP_400KPU                 (1 << 1)
+#define COMP_10KPU                  (1 << 0)
 
 
 /////////////////////////////////////////
@@ -1220,4 +1301,478 @@ typedef struct
 // ALRMASSR, ALRMASSR values
 #define RTC_MASKSS(x)       ((x) << 24)
 #define RTC_SS(x)           ((x) << 0)
+
+
+/////////////////////////////////////////
+// Independent watchdog (IWDG)
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t KR;       // Key
+    arm_reg_t DR;       // Prescaler
+    arm_reg_t RLR;      // Reload
+    arm_reg_t ISR;      // Status
+} IWDG_t;
+
+#define IWDG   ((IWDG_t*) STM_IWDG_BASE)
+
+// IWDG_KR values
+#define IWDG_ALIVE_KEY      0xAAAA
+#define IWDG_ACCESS_KEY     0x5555
+#define IWDG_START_KEY      0xCCCC
+
+// IWDG_PR values
+#define IWDG_PR_DIV_4       0
+#define IWDG_PR_DIV_8       1
+#define IWDG_PR_DIV_16      2
+#define IWDG_PR_DIV_32      3
+#define IWDG_PR_DIV_64      4
+#define IWDG_PR_DIV_128     5
+#define IWDG_PR_DIV_256     6
+
+// IWDG_SR values
+#define IWDG_RVU            (1 << 1)
+#define IWDG_PVU            (1 << 0)
+
+
+/////////////////////////////////////////
+// Window watchdog (WWDG)
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CR;       // Control
+    arm_reg_t CFR;      // Configuration
+    arm_reg_t ISR;      // Status
+} WWDG_t;
+
+#define WWDG   ((WWDG_t*) STM_WWDG_BASE)
+
+// WWDG_CR values
+#define WWDG_WDGA           (1 << 7)
+#define WWDG_T(n)           (n)
+
+// WWDG_CFR values
+#define WWDG_EWI            (1 << 9)
+#define WWDG_WDGTB_DIV_1    (0 << 7)
+#define WWDG_WDGTB_DIV_2    (1 << 7)
+#define WWDG_WDGTB_DIV_4    (2 << 7)
+#define WWDG_WDGTB_DIV_8    (3 << 7)
+#define WWDG_W(n)           (n)
+
+// WWDG_SR values
+#define WWDG_EWIF           (1 << 0)
+
+
+/////////////////////////////////////////
+// USB
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t EPR[8];       // Endpoint n registers
+    arm_reg_t gap0[8];      // Reserved
+    arm_reg_t CNTR;         // Control
+    arm_reg_t ISTR;         // Interrupt status
+    arm_reg_t FNR;          // Frame number
+    arm_reg_t DADDR;        // Device address
+    arm_reg_t BTABLE;       // Buffer table address (the value must be
+                            // 8-byte aligned)
+} USB_t;
+
+// One item of USB buffer descriptor table. The table shall be an
+// array of defined below structure placed somewhere in memory.
+// Must be 8-byte aligned.
+typedef struct
+{
+    arm_reg_t ADDR_TX;
+    arm_reg_t COUNT_TX;
+    arm_reg_t ADDR_RX;
+    arm_reg_t COUNT_RX;
+} USB_BTABLE_item_t;
+
+#define USB                 ((USB_t*) STM_USB_DEV_FS_BASE)
+#define USB_PACKET_BUF      ((volatile uint8_t *) STM_USB_DEV_FS_SRAM_BASE)
+#define USB_PACKET_BUF_SZ   (512 * 2)
+
+// USB_EPR[n] values
+#define USB_CTR_RX              (1 << 15)
+#define USB_DTOG_RX             (1 << 14)
+#define USB_GET_DTOG_RX(r)      (((r) >> 14) & 1)
+#define USB_STAT_RX_DISABLED    (0 << 12)
+#define USB_STAT_RX_STALL       (1 << 12)
+#define USB_STAT_RX_NAK         (2 << 12)
+#define USB_STAT_RX_VALID       (3 << 12)
+#define USB_STAT_RX_MASK        (3 << 12)
+#define USB_SETUP               (1 << 11)
+#define USB_EP_TYPE_BULK        (0 << 9)
+#define USB_EP_TYPE_CONTROL     (1 << 9)
+#define USB_EP_TYPE_ISO         (2 << 9)
+#define USB_EP_TYPE_INTERRUPT   (3 << 9)
+#define USB_EP_TYPE_MASK        (3 << 9)
+#define USB_EP_TYPE_CTRL_INTR_MASK   (1 << 9)
+#define USB_DBL_BUF             (1 << 8) // EP_KIND for BULK EP
+#define USB_STATUS_OUT          (1 << 8) // EP_KING for CONTROL EP
+#define USB_CTR_TX              (1 << 7)
+#define USB_DTOG_TX             (1 << 6)
+#define USB_GET_DTOG_TX(r)      (((r) >> 6) & 1)
+#define USB_STAT_TX_DISABLED    (0 << 4)
+#define USB_STAT_TX_STALL       (1 << 4)
+#define USB_STAT_TX_NAK         (2 << 4)
+#define USB_STAT_TX_VALID       (3 << 4)
+#define USB_STAT_TX_MASK        (3 << 4)
+#define USB_EA(x)               ((x) & 0xF)
+
+#define USB_EPR_RW_MASK         0x070F
+
+// BTABLE COUNT_RX values
+#define USB_BL_SIZE             (1 << 15)
+#define USB_NUM_BLOCK(x)        ((x) << 10)
+#define USB_GET_COUNT_RX(x)     ((x) & 0x1FF)
+
+// USB_CNTR values
+#define USB_CTRM                (1 << 15)
+#define USB_PMAOVRM             (1 << 14)
+#define USB_ERRM                (1 << 13)
+#define USB_WKUPM               (1 << 12)
+#define USB_SUSPM               (1 << 11)
+#define USB_RESETM              (1 << 10)
+#define USB_SOFM                (1 << 9)
+#define USB_ESOFM               (1 << 8)
+#define USB_RESUME              (1 << 4)
+#define USB_FSUSP               (1 << 3)
+#define USB_LP_MODE             (1 << 2)
+#define USB_PDWN                (1 << 1)
+#define USB_FRES                (1 << 0)
+
+// USB_ISTR values
+#define USB_CTR                 (1 << 15)
+#define USB_PMAOVR              (1 << 14)
+#define USB_ERR                 (1 << 13)
+#define USB_WKUP                (1 << 12)
+#define USB_SUSP                (1 << 11)
+#define USB_RESET               (1 << 10)
+#define USB_SOF                 (1 << 9)
+#define USB_ESOF                (1 << 8)
+#define USB_DIR                 (1 << 4)
+#define USB_GET_EP_ID(x)        ((x) & 0xF)
+
+// USB_FNR values
+#define USB_RXDP                (1 << 15)
+#define USB_RXDM                (1 << 14)
+#define USB_LCK                 (1 << 13)
+#define USB_GET_LSOF(r)         (((r) >> 11) & 3)
+#define USB_GET_FN(r)           ((r) & 0x7FF)
+
+// USB_DADDR values
+#define USB_EF                  (1 << 7)
+#define USB_ADD(x)              (x)
+
+
+/////////////////////////////////////////
+// USART
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t SR;       // Status
+    arm_reg_t DR;       // Data
+    arm_reg_t BRR;      // Baud rate
+    arm_reg_t CR1;      // Control 1
+    arm_reg_t CR2;      // Control 2
+    arm_reg_t CR3;      // Control 3
+    arm_reg_t GTPR;     // Guard time and prescaler
+} USART_t;
+
+#define USART1   ((USART_t*) STM_USART1_BASE)
+#define USART2   ((USART_t*) STM_USART2_BASE)
+#define USART3   ((USART_t*) STM_USART3_BASE)
+#define UART4    ((USART_t*) STM_UART4_BASE)
+#define UART5    ((USART_t*) STM_UART5_BASE)
+#define USART6   ((USART_t*) STM_USART6_BASE)
+
+// SR values
+#define USART_CTS           (1 << 9)
+#define USART_LBD           (1 << 8)
+#define USART_TXE           (1 << 7)
+#define USART_TC            (1 << 6)
+#define USART_RXNE          (1 << 5)
+#define USART_IDLE          (1 << 4)
+#define USART_ORE           (1 << 3)
+#define USART_NF            (1 << 2)
+#define USART_FE            (1 << 1)
+#define USART_PE            (1 << 0)
+
+// BRR values
+#define USART_DIV_MANTISSA(n)   ((n) << 4)
+#define USART_DIV_FRACTION(n)   (n)
+
+// CR1 values
+#define USART_OVER8         (1 << 15)
+#define USART_UE            (1 << 13)
+#define USART_M             (1 << 12)
+#define USART_WAKE          (1 << 11)
+#define USART_PCE           (1 << 10)
+#define USART_PS            (1 << 9)
+#define USART_PEIE          (1 << 8)
+#define USART_TXEIE         (1 << 7)
+#define USART_TCIE          (1 << 6)
+#define USART_RXNEIE        (1 << 5)
+#define USART_IDLEIE        (1 << 4)
+#define USART_TE            (1 << 3)
+#define USART_RE            (1 << 2)
+#define USART_RWU           (1 << 1)
+#define USART_SBK           (1 << 0)
+
+// CR2 values
+#define USART_LINEN         (1 << 14)
+#define USART_STOP_1        (0 << 12)
+#define USART_STOP_05       (1 << 12)
+#define USART_STOP_2        (2 << 12)
+#define USART_STOP_15       (3 << 12)
+#define USART_CLKEN         (1 << 11)
+#define USART_CPOL          (1 << 10)
+#define USART_CPHA          (1 << 9)
+#define USART_LBCL          (1 << 8)
+#define USART_LBDIE         (1 << 6)
+#define USART_LBDL          (1 << 5)
+#define USART_ADD(n)        (n)
+
+// CR3 values
+#define USART_ONEBIT        (1 << 11)
+#define USART_CTSIE         (1 << 10)
+#define USART_CTSE          (1 << 9)
+#define USART_RTSE          (1 << 8)
+#define USART_DMAT          (1 << 7)
+#define USART_DMAR          (1 << 6)
+#define USART_SCEN          (1 << 5)
+#define USART_NACK          (1 << 4)
+#define USART_HDSEL         (1 << 3)
+#define USART_IRLP          (1 << 2)
+#define USART_IREN          (1 << 1)
+#define USART_EIE           (1 << 0)
+
+// GTPR values
+#define USART_GT(n)         ((n) << 8)
+#define USART_PSC(n)        (n)
+
+
+/////////////////////////////////////////
+// FSMC
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t BCR1;     // chip-select control register 1
+    arm_reg_t BTR1;     // chip-select timing register 1
+    arm_reg_t BCR2;     // chip-select control register 2
+    arm_reg_t BTR2;     // chip-select timing register 2
+    arm_reg_t BCR3;     // chip-select control register 3
+    arm_reg_t BTR3;     // chip-select timing register 3
+    arm_reg_t BCR4;     // chip-select control register 4
+    arm_reg_t BTR4;     // chip-select timing register 4
+    arm_reg_t gap0[57];
+    arm_reg_t BWTR1;    // write timing register 1
+    arm_reg_t gap1;
+    arm_reg_t BWTR2;    // write timing register 2
+    arm_reg_t gap2;
+    arm_reg_t BWTR3;    // write timing register 3
+    arm_reg_t gap3;
+    arm_reg_t BWTR4;    // write timing register 4
+} FSMC_t;
+
+#define FSMC    ((FSMC_t*) STM_FSMC_BASE)
+
+// FSMC_BCR values
+#define FSMC_CBURSTRW       (1 << 19)
+#define FSMC_ASYNCWAIT      (1 << 15)
+#define FSMC_EXTMOD         (1 << 14)
+#define FSMC_WAITEN         (1 << 13)
+#define FSMC_WREN           (1 << 12)
+#define FSMC_WAITCFG        (1 << 11)
+#define FSMC_WRAPMOD        (1 << 10)
+#define FSMC_WAITPOL        (1 << 9)
+#define FSMC_BURSTEN        (1 << 8)
+#define FSMC_FACCEN         (1 << 6)
+#define FSMC_MWID_8BITS     (0 << 4)
+#define FSMC_MWID_16BITS    (1 << 4)
+#define FSMC_MTYP_SRAM      (0 << 2)
+#define FSMC_MTYP_CRAM      (1 << 2)
+#define FSMC_MTYP_FLASH     (2 << 2)
+#define FSMC_MUXEN          (1 << 1)
+#define FSMC_MBKEN          (1 << 0)
+
+// FSMC_BTR, FSMC_BWTR values
+#define FSMC_ACCMOD_A       (0 << 28)
+#define FSMC_ACCMOD_B       (1 << 28)
+#define FSMC_ACCMOD_C       (2 << 28)
+#define FSMC_ACCMOD_D       (3 << 28)
+#define FSMC_DATLAT(x)      ((x) << 24) // Only BTR
+#define FSMC_CLKDIV(x)      ((x) << 20) // Only BTR
+#define FSMC_BUSTURN(x)     ((x) << 16)
+#define FSMC_DATAST(x)      ((x) << 8)
+#define FSMC_ADDHLD(x)      ((x) << 4)
+#define FSMC_ADDSET(x)      ((x) << 0)
+
+
+/////////////////////////////////////////
+// I2C
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CR1;      // Control 1
+    arm_reg_t CR2;      // Control 2
+    arm_reg_t OAR1;     // Own address 1
+    arm_reg_t OAR2;     // Own address 2
+    arm_reg_t DR;       // Data
+    arm_reg_t SR1;      // Status 1
+    arm_reg_t SR2;      // Status 2
+    arm_reg_t CCR;      // Clock control
+    arm_reg_t TRISE;    // TRISE
+} I2C_t;
+
+#define I2C1    ((I2C_t*) STM_I2C1_BASE)
+#define I2C2    ((I2C_t*) STM_I2C2_BASE)
+
+// I2C_CR1 values
+#define I2C_SWRST           (1 << 15)
+#define I2C_ALERT           (1 << 13)
+#define I2C_PEC             (1 << 12)
+#define I2C_POS             (1 << 11)
+#define I2C_ACK             (1 << 10)
+#define I2C_STOP            (1 << 9)
+#define I2C_START           (1 << 8)
+#define I2C_NOSTRETCH       (1 << 7)
+#define I2C_ENGC            (1 << 6)
+#define I2C_ENPEC           (1 << 5)
+#define I2C_ENARR           (1 << 4)
+#define I2C_SMBTYPE         (1 << 3)
+#define I2C_SMBUS           (1 << 1)
+#define I2C_PE              (1 << 0)
+
+// I2C_CR2 values
+#define I2C_LAST            (1 << 12)
+#define I2C_DMAEN           (1 << 11)
+#define I2C_ITBUFEN         (1 << 10)
+#define I2C_ITEVTEN         (1 << 9)
+#define I2C_ITERREN         (1 << 8)
+#define I2C_FREQ(x)         ((x) << 0)
+
+// I2C_OAR1 values
+#define I2C_ADDMODE         (1 << 15)
+#define I2C_ALWAYS_ONE      (1 << 14)
+#define I2C_ADD(x)          ((x) << 0)
+
+// I2C_OAR2 values
+#define I2C_ADD2(x)         ((x) << 1)
+#define I2C_ENDUAL          (1 << 0)
+
+// I2C_SR1 values
+#define I2C_SMBALERT        (1 << 15)
+#define I2C_TIMEOUT         (1 << 14)
+#define I2C_PECERR          (1 << 12)
+#define I2C_OVR             (1 << 11)
+#define I2C_AF              (1 << 10)
+#define I2C_ARLO            (1 << 9)
+#define I2C_BERR            (1 << 8)
+#define I2C_TXE             (1 << 7)
+#define I2C_RXNE            (1 << 6)
+#define I2C_STOPF           (1 << 4)
+#define I2C_ADD10           (1 << 3)
+#define I2C_BTF             (1 << 2)
+#define I2C_ADDR            (1 << 1)
+#define I2C_SB              (1 << 0)
+
+// I2C_SR2 values
+#define I2C_PECR(x)         ((x) << 8)
+#define I2C_DUALF           (1 << 7)
+#define I2C_SMBHOST         (1 << 6)
+#define I2C_SMBDEFAULT      (1 << 5)
+#define I2C_GENCALL         (1 << 4)
+#define I2C_TRA             (1 << 2)
+#define I2C_BUSY            (1 << 1)
+#define I2C_MSL             (1 << 0)
+
+// I2C_CCR values
+#define I2C_FS              (1 << 15)
+#define I2C_DUTY            (1 << 14)
+#define I2C_CCR(x)          ((x) << 0)
+
+
+/////////////////////////////////////////
+// SPI
+/////////////////////////////////////////
+typedef struct
+{
+    arm_reg_t CR1;      // Control 1
+    arm_reg_t CR2;      // Control 2
+    arm_reg_t SR;       // Status
+    arm_reg_t DR;       // Data
+    arm_reg_t CRCPR;    // CRC polynomial
+    arm_reg_t RXCRCR;   // RX CRC
+    arm_reg_t TXCRCR;   // TX CRC
+    arm_reg_t I2SCFGR;  // I2S configuration
+    arm_reg_t I2SPR;    // I2S prescaler
+} SPI_t;
+
+#define SPI1    ((SPI_t*) STM_SPI1_BASE)
+#define SPI2    ((SPI_t*) STM_SPI2_I2S2_BASE)
+#define SPI3    ((SPI_t*) STM_SPI3_I2S3_BASE)
+
+
+// SPI_CR1 values
+#define SPI_BIDIMODE        (1 << 15)
+#define SPI_BIDIOE          (1 << 14)
+#define SPI_CRCEN           (1 << 13)
+#define SPI_CRCNEXT         (1 << 12)
+#define SPI_DFF             (1 << 11)
+#define SPI_RXONLY          (1 << 10)
+#define SPI_SSM             (1 << 9)
+#define SPI_SSI             (1 << 8)
+#define SPI_LSBFIRST        (1 << 7)
+#define SPI_SPE             (1 << 6)
+#define SPI_BR(x)           ((x) << 3)
+#define SPI_MSTR            (1 << 2)
+#define SPI_CPOL            (1 << 1)
+#define SPI_CPHA            (1 << 0)
+
+// SPI_CR2 values
+#define SPI_TXEIE           (1 << 7)
+#define SPI_RXNEIE          (1 << 6)
+#define SPI_ERRIE           (1 << 5)
+#define SPI_FRF             (1 << 4)
+#define SPI_SSOE            (1 << 2)
+#define SPI_TXDMAEN         (1 << 1)
+#define SPI_RXDMAEN         (1 << 0)
+
+// SPI_SR values
+#define SPI_FRE             (1 << 8)
+#define SPI_BSY             (1 << 7)
+#define SPI_OVR             (1 << 6)
+#define SPI_MODF            (1 << 5)
+#define SPI_CRCERR          (1 << 4)
+#define SPI_UDR             (1 << 3)
+#define SPI_CHSIDE          (1 << 2)
+#define SPI_TXE             (1 << 1)
+#define SPI_RXNE            (1 << 0)
+
+// SPI_I2SCFGR values
+#define SPI_I2SMOD              (1 << 11)
+#define SPI_I2SE                (1 << 10)
+#define SPI_I2SCFG_SLAVE_TX     (0 << 8)
+#define SPI_I2SCFG_SLAVE_RX     (1 << 8)
+#define SPI_I2SCFG_MASTER_TX    (2 << 8)
+#define SPI_I2SCFG_MASTER_RX    (3 << 8)
+#define SPI_PCMSYNC             (1 << 7)
+#define SPI_I2SSTD_PHILIPS      (0 << 4)
+#define SPI_I2SSTD_MSB_JUST     (1 << 4)
+#define SPI_I2SSTD_LSB_JUST     (2 << 4)
+#define SPI_I2SSTD_PCM          (3 << 4)
+#define SPI_CKPOL               (1 << 3)
+#define SPI_DATLEN_16BIT        (0 << 1)
+#define SPI_DATLEN_24BIT        (1 << 1)
+#define SPI_DATLEN_32BIT        (2 << 1)
+#define SPI_CHLEN_16BIT         (0 << 0)
+#define SPI_CHLEN_32BIT         (1 << 0)
+
+// SPI_I2SPR values
+#define SPI_MCKOE           (1 << 9)
+#define SPI_ODD             (1 << 8)
+#define SPI_I2SDIV(x)       (x)
 

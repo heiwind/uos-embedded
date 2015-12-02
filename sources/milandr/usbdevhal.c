@@ -26,13 +26,13 @@ static void dump (const void *addr, int size)
 }
 #endif
 
-static void mldr_set_addr (unsigned addr)
+static void mldr_set_addr (unsigned addr, void *arg)
 {
     ARM_USB->SA = addr;
 //debug_printf ("set_addr: %d\n", ARM_USB->SA);
 }
 
-static void mldr_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, int interval)
+static void mldr_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, int interval, void *arg)
 {
     ep_state_t *eps = &ep_state[ep];
 
@@ -57,13 +57,13 @@ static void mldr_ep_attr (unsigned ep, int dir, unsigned attr, int max_size, int
     }
 }
 
-static void mldr_ep_wait_out (unsigned ep, int ack)
+static void mldr_ep_wait_out (unsigned ep, int ack, void *arg)
 {
 //debug_printf ("ep_wait_out, ep = %d\n", ep);
     ARM_USB->SEPS[ep].CTRL = ARM_USB_EPEN | ARM_USB_EPRDY;
 }
 
-static void mldr_ep_wait_in (unsigned ep, int pid, const void *data, int size, int last)
+static void mldr_ep_wait_in (unsigned ep, int pid, const void *data, int size, int last, void *arg)
 {
 //debug_printf ("ep_wait_in, ep = %d, pid = %d, data @ %p, size = %d\n", ep, pid, data, size);
     const unsigned char *p = data;
@@ -77,14 +77,14 @@ static void mldr_ep_wait_in (unsigned ep, int pid, const void *data, int size, i
 //debug_printf ("EP%d CTRL = %X\n", ep, ARM_USB->SEPS[ep].CTRL);
 }
 
-static void mldr_ep_stall (unsigned ep, int dir)
+static void mldr_ep_stall (unsigned ep, int dir, void *arg)
 {
 //debug_printf ("STALL EP%d\n", ep);
     ARM_USB->SEPF[ep].TXFC = 1;
     ARM_USB->SEPS[ep].CTRL |= ARM_USB_EPRDY | ARM_USB_EPSSTALL;
 }
 
-static int mldr_in_avail_bytes (unsigned ep)
+static int mldr_in_avail_bytes (unsigned ep, void *arg)
 {
     if (ep_state[ep].busy)
         return 0;
@@ -209,7 +209,7 @@ void mldr_usbdev_init (usbdev_t *owner, int io_prio, mem_pool_t *pool, mutex_t *
     mem = pool;
     io_lock = m;
     
-    usbdevhal_bind (usbdev, &hal, m);
+    usbdevhal_bind (usbdev, &hal, 0, m);
 
     //power on the module
     ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_USB;

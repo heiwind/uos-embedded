@@ -496,7 +496,9 @@ int spim_init(elvees_spim_t *spi, unsigned port, unsigned io_mode)
 
     MC_MFBSP_RCTR(spi->port) = MC_MFBSP_RMODE | MC_MFBSP_RCLK_CP | 
         MC_MFBSP_RCS_CP | MC_MFBSP_RMBF;
-    MC_MFBSP_TCTR(spi->port) = MC_MFBSP_TMODE | MC_MFBSP_TMBF | MC_MFBSP_SS_DO;
+    MC_MFBSP_TCTR(spi->port) = MC_MFBSP_TMODE | MC_MFBSP_TMBF | MC_MFBSP_SS_DO |
+		((io_mode & SPI_SS0_ACTIVE_HIGH) ? (0) : MC_MFBSP_SS(0)) | 
+		((io_mode & SPI_SS1_ACTIVE_HIGH) ? (0) : MC_MFBSP_SS(1));
 
     return 0;
 }

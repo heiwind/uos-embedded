@@ -38,17 +38,14 @@
 // Режимы работы контроллера MIL-STD 1553
 //
 #define MIL_MODE_UNDEFINED          0
-#define MIL_MODE_BC_MAIN            (1 << 8)
-#define MIL_MODE_BC_RSRV            (2 << 8)
-#define MIL_MODE_RT                 (3 << 8)
-#define MIL_MODE_MON                (4 << 8)
-#define MIL_MODE_RT_ADDR(x)         (x)
-
-#define MIL_MODE_MASK               (0xF << 8)
-#define MIL_MODE_RT_ADDR_MASK       0xF
-
+#define MIL_MODE_BC_MAIN            1
+#define MIL_MODE_BC_RSRV            2
+#define MIL_MODE_RT                 3
+#define MIL_MODE_MON                4
 
 #define MIL_SUBADDR_WORDS_COUNT     32
+
+#define MIL_DATA_LENGTH     		1024
 
 //! Режимы передачи данных между узлами MIL-STD 1553.
 typedef enum
@@ -58,6 +55,56 @@ typedef enum
     MIL_SLOT_RT_RT,              //!< Передача данных ОУ->ОУ
     MIL_SLOT_NO_TRANS            //!< Нет передачи
 } mil_trans_mode_t;
+
+//! Значения регистра MSG в режиме ОУ и М.
+typedef enum
+{
+    // Команды обмена данными
+    //! Команда приёма КШ-ОУ, не групповая (формат сообщения 1)
+    MSG_DATARECV__BC_RT__SINGLE = 1,
+    //! Команда приёма  КШ-ОУ, групповая (формат сообщения 7)
+    MSG_DATARECV__BC_RT__GROUP = 0x80,
+    //! Команда приёма ОУ-ОУ, не групповая (формат сообщения 3)
+    MSG_DATARECV__RT_RT__SINGLE = 4,
+    //! Команда приёма ОУ-ОУ, групповая (формат сообщения 8)
+    MSG_DATARECV__RT_RT__GROUP = 0x100,
+    //! Команда передачи ОУ-КШ (формат сообщения 2)
+    MSG_DATASEND__RT_BC__SINGLE = 0x402,
+    //! Команда передачи ОУ-ОУ, не групповая (формат сообщения 3)
+    MSG_DATASEND__RT_RT__SINGLE = 0x1008,
+    //! Команда передачи ОУ-ОУ, групповая (формат сообщения 8)
+    MSG_DATASEND__RT_RT__GROUP = 0x200,
+    // Команды управления
+    //! Код 0-15 K=1 нет данных, не групповая (формат сообщения 4)
+    MSG_CMD_WITH_NODATA__0_0xf__SINGLE = 0x410,
+    //! Код 0-15 K=1 нет данных, групповая (формат сообщения 9)
+    MSG_CMD_WITH_NODATA__0_0xf__GROUP = 0x400,
+    //! Код 16-31 K=1 с данными, не групповая (формат сообщения 5)
+    MSG_CMD_WITH_NODATA__0x10_0x1f__DATAWORD_EXPECTED__SINGLE = 0x2420,
+    //! Код 16-31 К=0 с данными, не групповая (формат сообщения 6)
+    MSG_CMD_WITH_DATA__0x10_0x1f__SINGLE = 0x40,
+    //! Код 16-31 К=0 с данными, групповая (формат сообщения 10)
+    MSG_CMD_WITH_DATA__0x10_0x1f__GROUP = 0x800
+} MSG_COMMANDS;
+
+typedef enum
+{
+    CMD_TakeInterfaceControl = 0,  //!< Принять управление интерфейсом
+    CMD_Synchronize = 1,  //!< Синхронизация
+    CMD_SendAnswerWord = 2,  //!< Передать ОС
+    CMD_SelfCheck = 3,  //!< Начать самоконтроль ОУ
+    CMD_LockSender = 4,  //!< Блокировать передатчик
+    CMD_UnlockSender = 5,  //!< Разблокировать передатчик
+    CMD_LockInvalidRtFlag = 6,  //!< Блокировать признак неисправности ОУ
+    CMD_UnlockInvalidRtFlag = 7,  //!< Разблокировать признак неисправности ОУ
+    CMD_SetRtInitialState = 8,  //!< Установить ОУ в исходное состояние
+    CMD_SendVectorWord = 0x10,  //!< Передать векторное слово
+    CMD_SynchronizeWithDataWord = 0x11,  //!< Синхронизация (с СД)
+    CMD_SendLastCommand = 0x12,  //!< Передать последнюю команду
+    CMD_SendRtInternalCheckWord = 0x13,  //!< Передать слово ВСК (встроенная система контроля) ОУ
+    CMD_LockSenderN = 0x14,  //!< Блокировать i-й передатчик
+    CMD_UnlockSenderN = 0x15  //!< Разблокировать i-й передатчик
+} BC_COMMAND_CODES;
 
 //! Дескриптор слота
 typedef struct _mil_slot_desc_t
@@ -84,7 +131,6 @@ struct _mil_slot_t
     uint16_t            *data;
     mil_slot_t          *next;
 };
-
 
 //
 // Базовый тип интерфейса MIL-STD 1553
