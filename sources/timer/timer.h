@@ -65,6 +65,8 @@ typedef small_uint_t clock_time_t;
 #define TIME_MAX     ((clock_time_t)(-1))
 #endif
 
+#define TIME_INFINITE (TIME_MAX>>1)
+
 struct _timer_t {
     mutex_t lock;
 #ifndef TIMER_NO_DECISEC
@@ -94,6 +96,8 @@ struct _timer_t {
     list_t user_timers;
 #endif
 };
+
+
 
 #ifdef USER_TIMERS
 typedef small_uint_t usertimer_time_t;

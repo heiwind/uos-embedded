@@ -108,6 +108,11 @@ INLINE list_t *list_first (const list_t *l)
 	return l->next;
 }
 
+#define list_iterate_from(i, first, head)       for (i = (typeof(i)) first; \
+                         i != (typeof(i)) (head); \
+                         i = (typeof(i)) ((list_t*) i)->next)
+
+
 /*
  * Iterate through all list items, from first to last.
  * Example:

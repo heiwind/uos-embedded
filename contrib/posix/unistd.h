@@ -6,7 +6,11 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 #include <errno.h>
+#include <posix-port.h>
 /*#include <dirent.h>*/
+#if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
+#include <timer/etimer_threads.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,12 +58,16 @@ static inline int socketpair (int d, int type, int protocol, int sv[2])
 	return -1;
 }
 
+#if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_DELAY
 static inline void usleep (unsigned long usec)
 {
 	extern timer_t *uos_timer;
 
 	timer_delay (uos_timer, usec / 1000);
 }
+#elif UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
+#define usleep(usec) etimer_usleep(usec)
+#endif
 
 static inline char *getcwd (char *buf, size_t size)
 {
