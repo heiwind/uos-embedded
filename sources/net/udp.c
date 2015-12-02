@@ -197,9 +197,11 @@ drop:
  * Add UDP header and send the packet to the given interface.
  */
 static bool_t
-udp_send_netif (udp_socket_t *s, buf_t *p, unsigned char *dest,
-	unsigned short port, netif_t *netif, unsigned char *local_ip,
-	unsigned char *gateway)
+udp_send_netif (udp_socket_t *s, buf_t *p
+        , const unsigned char *dest,
+	unsigned short port, netif_t *netif
+	, const unsigned char *local_ip
+	, const unsigned char *gateway)
 {
 	udp_hdr_t *h;
 
@@ -265,7 +267,7 @@ bool_t
 udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 {
 	netif_t *netif;
-	unsigned char *local_ip, *gateway;
+	const unsigned char *local_ip, *gateway;
 
 	/* Find the outgoing network interface. */
 	netif = route_lookup (s->ip, dest, &gateway, &local_ip);
@@ -365,7 +367,7 @@ udp_close (udp_socket_t *s)
  * with appropriate address/port.
  */
 void
-udp_connect (udp_socket_t *s, unsigned char *ipaddr, unsigned short port)
+udp_connect (udp_socket_t *s, const unsigned char *ipaddr, unsigned short port)
 {
 	mutex_lock (&s->lock);
 	s->peer_port = port;
@@ -373,8 +375,9 @@ udp_connect (udp_socket_t *s, unsigned char *ipaddr, unsigned short port)
 		ipadr_assign_ucs(s->peer_ip, ipaddr);
 
 		/* Find the outgoing network interface. */
-		s->netif = route_lookup (s->ip, ipaddr, &s->gateway,
-			&s->local_ip);
+		s->netif = route_lookup (s->ip, ipaddr
+		        , (const_ip4_ucs*)&s->gateway
+		        , (const_ip4_ucs*)&s->local_ip);
 	}
 	mutex_unlock (&s->lock);
 }

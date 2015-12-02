@@ -6,8 +6,10 @@
 #include <net/arp.h>
 
 bool_t
-netif_output_prio (netif_t *netif, buf_t *p, unsigned char *ipdest,
-	unsigned char *ipsrc, small_uint_t prio)
+netif_output_prio (netif_t *netif, buf_t *p
+        , const unsigned char *ipdest
+        , const unsigned char *ipsrc
+        , small_uint_t prio)
 {
 	if (netif->arp && ipsrc) {	/* vch: для бриджуемых фреймов не нужен arp */
 		unsigned char *ethdest = 0;
@@ -32,8 +34,9 @@ discard:		/* Count this packet as discarded. */
 }
 
 bool_t
-netif_output (netif_t *netif, buf_t *p, unsigned char *ipdest,
-	unsigned char *ipsrc)
+netif_output (netif_t *netif, buf_t *p
+        , const unsigned char *ipdest
+        , const unsigned char *ipsrc)
 {
 	return netif_output_prio (netif, p, ipdest, ipsrc, 0);
 }

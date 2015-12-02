@@ -17,8 +17,8 @@
  * the packet on the appropriate interface.
  */
 static void
-ip_forward (ip_t *ip, buf_t *p, unsigned char *gateway, netif_t *netif,
-	unsigned char *netif_ipaddr)
+ip_forward (ip_t *ip, buf_t *p, const unsigned char *gateway, netif_t *netif,
+	const unsigned char *netif_ipaddr)
 {
 	ip_hdr_t *iphdr = (ip_hdr_t*) p->payload;
 
@@ -108,7 +108,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 		if (! netif) {
 			/* Packet not for us, route or discard */
 			if (ip->forwarding && ! broadcast) {
-				unsigned char *netif_ipaddr, *gateway;
+				const unsigned char *netif_ipaddr, *gateway;
 
 				netif = route_lookup (ip, iphdr->dest,
 					&gateway, &netif_ipaddr);
@@ -227,9 +227,11 @@ proto_unreach:
  * netif_ipaddr	- IP address of outgoing interface (when netif is not NULL)
  */
 bool_t
-ip_output_netif (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
-	small_uint_t proto, unsigned char *gateway, netif_t *netif,
-	unsigned char *netif_ipaddr)
+ip_output_netif (ip_t *ip, buf_t *p
+        , const unsigned char *dest, const unsigned char *src
+        , small_uint_t proto
+        , const unsigned char *gateway
+        , netif_t *netif , const unsigned char *netif_ipaddr)
 {
 	ip_hdr_t *iphdr;
 	unsigned short chksum;
@@ -289,7 +291,7 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	small_uint_t proto)
 {
 	netif_t *netif;
-	unsigned char *gateway, *netif_ipaddr;
+	const unsigned char *gateway, *netif_ipaddr;
 
 	/* Find the outgoing network interface. */
 	netif = route_lookup (ip, dest, &gateway, &netif_ipaddr);

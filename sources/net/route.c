@@ -14,7 +14,7 @@
  * Return 1 on match, 0 on failure.
  */
 static bool_t
-route_match (route_t *r, unsigned char *a)
+route_match (const route_t *r, const unsigned char *a)
 {
 	switch (r->masklen) {
 	case 0:	 return 1;
@@ -72,8 +72,10 @@ route_match (route_t *r, unsigned char *a)
  * Records of type 1 have gateway[0] = 0.
  * Records of type 2 have real gateway addresses.
  */
-void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
-	unsigned char masklen, unsigned char *gateway)
+void route_setup (ip_t *ip, route_t *r
+        , const unsigned char *ipaddr,
+	unsigned char masklen
+	    , const unsigned char *gateway)
 {
 	unsigned long net, bcast;	/* host byte order */
 	route_t *s, *best;
@@ -129,7 +131,7 @@ void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
 /*
  * Add interface record to the list.
  */
-void route_add_netif (ip_t *ip, route_t *r, unsigned char *ipaddr,
+void route_add_netif (ip_t *ip, route_t *r, const unsigned char *ipaddr,
 	unsigned char masklen, netif_t *netif)
 {
 	route_setup (ip, r, ipaddr, masklen, 0);
@@ -165,8 +167,8 @@ bool_t route_add_gateway (ip_t *ip, route_t *r,
  * Search the network interface and gateway address to forward the packet.
  * Return also the IP adress of the interface,
  */
-netif_t *route_lookup (ip_t *ip, unsigned char *ipaddr,
-	unsigned char **gateway, unsigned char **netif_ipaddr)
+netif_t *route_lookup (ip_t *ip, const unsigned char *ipaddr,
+        const unsigned char **gateway, const unsigned char **netif_ipaddr)
 {
 	route_t *r, *best;
 
@@ -242,10 +244,10 @@ netif_t *route_lookup_self (ip_t *ip, unsigned char *ipaddr,
  * Find the "closest" IP address of the given network interface.
  * The interface can have several IP addresses (aliases).
  */
-unsigned char *route_lookup_ipaddr (ip_t *ip, unsigned char *ipaddr,
+const unsigned char *route_lookup_ipaddr (ip_t *ip, const unsigned char *ipaddr,
         struct _netif_t *netif)
 {
-	route_t *r, *best;
+	const route_t *r, *best;
 
 	best = 0;
 	ROUTE_printf ("route: lookup ipaddr %d.%d.%d.%d for %s\n",

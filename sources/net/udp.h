@@ -91,7 +91,7 @@ struct _buf_t *udp_peekfrom (udp_socket_t *s, unsigned char *from_addr,
  * Connected socket will receive packets only from the peer
  * with appropriate address/port.
  */
-void udp_connect (udp_socket_t *s, unsigned char *ipaddr, unsigned short port);
+void udp_connect (udp_socket_t *s, const unsigned char *ipaddr, unsigned short port);
 
 /*
  * Send the UDP packet to the connected socket.

@@ -95,9 +95,12 @@ typedef struct _netif_interface_t {
 } netif_interface_t;
 
 bool_t netif_output (netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ipsrc);
+	const unsigned char *ipdest
+	, const unsigned char *ipsrc);
 bool_t netif_output_prio (netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ipsrc, small_uint_t prio);
+	const unsigned char *ipdest
+	, const unsigned char *ipsrc
+	, small_uint_t prio);
 struct _buf_t *netif_input (netif_t *netif);
 void netif_set_address (netif_t *netif, unsigned char *ethaddr);
 

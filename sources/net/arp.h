@@ -187,10 +187,11 @@ struct ethip_hdr {
 arp_t *arp_init (array_t *buf, unsigned bytes, struct _ip_t *ip);
 struct _buf_t *arp_input (struct _netif_t *netif, struct _buf_t *p);
 bool_t arp_request (struct _netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ipsrc);
+	const unsigned char *ipdest, const unsigned char *ipsrc);
 bool_t arp_add_header (struct _netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ethdest);
-unsigned char *arp_lookup (struct _netif_t *netif, unsigned char *ipaddr);
+	const unsigned char *ipdest
+	, const unsigned char *ethdest);
+unsigned char *arp_lookup (struct _netif_t *netif, const unsigned char *ipaddr);
 void arp_timer (arp_t *arp);
 
 

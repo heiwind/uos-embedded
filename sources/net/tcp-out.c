@@ -224,7 +224,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 	/* If we don't have a local IP address, we get one by
 	 * calling ip_route(). */
 	if ( !ipadr_not0_ucs(s->local_ip) ) {
-	    unsigned char *local_ip;
+	    const unsigned char *local_ip;
 		netif = route_lookup (s->ip, s->remote_ip.ucs, 0, &local_ip);
 		if (! netif)
 			return;

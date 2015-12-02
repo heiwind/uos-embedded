@@ -50,6 +50,7 @@ typedef union  __attribute__ ((packed,aligned(4))) _ip_addr{
 
 //ip adress in network byte-order
 typedef ip_addr ip_naddr;
+typedef const unsigned char* const_ip4_ucs;
 
 INLINE __CONST 
 ip_addr ipadr_4l(uint32_t x) __THROW 
@@ -440,9 +441,11 @@ void ip_init (ip_t *ip, struct _mem_pool_t *pool, int prio,
 void ip_input (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
 bool_t ip_output (ip_t *ip, struct _buf_t *p, unsigned char *dest,
 	unsigned char *src, small_uint_t proto);
-bool_t ip_output_netif (ip_t *ip, struct _buf_t *p, unsigned char *dest,
-	unsigned char *src, small_uint_t proto, unsigned char *gateway,
-	struct _netif_t *netif, unsigned char *netif_ipaddr);
+bool_t ip_output_netif (ip_t *ip, struct _buf_t *p
+        , const unsigned char *dest, const unsigned char *src
+        , small_uint_t proto
+        , const unsigned char *gateway
+        , struct _netif_t *netif, const unsigned char *netif_ipaddr);
 
 void icmp_echo_request (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
 void icmp_dest_unreach (ip_t *ip, struct _buf_t *p, small_uint_t op);

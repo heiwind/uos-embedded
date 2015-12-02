@@ -189,7 +189,7 @@ crc16_inet (unsigned short sum, unsigned const char *buf, unsigned short len)
 }
 
 unsigned short
-crc16_inet_header (unsigned char *src, unsigned char *dest,
+crc16_inet_header (const unsigned char *src, const unsigned char *dest,
 	unsigned char proto, unsigned short proto_len)
 {
 	unsigned short sum;

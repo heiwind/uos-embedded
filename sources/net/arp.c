@@ -52,7 +52,7 @@ arp_init (array_t *buf, unsigned bytes, struct _ip_t *ip)
  * Mark it as age = 0.
  */
 unsigned char *
-arp_lookup (netif_t *netif, unsigned char *ipaddr)
+arp_lookup (netif_t *netif, const unsigned char *ipaddr)
 {
 	arp_t *arp = netif->arp;
 	arp_entry_t *e;
@@ -77,7 +77,7 @@ arp_lookup (netif_t *netif, unsigned char *ipaddr)
  * Mark new entries as age = 0.
  */
 static void
-arp_add_entry (netif_t *netif, unsigned char *ipaddr, unsigned char *ethaddr)
+arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char *ethaddr)
 {
 	arp_t *arp = netif->arp;
 	arp_entry_t *e, *q;
@@ -159,7 +159,7 @@ arp_input (netif_t *netif, buf_t *p)
 {
 	struct ethip_hdr *h;
 	struct arp_hdr *ah;
-	unsigned char *ipaddr;
+	const unsigned char *ipaddr;
 
 	/*debug_printf ("arp_input: %d bytes\n", p->tot_len);*/
 	h = (struct ethip_hdr*) p->payload;
@@ -273,8 +273,9 @@ arp_input (netif_t *netif, buf_t *p)
  * concrete alias.
  */
 bool_t
-arp_request (netif_t *netif, buf_t *p, unsigned char *ipdest,
-	unsigned char *ipsrc)
+arp_request (netif_t *netif, buf_t *p
+        , const unsigned char *ipdest
+        , const unsigned char *ipsrc)
 {
 	struct arp_hdr *ah;
 
@@ -320,8 +321,9 @@ arp_request (netif_t *netif, buf_t *p, unsigned char *ipdest,
  * For broadcasts, ipdest must be NULL.
  */
 bool_t
-arp_add_header (netif_t *netif, buf_t *p, unsigned char *ipdest,
-	unsigned char *ethdest)
+arp_add_header (netif_t *netif, buf_t *p
+        , const unsigned char *ipdest
+        , const unsigned char *ethdest)
 {
 	struct eth_hdr *h;
 
