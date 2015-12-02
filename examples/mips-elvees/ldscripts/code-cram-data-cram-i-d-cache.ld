@@ -17,6 +17,10 @@ MEMORY
   pram0  (rw!x) : ORIGIN = 0xb8440000,	LENGTH = 32K
   xyram1 (rw!x) : ORIGIN = 0x98800000,	LENGTH = 128K
   pram1  (rw!x) : ORIGIN = 0xb8840000,	LENGTH = 32K
+  xyram2 (rw!x) : ORIGIN = 0xb8c00000,  LENGTH = 128K
+  pram2  (rw!x) : ORIGIN = 0xb8c40000,  LENGTH = 32K
+  xyram3 (rw!x) : ORIGIN = 0xb9000000,  LENGTH = 128K
+  pram3  (rw!x) : ORIGIN = 0xb9040000,  LENGTH = 32K  
 }
 
 /* higher address of the user mode stack */
@@ -110,6 +114,70 @@ SECTIONS
   } > cdata
   __bss_end = . ;
   _end = .;
+
+   .DSP0_data   :
+   {
+      * (.DSP0_data);
+      . = ALIGN (32 / 8);
+   } > xyram0
+   
+   .DSP0_bss ADDR(.DSP0_data) + SIZEOF(.DSP0_data) (NOLOAD) :
+   {
+      *(.DSP0_bss);
+   } > xyram0
+
+   .DSP0_text   :
+   {
+      * (.DSP0_text);
+   } > pram0
+   
+   .DSP1_data   :
+   {
+      * (.DSP1_data);
+      . = ALIGN (32 / 8);
+   } > xyram1
+   
+   .DSP1_bss ADDR(.DSP1_data) + SIZEOF(.DSP1_data) (NOLOAD):
+   {
+      *(.DSP1_bss);
+   } > xyram1
+
+   .DSP1_text   :
+   {
+      * (.DSP1_text);
+   } > pram1
+
+   .DSP2_data   :
+   {
+      * (.DSP2_data);
+      . = ALIGN (32 / 8);
+   } > xyram2
+   
+   .DSP2_bss ADDR(.DSP2_data) + SIZEOF(.DSP2_data) (NOLOAD) :
+   {
+      *(.DSP2_bss);
+   } > xyram2
+
+   .DSP2_text   :
+   {
+      * (.DSP2_text);
+   } > pram2
+   
+   .DSP3_data   :
+   {
+      * (.DSP3_data);
+      . = ALIGN (32 / 8);
+   } > xyram3
+   
+   .DSP3_bss ADDR(.DSP3_data) + SIZEOF(.DSP3_data) (NOLOAD):
+   {
+      *(.DSP3_bss);
+   } > xyram3
+
+   .DSP3_text   :
+   {
+      * (.DSP3_text);
+   } > pram3
 
   /* Stabs debugging sections.  */
   .stab          0 : { *(.stab) }
