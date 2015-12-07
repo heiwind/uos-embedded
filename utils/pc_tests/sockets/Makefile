@@ -1,7 +1,9 @@
 CC_HOST = gcc
 
 # Для использования сокетов TCP, иначе собирается версия с UDP
-CFLAGS  = -DTCP_SOCKET
+#CFLAGS  ?= -DTCP_SOCKET
+CFLAGS  ?=
+CFLAGS += -g 
 
 LDFLAGS	=
 LIBS 	= 
