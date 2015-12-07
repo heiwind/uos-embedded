@@ -37,6 +37,14 @@
 #define __nonnull(seq) __attribute__((nonull seq )) 
 #endif
 
+#ifndef __THROW
+#   ifdef __cplusplus
+#       define __THROW throw()
+#   else
+#       define __THROW 
+#   endif
+#endif
+
 /**\~rissian эти модификаторы предназначены для более аккуратной линковки кода:
  * \value CODE_ISR - код вызывается из обработчика прерывания,вероятно его желательно 
  *  положить в быструю память рядом с таблицей прерываний
@@ -51,7 +59,9 @@
 #define CODE_ISR
 #endif
 
-
+#ifndef __CONST
+#define __CONST __attribute__ ((__const__))
+#endif
 
 #define ARRAY_LENGTH(array) (sizeof (array) / sizeof ((array)[0]))
 #define ARRAY_END(array)    ((array) + ARRAY_LENGTH (array))
