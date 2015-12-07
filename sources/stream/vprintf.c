@@ -39,9 +39,17 @@
  *
  * The format %D -- Hexdump, takes a pointer. Sharp flag - use `:' as
  * a separator, instead of a space. For example:
+                    precision denotes size of groups delimited by space
  *
  *	("%6D", ptr)       -> XX XX XX XX XX XX
+ *  ("%6.3D", len, ptr) -> XX:XX:XX XX:XX:XX ...
  *	("%#*D", len, ptr) -> XX:XX:XX:XX ...
+ *	
+ * The flag specifier introduced:
+ *  @ - denotes padding symbol instead default space or 0
+
+ *  ("%@.6D", ptr)       -> XX.XX.XX.XX.XX.XX
+ *  ("%@.6d", 100)       -> ...100
  */
 #include <runtime/lib.h>
 #include <runtime/math.h>
@@ -121,6 +129,10 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 			}
 			goto reswitch;
 
+        case '@':
+            padding = FETCH_BYTE (fmt++);
+            goto reswitch;
+            
 		case '0':
 			if (! dot) {
 				padding = '0';
@@ -183,15 +195,28 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 				width = 16;
 			if (sharpflag)
 				padding = ':';
+			{
+			    int prec = dwidth-1;
 			while (width--) {
 				c = *s++;
 				PUTC (mkhex (c >> 4));
 				PUTC (mkhex (c));
-				if (width)
-					PUTC (padding);
+				if (prec != 0) {
+				    //precision denotes size of groups delimited by space
+	                if (width)
+	                    PUTC (padding);
+				}
+				else {
+                    PUTC (' ');
+				}
+				prec--;
+				if (prec < 0)
+				    prec = dwidth-1;
+			}//while (width--)
 			}
 			break;
 
+        case 'i':
 		case 'd':
 			ul = lflag ? va_arg (ap, long) : va_arg (ap, int);
 			if (! sign) sign = 1;
