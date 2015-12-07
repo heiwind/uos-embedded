@@ -76,7 +76,7 @@ static inline void enable_flash_prefetch()
 #endif
 
 #if defined (ARM_STM32L151RC)
-static inline void stm32l_low_power()
+void stm32l_low_power()
 {
 	RCC->AHBENR |= RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN;
     RCC->APB1ENR = RCC_PWREN;
@@ -109,7 +109,7 @@ static inline void stm32l_low_power()
 #endif
 
 #if defined (ARM_STM32L152RC)
-static inline void stm32l_low_power()
+void stm32l_low_power()
 {
 	RCC->AHBENR |= RCC_GPIOAEN | RCC_GPIOBEN | RCC_GPIOCEN | RCC_GPIODEN |
         RCC_GPIOEEN | RCC_GPIOHEN;
@@ -344,6 +344,8 @@ generator will not work properly
 #	error "Unsupported CPU frequency when using HSI"
 #endif
 
+	RCC->CR &= ~RCC_MSION;
+
 #elif defined(CLK_SOURCE_HSE)
 
 	enable_flash_prefetch();
@@ -377,6 +379,7 @@ generator will not work properly
     RCC->CFGR |= RCC_SW_PLL;
     while ((RCC->CFGR & RCC_SWS_MASK) != RCC_SWS_PLL);
 
+	RCC->CR &= ~RCC_MSION;
 
 #else 	// MSI clock source
 

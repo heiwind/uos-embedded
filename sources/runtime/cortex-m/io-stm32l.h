@@ -32,7 +32,9 @@ typedef volatile unsigned int arm_reg_t;
 #define ARM_PERIPH_BASE     0x40000000  // Peripheral registers
 #define ARM_SYSTEM_BASE     0xE0000000  // Core registers
 
-#define ARM_SRAM_SIZE       (192*1024)   // Internal SRAM size
+#define ARM_SRAM_SIZE       (192*1024)  // Internal SRAM size
+
+#define STM_EEPROM_BASE     0x08080000  // EEPROM base address
 
 #include <runtime/cortex-m/io-cortex-m.h>
 
@@ -1160,6 +1162,7 @@ typedef struct
     arm_reg_t TAFCR;    // Tamper and alternate function configuration
     arm_reg_t ALRMASSR; // Alarm A sub second
     arm_reg_t ALRMBSSR; // Alarm B sub second
+    arm_reg_t gap0;
     arm_reg_t BKPR[32]; // Backup registers
 } RTC_t;
 
@@ -1311,7 +1314,7 @@ typedef struct
     arm_reg_t KR;       // Key
     arm_reg_t DR;       // Prescaler
     arm_reg_t RLR;      // Reload
-    arm_reg_t ISR;      // Status
+    arm_reg_t SR;      // Status
 } IWDG_t;
 
 #define IWDG   ((IWDG_t*) STM_IWDG_BASE)
