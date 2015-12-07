@@ -5,6 +5,15 @@
 /*#undef HTONS*/
 /*#define HTONS(v) ~v*/
 
+#define CPU_ALIGN sizeof (long)
+#define CPU_ALIGN_MASK (CPU_ALIGN-1)
+/* How many bytes are copied each iteration of the 4X unrolled loop.  */
+#define BIGBLOCKSIZE    (CPU_ALIGN << 2)
+#define BIGBLOCKN       (BIGBLOCKSIZE/sizeof(long))
+
+/* How many bytes are copied each iteration of the word copy loop.  */
+#define LITTLEBLOCKSIZE (CPU_ALIGN)
+
 /*
  * Calculate a new sum given the current sum and the new data.
  * Use 0 as the initial sum value.
@@ -111,16 +120,52 @@ crc16_inet (unsigned short sum, unsigned const char *buf, unsigned short len)
 	unsigned long longsum = sum;
 	unsigned long longlen = len;
 
-	if ((int) buf & 1) {
-		/* get first non-aligned byte */
+    if ((int) buf & 1) {
+        /* get first non-aligned byte */
 #if HTONS(1) == 1
-		longsum += *buf++ << 8;
+        longsum += *buf++ << 8;
 #else
-		longsum += *buf++;
+        longsum += *buf++;
 #endif
-		longsum = (longsum >> 8) + ((unsigned char) longsum << 8);
-		--longlen;
-	}
+        longsum = (longsum >> 8) + ((unsigned char) longsum << 8);
+        --longlen;
+    }
+#if CPU_HARD_MISALIGN > 0
+    if ((int) buf & 2) {
+        /* get first non-aligned byte */
+        longsum += *(unsigned short*) buf;
+        buf += 2;
+        longlen -=2;
+    }
+
+#   if UOS_FOR_SPEED > 1
+    if (longlen>BIGBLOCKSIZE){
+        for (; longlen>BIGBLOCKSIZE; longlen-=BIGBLOCKSIZE, buf+=BIGBLOCKSIZE){
+            unsigned* lbuf = (unsigned*)buf;
+            unsigned tmp;
+            unsigned tmp2;
+            unsigned sum2;
+
+            tmp = lbuf[0];
+            longsum += (unsigned short)tmp;
+            longsum += tmp>>16;
+
+            tmp2 = lbuf[1];
+            sum2  = (unsigned short)tmp2;
+            sum2 += tmp2>>16;
+
+            tmp = lbuf[2];
+            longsum += (unsigned short)tmp;
+            longsum += tmp>>16;
+
+            tmp2 = lbuf[3];
+            sum2 += (unsigned short)tmp2;
+            sum2 += tmp2>>16;
+            longsum += sum2;
+        }
+    }
+#   endif
+#endif//CPU_HARD_MISALIGN > 0
 
 	for (; longlen>1; longlen-=2, buf+=2)
 		longsum += *(unsigned short*) buf;
@@ -136,9 +181,8 @@ crc16_inet (unsigned short sum, unsigned const char *buf, unsigned short len)
 	}
 	/* Build cyclic sum. */
 	longsum = (longsum >> 16) + (unsigned short) longsum;
+    longsum = (longsum >> 16) + (unsigned short) longsum;
 	sum = longsum;
-	if (longsum & 0x10000)
-		++sum;
 #endif
 	/*debug_printf (" -> %#04x\n", sum);*/
 	return sum;
@@ -153,7 +197,7 @@ crc16_inet_header (unsigned char *src, unsigned char *dest,
 	/*debug_printf ("crc16_inet_header (src=%#02x.%#02x.%#02x.%#02x, dest=%#02x.%#02x.%#02x.%#02x, proto=%#02x, proto_len=%#02x)",
 		src[0], src[1], src[2], src[3], dest[0],
 		dest[1], dest[2], dest[3], proto, proto_len);*/
-#if __AVR__
+#ifdef __AVR__
 	/* Sum `proto' and `proto_len'. */
 	sum = proto_len;
 	asm volatile (
@@ -235,9 +279,8 @@ crc16_inet_header (unsigned char *src, unsigned char *dest,
 
 	/* Build cyclic sum. */
 	longsum = (longsum >> 16) + (unsigned short) longsum;
+    longsum = (longsum >> 16) + (unsigned short) longsum;
 	sum = longsum;
-	if (longsum & 0x10000)
-		++sum;
 #endif
 	/*debug_printf (" -> %#04x\n", sum);*/
 	return sum;
