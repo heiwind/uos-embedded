@@ -416,7 +416,7 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
 void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
 {
 	mil1553_lock(&mil->milif);
-    if ((status & MIL_STD_STATUS_VALMESS) && (!(status & MIL_STD_STATUS_IDLE))) {
+    if (status & MIL_STD_STATUS_VALMESS) {
         if (mil->urgent_desc.reserve) {
             // Была передача вне очереди
             if (mil->pool && mil->urgent_desc.transmit_mode == MIL_SLOT_RT_BC)
@@ -430,29 +430,29 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
 	    mil->nb_errors++;
 	}
 
-    if (status & MIL_STD_STATUS_IDLE) {
-		if (mil->urgent_desc.reserve) // Если была передача вне очереди, то сбрасываем дескриптор,
-			mil->urgent_desc.raw = 0; // чтобы не начать её повторно
-		else {
-			if (mil->cur_slot != 0) {
-				mil->cur_slot = mil->cur_slot->next;
-			}
-			if (mil->cur_slot == 0)
-				mil->cur_slot = mil->cyclogram;
-		}
 
-		if (mil->urgent_desc.raw != 0) {    // Есть требование на выдачу вне очереди
-			start_slot(mil, mil->urgent_desc, mil->urgent_data);
-			mil->urgent_desc.reserve = 1;   // Признак того, что идёт передача вне очереди
-		} else if (mil->cur_slot != mil->cyclogram || mil->tim_reg == 0 || mil->period_ms == 0) {
-			// если таймер не задан, или его период равен нулю циклограмма начинается с начала
-			if (mil->cur_slot != 0) {
-				start_slot(mil, mil->cur_slot->desc, mil->cur_slot->data);
-			}
+	if (mil->urgent_desc.reserve) // Если была передача вне очереди, то сбрасываем дескриптор,
+		mil->urgent_desc.raw = 0; // чтобы не начать её повторно
+	else {
+		if (mil->cur_slot != 0) {
+			mil->cur_slot = mil->cur_slot->next;
 		}
-    }
+		if (mil->cur_slot == 0)
+			mil->cur_slot = mil->cyclogram;
+	}
 
-    //TOGLE(LEFT_LED);
+	volatile unsigned int d = KHZ/1000; // ~ 10мкс
+	while(d--);
+
+	if (mil->urgent_desc.raw != 0) {    // Есть требование на выдачу вне очереди
+		start_slot(mil, mil->urgent_desc, mil->urgent_data);
+		mil->urgent_desc.reserve = 1;   // Признак того, что идёт передача вне очереди
+	} else if (mil->cur_slot != mil->cyclogram || mil->tim_reg == 0 || mil->period_ms == 0) {
+		// если таймер не задан, или его период равен нулю циклограмма начинается с начала
+		if (mil->cur_slot != 0) {
+			start_slot(mil, mil->cur_slot->desc, mil->cur_slot->data);
+		}
+	}
 
     mil1553_unlock(&mil->milif);
 
@@ -694,17 +694,7 @@ static bool_t status_handler(void *arg)
 	if (status_array[write_idx].done) {
 		nb_missing++;
 	} else {
-		unsigned mode =  reg->CONTROL;
-		unsigned status = reg->STATUS;
-		if ((mode & MIL_STD_CONTROL_MODE_MASK) == MIL_STD_CONTROL_MODE(MIL_STD_MODE_BC)) {
-			if (status & MIL_STD_STATUS_IDLE) {
-				reg->INTEN = MIL_STD_INTEN_VALMESSIE | MIL_STD_INTEN_ERRIE;
-			} else {
-				reg->INTEN = 0;
-				reg->INTEN = MIL_STD_INTEN_IDLEIE;
-			}
-		}
-		status_array[write_idx].status = status;
+		status_array[write_idx].status = reg->STATUS;
 		status_array[write_idx].command_word_1 = reg->CommandWord1;
 		status_array[write_idx].msg = reg->MSG;
 		status_array[write_idx].time_stamp = ARM_TIMER2->TIM_CNT;
