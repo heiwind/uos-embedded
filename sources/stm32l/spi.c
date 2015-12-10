@@ -93,9 +93,10 @@ static inline int trx_no_dma(spimif_t *spimif, spi_message_t *msg, unsigned bits
     uint16_t            *txp_16bit;
     unsigned            i;
 
-		//    Активируем CS
-		//    Если функция cs_control не установлена, то считаем, что для выборки
-		//    устройства используется вывод NSS    if (spi->cs_control)
+    //    Активируем CS
+    //    Если функция cs_control не установлена, то считаем, что для выборки
+    //    устройства используется вывод NSS
+    if (spi->cs_control)
         spi->cs_control(spi->port, cs_num, mode & SPI_MODE_CS_HIGH);
     else
         reg->CR1 |= SPI_MSTR; // reg->CR1 |= SPI_SPE;
@@ -161,9 +162,9 @@ static inline int trx_no_dma(spimif_t *spimif, spi_message_t *msg, unsigned bits
         return SPI_ERR_BAD_BITS;
     }
 
-    	// Деактивируем CS
-        // Если функция cs_control не установлена, то считаем, что для выборки
-        // устройства используется вывод NSS
+	// Деактивируем CS
+	// Если функция cs_control не установлена, то считаем, что для выборки
+	// устройства используется вывод NSS
     if (!(mode & SPI_MODE_CS_HOLD)) {
         if (spi->cs_control)
             spi->cs_control(spi->port, cs_num, !(mode & SPI_MODE_CS_HIGH));
