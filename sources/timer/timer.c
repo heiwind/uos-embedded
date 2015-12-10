@@ -14,7 +14,7 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 
-volatile uint32_t __timer_ticks_uos;
+extern volatile uint32_t __timer_ticks_uos;
 
 #if I386
 #   include <runtime/i386/i8253.h>

@@ -51,7 +51,7 @@
 #endif
 
 
-extern volatile uint32_t __timer_ticks_uos;
+volatile uint32_t __timer_ticks_uos;
 
 void udelay (unsigned usec)
 {
