@@ -441,8 +441,7 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
 			mil->cur_slot = mil->cyclogram;
 	}
 
-	volatile unsigned int d = KHZ/1000; // ~ 10мкс
-	while(d--);
+	udelay(6);
 
 	if (mil->urgent_desc.raw != 0) {    // Есть требование на выдачу вне очереди
 		start_slot(mil, mil->urgent_desc, mil->urgent_data);

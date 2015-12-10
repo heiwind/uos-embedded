@@ -3,6 +3,7 @@
 
 #include <mil1553/mil1553-interface.h>
 #include <mem/mem-queue.h>
+#include <runtime/lib.h>
 
 #define STATUS_ITEMS_SIZE	32
 

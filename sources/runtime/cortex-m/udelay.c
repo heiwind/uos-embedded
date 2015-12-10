@@ -68,14 +68,26 @@ void udelay (unsigned usec)
 		SYS_TIMER->TIM_CNTRL = ARM_TIM_CNT_EN;
 	}
 	unsigned arr = SYS_TIMER->TIM_ARR;
+
+	if (SYS_TIMER->TIM_STATUS & ARM_TIM_CNT_ZERO_EVENT) {
+		SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ZERO_EVENT;
+	}
+
 	unsigned now = SYS_TIMER->TIM_CNT;
 
-	unsigned final = now + usec * (KHZ / 1000);
+	if (SYS_TIMER->TIM_STATUS & ARM_TIM_CNT_ZERO_EVENT) {
+		SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ZERO_EVENT;
+		now = SYS_TIMER->TIM_CNT;
+	}
+
+	unsigned final = now + (usec-1)* (KHZ / 1000);
 	
+	//debug_printf("timer %X %X %X %X\n", arr, now, final, SYS_TIMER->TIM_STATUS);
+
 	for (;;) {
 		if (SYS_TIMER->TIM_STATUS & ARM_TIM_CNT_ZERO_EVENT) {
 			SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ZERO_EVENT;
-			final -= arr;
+			final -= arr; // если arr == 0xFFFFFFFF то + 1 даст ошибку (0)
 		}
 
 		/* This comparison is valid only when using a signed type. */
