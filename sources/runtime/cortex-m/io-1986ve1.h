@@ -1524,6 +1524,7 @@ typedef struct
 #define MIL_STD_CONTROL_MR (1 << 0)  /* Сброс контроллера */
 #define MIL_STD_CONTROL_BCSTART (1 << 1)  /* Инициирует передачу сообщения в канал в режиме КШ */
 #define MIL_STD_CONTROL_MODE(n) (((n) & 3) << 2)  /* Выбор режима работы контроллера. Значения режимов описаны ниже. */
+#define MIL_STD_CONTROL_MODE_MASK (3 << 2)  /* Маска режимов контроллера. */
 
 #define MIL_STD_MODE_BC 1  /* Режим контроллера шины (КШ) (BC - Bus Controller) */
 #define MIL_STD_MODE_RT 2  /* Режим оконечного устройства (ОУ) (RT - Remote Terminal) */

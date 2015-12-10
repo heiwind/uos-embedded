@@ -18,6 +18,8 @@
  */
 #include <runtime/lib.h>
 
+#define USE_OLDTICKS	0
+
 #ifdef ARM_1986BE1
 #if (ARM_SYS_TIMER==1)
 #	define TIMER_IRQ	TIMER1_IRQn
@@ -48,6 +50,9 @@
 #endif
 #endif
 
+
+volatile uint32_t __timer_ticks_uos;
+
 void udelay (unsigned usec)
 {
 	if (! usec)
@@ -68,14 +73,28 @@ void udelay (unsigned usec)
 		SYS_TIMER->TIM_CNTRL = ARM_TIM_CNT_EN;
 	}
 	unsigned arr = SYS_TIMER->TIM_ARR;
+
+	if (SYS_TIMER->TIM_STATUS & ARM_TIM_CNT_ZERO_EVENT) {
+		SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ZERO_EVENT;
+	}
+
 	unsigned now = SYS_TIMER->TIM_CNT;
 
-	unsigned final = now + usec * (KHZ / 1000);
+	if (SYS_TIMER->TIM_STATUS & ARM_TIM_CNT_ZERO_EVENT) {
+		SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ZERO_EVENT;
+		now = SYS_TIMER->TIM_CNT;
+	}
+
+	unsigned final = now + (usec-1)* (KHZ / 1000);
 	
+	//debug_printf("timer %X %X %X %X\n", arr, now, final, SYS_TIMER->TIM_STATUS);
+
 	for (;;) {
 		if (SYS_TIMER->TIM_STATUS & ARM_TIM_CNT_ZERO_EVENT) {
 			SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ZERO_EVENT;
-			final -= arr;
+			final -= arr; // если arr == 0xFFFFFFFF то + 1 даст ошибку (0)
+			if (arr != 0xFFFFFFFF)
+				final--;
 		}
 
 		/* This comparison is valid only when using a signed type. */
@@ -84,6 +103,8 @@ void udelay (unsigned usec)
 			break;
 	}
 #else
+
+#if USE_OLDTICKS
 	unsigned ctrl = ARM_SYSTICK->CTRL;
 	if (! (ctrl & ARM_SYSTICK_CTRL_ENABLE)) {
 		/* Start timer using HCLK clock, no interrupts. */
@@ -91,6 +112,24 @@ void udelay (unsigned usec)
 		ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_HCLK |
 			ARM_SYSTICK_CTRL_ENABLE;
 	}
+#else
+	uint32_t ctrl;
+	uint32_t prev_ticks;
+	uint32_t ticks = __timer_ticks_uos;
+
+	prev_ticks = ticks;
+
+	if (!ticks) {
+		ctrl = ARM_SYSTICK->CTRL;
+		if (! (ctrl & ARM_SYSTICK_CTRL_ENABLE)) {
+			/* Start timer using HCLK clock, no interrupts. */
+			ARM_SYSTICK->LOAD = 0xFFFFFF;
+			ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_HCLK |
+				ARM_SYSTICK_CTRL_ENABLE;
+		}
+	}
+#endif
+
 	unsigned load = ARM_SYSTICK->LOAD & 0xFFFFFF;
 	unsigned now = ARM_SYSTICK->VAL & 0xFFFFFF;
 #ifdef SETUP_HCLK_HSI
@@ -99,14 +138,35 @@ void udelay (unsigned usec)
 	unsigned final = now - usec * (KHZ / 1000) + 42;
 #endif
 	for (;;) {
+
+#if USE_OLDTICKS
 		ctrl = ARM_SYSTICK->CTRL;
 		if (ctrl & ARM_SYSTICK_CTRL_COUNTFLAG) {
 			final += load;
 		}
-
+#else
+		if (!ticks) {
+			ctrl = ARM_SYSTICK->CTRL;
+			if (ctrl & ARM_SYSTICK_CTRL_COUNTFLAG) {
+				final += load;
+			}
+		} else {
+			if (prev_ticks != ticks) {
+				uint32_t delta;
+				if (ticks < prev_ticks) {
+					delta = ticks - prev_ticks + 1;
+				} else {
+					delta = ticks - prev_ticks;
+				}
+				final += (load + 1) * delta;
+			}
+			prev_ticks = ticks;
+			ticks = __timer_ticks_uos;
+		}
+#endif
 		/* This comparison is valid only when using a signed type. */
 		now = ARM_SYSTICK->VAL & 0xFFFFFF;
-		if ((int) ((now - final) << 8) < 0)
+		if ((int) (now - final) < 0)
 			break;
 	}
 #endif
