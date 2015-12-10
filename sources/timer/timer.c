@@ -14,6 +14,8 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 
+volatile uint32_t __timer_ticks_uos;
+
 #if I386
 #   include <runtime/i386/i8253.h>
 #   define TIMER_IRQ        0   /* IRQ0 */
@@ -175,6 +177,11 @@ static inline
 #endif
 void timer_update (timer_t *t)
 {
+	__timer_ticks_uos++;
+
+	if (__timer_ticks_uos==0)
+		__timer_ticks_uos++;
+
 /*debug_printf ("<ms=%ld> ", t->milliseconds);*/
 #if defined (ELVEES)
     /* Clear interrupt. */
