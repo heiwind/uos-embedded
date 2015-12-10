@@ -93,10 +93,9 @@ static inline int trx_no_dma(spimif_t *spimif, spi_message_t *msg, unsigned bits
     uint16_t            *txp_16bit;
     unsigned            i;
 
-    // РђРєС‚РёРІРёСЂСѓРµРј CS
-    // Р•СЃР»Рё С„СѓРЅРєС†РёСЏ cs_control РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅР°, С‚Рѕ СЃС‡РёС‚Р°РµРј, С‡С‚Рѕ РґР»СЏ РІС‹Р±РѕСЂРєРё
-    // СѓСЃС‚СЂРѕР№СЃС‚РІР° РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІС‹РІРѕРґ NSS
-    if (spi->cs_control)
+		//    Активируем CS
+		//    Если функция cs_control не установлена, то считаем, что для выборки
+		//    устройства используется вывод NSS    if (spi->cs_control)
         spi->cs_control(spi->port, cs_num, mode & SPI_MODE_CS_HIGH);
     else
         reg->CR1 |= SPI_MSTR; // reg->CR1 |= SPI_SPE;
@@ -151,7 +150,7 @@ static inline int trx_no_dma(spimif_t *spimif, spi_message_t *msg, unsigned bits
                 break;
         }
     } else {
-        // Р”РµР°РєС‚РёРІРёСЂСѓРµРј CS
+        // Деактивируем CS
         if (!(mode & SPI_MODE_CS_HOLD)) {
             if (spi->cs_control)
                 spi->cs_control(spi->port, cs_num, !(mode & SPI_MODE_CS_HIGH));
@@ -162,9 +161,9 @@ static inline int trx_no_dma(spimif_t *spimif, spi_message_t *msg, unsigned bits
         return SPI_ERR_BAD_BITS;
     }
 
-    // Р”РµР°РєС‚РёРІРёСЂСѓРµРј CS
-    // Р•СЃР»Рё С„СѓРЅРєС†РёСЏ cs_control РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅР°, С‚Рѕ СЃС‡РёС‚Р°РµРј, С‡С‚Рѕ РґР»СЏ РІС‹Р±РѕСЂРєРё
-    // СѓСЃС‚СЂРѕР№СЃС‚РІР° РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІС‹РІРѕРґ NSS
+    	// Деактивируем CS
+        // Если функция cs_control не установлена, то считаем, что для выборки
+        // устройства используется вывод NSS
     if (!(mode & SPI_MODE_CS_HOLD)) {
         if (spi->cs_control)
             spi->cs_control(spi->port, cs_num, !(mode & SPI_MODE_CS_HIGH));
