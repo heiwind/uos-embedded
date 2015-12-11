@@ -123,7 +123,6 @@ bool_t mutex_group_signaled(struct mg_signal_ctx* ctx)
             return true;
         }
     }
-    g->waiter = task_current;
     return false;
 }
 
