@@ -28,10 +28,7 @@ void
 mutex_signal (mutex_t *m, void *message)
 {
 #if FASTER_LOCKS
-    if (   list_is_empty (&m->waiters) 
-        && list_is_empty (&m->groups)
-        && (m->irq == NULL)
-       )
+    if (!mutex_is_wait(m))
         return;
 #endif
 	arch_state_t x;

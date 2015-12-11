@@ -91,6 +91,8 @@ void mutex_unlock (mutex_t *lock);
  * after acquiring the lock the IRQ will be disabled.
  */
 bool_t mutex_trylock (mutex_t *lock);
+INLINE bool_t mutex_is_locked (mutex_t *m);
+INLINE bool_t mutex_is_wait (mutex_t *m);
 
 /*! this is function that called from schdeler-switcher context, it should not use
  *   os routines that can cause task block 
@@ -209,6 +211,19 @@ struct _array_t {
 
 #define ARRAY(name, bytes) \
 	array_t name [((bytes) + sizeof (array_t) - 1) / sizeof (array_t)]
+
+
+INLINE
+bool_t mutex_is_locked (mutex_t *m){
+    return (m->master != (void*)0 );
+}
+
+INLINE
+bool_t mutex_is_wait (mutex_t *m){
+    return     !list_is_empty (&m->waiters) 
+            || !list_is_empty (&m->groups)
+            || (m->irq != (void*)0);
+}
 
 #ifdef __cplusplus
 }
