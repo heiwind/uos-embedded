@@ -14,7 +14,9 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 
+#if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 extern volatile uint32_t __timer_ticks_uos;
+#endif
 
 #ifndef CODE_ISR
 #define CODE_ISR
@@ -197,11 +199,12 @@ CODE_ISR
 static inline
 void timer_update (timer_t *t)
 {
+#if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 	__timer_ticks_uos++;
 
 	if (__timer_ticks_uos==0)
 		__timer_ticks_uos++;
-
+#endif
 /*debug_printf ("<ms=%ld> ", t->milliseconds);*/
 #if defined (ELVEES)
     /* Clear interrupt. */
