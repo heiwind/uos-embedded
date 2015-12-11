@@ -146,15 +146,6 @@
 
 //#define MEM_DEBUG 1
 
-//*****************************     net       *****************************
-//#define DEBUG_NET_ETH
-//#define DEBUG_NET_ETH_FAIL
-//#define ARP_TRACE
-//#define DEBUG_NET_ARPTABLE
-//#define DEBUG_NET_ROUTE
-//#define DEBUG_NET_IP
-//#define DEBUG_NET_ICMP
-
  /**************************************************************************
  *                              Task Hooks
  ************************************************************************** */
@@ -173,22 +164,5 @@
 //#define USED_ISR  __attribute__((section(".text.isr_used")))
 
 
-/**************************************************************************
- *                              net
- ************************************************************************** */
-//#   define ETH_STACKSZ        1000
-//#   define ETH_INQ_SIZE       16
-//#   define ETH_OUTQ_SIZE      8
-//#   define ETH_MTU            1518    /* maximum ethernet frame length */
-
-//#   define ETH_MDIO_KHZ       2500ul
-//*   этот таймаут задает время устаревания PHY_STASTUS, после которого eth_phy_poll форсирует запрос статуса
-//      с блокированием управляющей нитки 
-//#   define ETH_PHY_STASTUS_TOus    10000ul
-
-
-#define ETH_OPTIMISE_SPEED      1
-
-//#define UDP_CHECKSUM_DISABLE
 
 #endif /* UOS_CONF_H_ */

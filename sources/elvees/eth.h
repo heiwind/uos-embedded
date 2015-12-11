@@ -21,6 +21,7 @@
 #ifndef __NVCOM_ETH_H
 #define __NVCOM_ETH_H
 
+#include <uos-conf-net.h>
 #include <net/netif.h>
 #include <buf/buf-queue.h>
 

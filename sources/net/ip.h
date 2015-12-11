@@ -5,6 +5,7 @@
 #include <runtime/arch.h>
 #include <runtime/sys/uosc.h>
 #include <kernel/uos.h>
+#include <uos-conf-net.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
