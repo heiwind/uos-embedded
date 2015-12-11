@@ -142,6 +142,7 @@
  * NDEBUG отключает дебажный вывод функций debug_printf, assert
  */
 //#define NDEBUG
+//#define DEBUG_SIMULATE
 
 //#define MEM_DEBUG 1
 
