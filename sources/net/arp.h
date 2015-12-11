@@ -107,11 +107,11 @@ INLINE unsigned char* macadr_assign_ucs(      unsigned char* __restrict__ dst
 }
 
 INLINE 
-bool_t __CONST macadr_is_same(    const mac_addr a
-                                , const mac_addr b
+bool_t __CONST macadr_is_same(    const mac_addr* a
+                                , const mac_addr* b
                                 ) __THROW
 {
-        return (a.val.l == b.val.l) && (a.val.h == b.val.h);
+        return (a->val.l == b->val.l) && (a->val.h == b->val.h);
 }
 
 INLINE 
@@ -123,7 +123,7 @@ bool_t macadr_is_same_ucs( const unsigned char* __restrict__ a
     if ( (((uintptr_t)a|(uintptr_t)b)&CPU_ACCESSW_ALIGNMASK) == 0){
         const mac_addr* __restrict__ maca = (const mac_addr*) a;
         const mac_addr* __restrict__ macb = (const mac_addr*) b;
-        return macadr_is_same(*maca, *macb);
+        return macadr_is_same(maca, macb);
     }
 #endif
 #if UOS_FOR_SIZE > 0
@@ -213,7 +213,9 @@ struct eth_hdr {
 #define PROTO_ARP	HTONS (0x0806)
 #define PROTO_IP	HTONS (0x0800)
 } __attribute__ ((packed));
+#define MAC_HLEN     14      /* ETH MAC header length */
 
+//*********************    ARP headers       **********************************
 struct arp_hdr {
 	struct eth_hdr	eth;		/* ethernet header */
 
@@ -243,18 +245,18 @@ struct ethip_hdr {
 	unsigned char	ip_hdr0 [4];
 	unsigned char	ip_hdr1 [4];
 	unsigned char	ip_hdr2 [4];
-	unsigned char	ip_src [4];
-	unsigned char	ip_dst [4];
+	ip_addr         ip_src;
+	ip_addr         ip_dst;
 } __attribute__ ((packed));
 
 arp_t *arp_init (array_t *buf, unsigned bytes, struct _ip_t *ip);
 struct _buf_t *arp_input (struct _netif_t *netif, struct _buf_t *p);
 bool_t arp_request (struct _netif_t *netif, struct _buf_t *p,
-	const unsigned char *ipdest, const unsigned char *ipsrc);
+        ip_addr_const ipdest, ip_addr_const ipsrc);
 bool_t arp_add_header (struct _netif_t *netif, struct _buf_t *p,
 	const unsigned char *ipdest
 	, const unsigned char *ethdest);
-unsigned char *arp_lookup (struct _netif_t *netif, const unsigned char *ipaddr);
+unsigned char *arp_lookup (struct _netif_t *netif, ip_addr_const ipaddr);
 void arp_timer (arp_t *arp);
 
 

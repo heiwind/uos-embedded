@@ -200,8 +200,8 @@ static bool_t
 udp_send_netif (udp_socket_t *s, buf_t *p
         , const unsigned char *dest,
 	unsigned short port, netif_t *netif
-	, const unsigned char *local_ip
-	, const unsigned char *gateway)
+	, ip_addr_const local_ip
+	, ip_addr_const gateway)
 {
 	udp_hdr_t *h;
 
@@ -230,8 +230,9 @@ udp_send_netif (udp_socket_t *s, buf_t *p
 	unsigned short chksum;
 
 	/* Calculate checksum. */
-	chksum = buf_chksum (p, crc16_inet_header (local_ip,
-		dest, IP_PROTO_UDP, p->tot_len));
+	chksum = buf_chksum (p
+	        , crc16_inet_header (ipref_as_ucs(local_ip), dest, IP_PROTO_UDP, p->tot_len)
+	        );
 	if (chksum == 0x0000)
 		chksum = 0xffff;
 	if (p->tot_len & 1) {
@@ -256,7 +257,7 @@ udp_send_netif (udp_socket_t *s, buf_t *p
 #endif
 	++s->ip->udp_out_datagrams;
 
-    return ip_output_netif (s->ip, p, dest, local_ip, IP_PROTO_UDP,
+    return ip_output_netif (s->ip, p, dest, ipref_as_ucs(local_ip), IP_PROTO_UDP,
 		gateway, netif, local_ip);
 }
 
@@ -284,7 +285,7 @@ udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 		s->local_port,
 		gateway[0], gateway[1], gateway[2], gateway[3]); */
 	return udp_send_netif (s, p, dest, port
-	        , netif, ipref_as_ucs(local_ip), ipref_as_ucs(gateway)
+	        , netif, local_ip, gateway
 	        );
 }
 
@@ -305,7 +306,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 		return 0;
 	}
 	return udp_send_netif (s, p, s->peer_ip.ucs, s->peer_port, s->netif,
-	        ipref_as_ucs(s->local_ip), ipref_as_ucs(s->gateway));
+	        s->local_ip, s->gateway);
 }
 
 /*

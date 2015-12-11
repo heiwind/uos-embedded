@@ -23,8 +23,8 @@
  * the packet on the appropriate interface.
  */
 static void
-ip_forward (ip_t *ip, buf_t *p, const unsigned char *gateway, netif_t *netif,
-	const unsigned char *netif_ipaddr)
+ip_forward (ip_t *ip, buf_t *p, ip_addr_const gateway, netif_t *netif,
+        ip_addr_const netif_ipaddr)
 {
 	ip_hdr_t *iphdr = (ip_hdr_t*) p->payload;
 
@@ -51,7 +51,7 @@ ip_forward (ip_t *ip, buf_t *p, const unsigned char *gateway, netif_t *netif,
 
 	/* Forwarding packet to netif. */
 	if (! gateway)
-		gateway = iphdr->dest.ucs;
+		gateway = iphdr->dest.var;
 	netif_output (netif, p, gateway, netif_ipaddr);
 	++ip->forw_datagrams;
 }
@@ -121,13 +121,13 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 			    ip_addr_const gateway = 0;
 
 				netif = route_lookup (ip, iphdr->dest.var, &gateway, &netif_ipaddr);
-				if (! gateway)
+				if (! ipadr_not0(gateway))
 					gateway = iphdr->dest.var;
 
 				/* Don't forward packets onto the same
 				 * network interface on which they arrived. */
 				if (netif && netif != inp)
-					ip_forward (ip, p, ipref_as_ucs(gateway), netif, ipref_as_ucs(netif_ipaddr));
+					ip_forward (ip, p, gateway, netif, netif_ipaddr);
 				else
 					buf_free (p);
 			} else {
@@ -239,8 +239,8 @@ bool_t
 ip_output_netif (ip_t *ip, buf_t *p
         , const unsigned char *dest, const unsigned char *src
         , small_uint_t proto
-        , const unsigned char *gateway
-        , netif_t *netif , const unsigned char *netif_ipaddr)
+        , ip_addr_const gateway
+        , netif_t *netif , ip_addr_const netif_ipaddr)
 {
 	ip_hdr_t *iphdr;
 	unsigned short chksum;
@@ -271,7 +271,10 @@ ip_output_netif (ip_t *ip, buf_t *p
 	iphdr->id_l = ip->id;
 
 	iphdr->dest = ipadr_4ucs(dest);
-	iphdr->src = ipadr_4ucs(src ? src : netif_ipaddr);
+	if (src)
+	    iphdr->src = ipadr_4ucs(src);
+	else
+	    iphdr->src.var = netif_ipaddr;
 
 	iphdr->chksum_h = 0;
 	iphdr->chksum_l = 0;
@@ -283,15 +286,17 @@ ip_output_netif (ip_t *ip, buf_t *p
 	iphdr->chksum_h = chksum;
 	iphdr->chksum_l = chksum >> 8;
 #endif
-	IP_printf ("ip: netif %s output %d bytes to %@.4D\n"
-	        ,netif->name, p->tot_len
-	        , dest
-	        );
 	/*buf_print_ip (p);*/
 
-	if (! gateway)
-		gateway = dest;
-	return netif_output (netif, p, dest, netif_ipaddr);
+	if (!ipadr_not0(gateway))
+		gateway = ipref_4ucs(dest);
+    IP_printf ("ip: netif %s output %d bytes to %@.4D, gate %@.4D\n"
+            ,netif->name, p->tot_len
+            , dest, ipref_as_ucs(gateway)
+            );
+    assert(p != 0);
+
+	return netif_output (netif, p, gateway, netif_ipaddr);
 }
 
 /*
@@ -317,7 +322,7 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 		return 0;
 	}
 	return ip_output_netif (ip, p, dest, src, proto
-	        , ipref_as_ucs(gateway), netif, ipref_as_ucs(netif_ipaddr)
+	        , gateway, netif, netif_ipaddr
 	        );
 }
 
@@ -359,7 +364,7 @@ ip_main (void *arg)
 		} else {
 			/* Interrupt from driver. */
 			netif = (netif_t*) m;
-/*debug_printf ("ip: netif %S\n", netif->name);*/
+			//IP_printf ("ip: netif %s\n", netif->name);
 
 			for (;;) {
 				p = netif_input (netif);

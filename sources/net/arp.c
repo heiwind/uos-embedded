@@ -52,13 +52,13 @@ arp_init (array_t *buf, unsigned bytes, struct _ip_t *ip)
  * Mark it as age = 0.
  */
 unsigned char *
-arp_lookup (netif_t *netif, const unsigned char *ipaddr)
+arp_lookup (netif_t *netif, ip_addr_const ipaddr)
 {
 	arp_t *arp = netif->arp;
 	arp_entry_t *e;
 
 	for (e = arp->table; e < arp->table + arp->size; ++e)
-		if (e->netif == netif && ipadr_is_same_ucs(e->ipaddr.ucs, ipaddr) ) {
+		if (e->netif == netif && ipadr_is_same(e->ipaddr.var, ipaddr) ) {
 			/*debug_printf ("arp_lookup: %d.%d.%d.%d -> %02x-%02x-%02x-%02x-%02x-%02x\n",
 				ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
 				e->ethaddr[0], e->ethaddr[1], e->ethaddr[2],
@@ -77,14 +77,18 @@ arp_lookup (netif_t *netif, const unsigned char *ipaddr)
  * Mark new entries as age = 0.
  */
 static void
-arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char *ethaddr)
+arp_add_entry (netif_t *netif, ip_addr_const ipaddr, const unsigned char *_ethaddr)
 {
 	arp_t *arp = netif->arp;
 	arp_entry_t *e, *q;
+	mac_addr    ethaddr;
 
-	if (ipaddr[0] == 0)
+	if (ipref_as_ucs(ipaddr)[0] == 0)
 		return;
 
+	ethaddr = macadr_4ucs(_ethaddr);
+	
+	
 	/* Walk through the ARP mapping table and try to find an entry to
 	 * update. If none is found, the IP -> MAC address mapping is
 	 * inserted in the ARP table. */
@@ -94,9 +98,9 @@ arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char 
 			continue;
 
 		/* IP address match? */
-		if (ipadr_is_same_ucs(e->ipaddr.ucs, ipaddr)) {
+		if (ipadr_is_same(e->ipaddr.var, ipaddr)) {
 			/* An old entry found, update this and return. */
-			if (macadr_is_same_ucs(e->ethaddr.ucs, ethaddr) ||
+			if (macadr_is_same(&e->ethaddr, &ethaddr) ||
 			    e->netif != netif) {
 				/* debug_printf ("arp: entry %d.%d.%d.%d changed from %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
 					ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
@@ -107,7 +111,7 @@ arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char 
 					ethaddr[0], ethaddr[1], ethaddr[2],
 					ethaddr[3], ethaddr[4], ethaddr[5],
 					netif->name); */
-				macadr_assign_ucs(e->ethaddr.ucs, ethaddr);
+				macadr_assign(&e->ethaddr, &ethaddr);
 				e->netif = netif;
 			}
 			e->age = 0;
@@ -137,8 +141,8 @@ arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char 
 	}
 
 	/* Now, fill this table entry with the new information. */
-	ipadr_assign_ucs(e->ipaddr.ucs, ipaddr);
-	macadr_assign_ucs(e->ethaddr.ucs, ethaddr);
+	ipadr_assignref(&e->ipaddr, ipaddr);
+	macadr_assign(&e->ethaddr, &ethaddr);
 	e->netif = netif;
 	e->age = 0;
 	ARPTABLE_printf ("arp: create entry %@.4D %#6D netif %s\n",
@@ -171,12 +175,12 @@ arp_input (netif_t *netif, buf_t *p)
 		/* For unicasts, update an ARP entry, independent of
 		 * the source IP address. */
 		if (h->eth.dest[0] != 255) {
-		    ARPTRACE_printf ("arp: add entry %@.4D %#6D\n", h->ip_src, h->eth.src);
-			arp_add_entry (netif, h->ip_src, h->eth.src);
+		    ARPTRACE_printf ("arp: add entry %@.4D %#6D\n", h->ip_src.ucs, h->eth.src);
+			arp_add_entry (netif, h->ip_src.var, h->eth.src);
 		}
 
 		/* Strip off the Ethernet header. */
-		buf_add_header (p, -14);
+		buf_add_header (p, -MAC_HLEN);
 		return p;
 
 	case PROTO_ARP:
@@ -235,7 +239,7 @@ arp_input (netif_t *netif, buf_t *p)
 			 * No need to check the destination IP address. */
 		    ARPTRACE_printf ("arp: got reply from %@.4D %#6D\n"
 		                     , ah->src_ipaddr,ah->src_hwaddr);
-			arp_add_entry (netif, ah->src_ipaddr, ah->src_hwaddr);
+			arp_add_entry (netif, ipref_4ucs(ah->src_ipaddr), ah->src_hwaddr);
 			buf_free (p);
 			return 0;
 		}
@@ -251,8 +255,8 @@ arp_input (netif_t *netif, buf_t *p)
  */
 bool_t
 arp_request (netif_t *netif, buf_t *p
-        , const unsigned char *ipdest
-        , const unsigned char *ipsrc)
+        , ip_addr_const ipdest
+        , ip_addr_const ipsrc)
 {
 	struct arp_hdr *ah;
 
@@ -281,15 +285,13 @@ arp_request (netif_t *netif, buf_t *p
 	/* Most implementations set dst_hwaddr to zero. */
 	memset (ah->dst_hwaddr, 0, 6);
 	macadr_assign_ucs (ah->src_hwaddr, netif->ethaddr.ucs);
-	ipadr_assign_ucs(ah->dst_ipaddr, ipdest);
-	ipadr_assign_ucs(ah->src_ipaddr, ipsrc);
+	ipadr_assignref_ucs(ah->dst_ipaddr, ipdest);
+	ipadr_assignref_ucs(ah->src_ipaddr, ipsrc);
 
-	/* debug_printf ("arp: send request for %d.%d.%d.%d\n",
-		ipdest[0], ipdest[1], ipdest[2], ipdest[3]); */
-	/*debug_printf ("     from %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-		ipsrc[0], ipsrc[1], ipsrc[2], ipsrc[3],
-		netif->ethaddr[0], netif->ethaddr[1], netif->ethaddr[2],
-		netif->ethaddr[3], netif->ethaddr[4], netif->ethaddr[5]);*/
+	ARPTRACE_printf ("arp: send request for %@.4D\n", ipref_as_ucs(ipdest));
+	ARPTRACE_printf ("     from %@.4D %#6D\n"
+	        , ipref_as_ucs(ipsrc), netif->ethaddr.ucs
+	        );
 	return netif->interface->output (netif, p, 0);
 }
 
@@ -308,7 +310,9 @@ arp_add_header (netif_t *netif, buf_t *p
 	if (! buf_add_header (p, sizeof (struct eth_hdr) )) {
 		/* No space for header, deallocate packet. */
 		buf_free (p);
-		/*debug_printf ("arp_output: no space for header\n");*/
+		ARPTRACE_printf ("arp_output: no space for header %d\n",
+		        ( (p->payload - (unsigned char*) p) - sizeof (buf_t) )
+		        );
 		return 0;
 	}
 	h = (struct eth_hdr*) p->payload;

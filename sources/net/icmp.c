@@ -47,7 +47,7 @@ icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 	/*if (buf_chksum (p, 0) != 0) debug_printf ("icmp_echo_request: bad reply checksum\n");*/
 
 	ICMP_printf("icmp_echo_request: send reply\n");
-	netif_output (inp, p, h->ip.dest.ucs, h->ip.src.ucs);
+	netif_output (inp, p, h->ip.dest.var, h->ip.src.var);
 	++ip->icmp_out_msgs;
         ++ip->icmp_out_echo_reps;
 	++ip->out_requests;

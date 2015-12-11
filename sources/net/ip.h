@@ -534,8 +534,8 @@ bool_t ip_output (ip_t *ip, struct _buf_t *p, unsigned char *dest,
 bool_t ip_output_netif (ip_t *ip, struct _buf_t *p
         , const unsigned char *dest, const unsigned char *src
         , small_uint_t proto
-        , const unsigned char *gateway
-        , struct _netif_t *netif, const unsigned char *netif_ipaddr);
+        , ip_addr_const gateway
+        , struct _netif_t *netif, ip_addr_const netif_ipaddr);
 
 void icmp_echo_request (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
 void icmp_dest_unreach (ip_t *ip, struct _buf_t *p, small_uint_t op);
