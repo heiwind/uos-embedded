@@ -235,6 +235,18 @@ INLINE void task_activate (task_t *task) {
 		task_need_schedule = 1;
 }
 
+INLINE
+bool_t task_is_active (task_t *task)
+{
+    task_t * t;
+    list_iterate(t, &task_active){
+        if (t == task)
+            return 1;
+    }
+    return 0;
+}
+
+
 /* Task policy, e.g. the scheduler.
  * Task_active contains a list of all tasks, which are ready to run.
  * Find a task with the biggest priority. */
