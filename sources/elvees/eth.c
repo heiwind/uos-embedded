@@ -28,6 +28,21 @@
 #include <elvees/eth.h>
 #include <elvees/ks8721bl.h>
 
+#ifdef DEBUG_NET_ETH
+#define ETH_printf(...) debug_printf(__VA_ARGS__)
+#define EDMA_printf(...)
+#else
+#define ETH_printf(...)
+#define EDMA_printf(...)
+#endif
+
+#ifdef DEBUG_NET_ETH_FAIL
+#define ETHFAIL_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define ETHFAIL_printf(...)
+#endif
+
+
 #define ETH_IRQ_RECEIVE		12	/* receive interrupt */
 #define ETH_IRQ_TRANSMIT	13	/* transmit interrupt */
 #define ETH_IRQ_DMA_RX		14	/* receive DMA interrupt */
@@ -387,6 +402,64 @@ chip_read_rxfifo (unsigned physaddr, unsigned nbytes)
 }
 
 /*
+ * Fetch data from receive FIFO to dma buffer.
+ */
+static void
+chip_start_rxfifo (eth_t* u, unsigned nbytes)
+{
+    /* Set the address and length for DMA. */
+    unsigned physaddr = u->dma_rx.byf_phys;
+
+    unsigned csr = MC_DMA_CSR_WN(15)
+                 | MC_DMA_CSR_WCX (nbytes - 1)
+                 ;
+    MC_CSR_EMAC(0) = csr;
+    MC_IR_EMAC(0) = physaddr;
+    MC_CP_EMAC(0) = 0;
+    EDMA_printf ("(r%d) ", nbytes);
+
+    /* Run the DMA. */
+    MC_CSR_EMAC(0) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
+}
+
+static bool_t
+chip_wait_rxfifo (eth_t* u)
+{
+    bool_t done = 0;
+    unsigned csr;
+
+    csr = MC_CSR_EMAC(0);
+    done = (csr & MC_DMA_CSR_RUN) == 0;
+
+    if (!done) {
+        mutex_wait(&u->dma_rx.lock);
+        csr = MC_CSR_EMAC(0);
+        EDMA_printf (" ->s(%x)\n",csr);
+        done = (csr & MC_DMA_CSR_RUN) == 0;
+    }
+
+#ifdef ENABLE_DCACHE
+    MC_CSR |= MC_CSR_FLUSH_D;
+#endif
+    if (!done) {
+        debug_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
+        MC_CSR_EMAC(0) = 0;
+    }
+    return done;
+}
+
+static void
+chip_poll_rxfifo (eth_t* u){
+    unsigned csr;
+    mutex_lock (&u->dma_rx.lock);
+    csr = MC_CSR_EMAC(0);
+    bool_t done = (csr & MC_DMA_CSR_RUN) == 0;
+    if ((u->dma_rx.byf_phys != 0) & done)
+        mutex_signal(&u->dma_rx.lock, u);
+    mutex_unlock (&u->dma_rx.lock);
+}
+
+/*
  * Write the packet to chip memory and start transmission.
  * Deallocate the packet.
  */
@@ -399,7 +472,7 @@ chip_transmit_packet (eth_t *u, buf_t *p)
 	buf_t *q;
     if (1)
     {
-debug_printf ("eth_send_data: length %d bytes %#12.6D %#2D\n"
+        ETH_printf ("eth_send_data: length %d bytes %#12.6D %#2D\n"
                 , p->tot_len
                 , p->payload, p->payload+12
                 );
@@ -490,10 +563,15 @@ static buf_t *
 eth_input (eth_t *u)
 {
 	buf_t *p;
+#if ETH_OPTIMISE_SPEED > 0
+    mutex_t* const rx_lock = &u->rx_lock;
+#else
+    const mutex_t* rx_lock = &u->netif.lock;
+#endif
 
-	mutex_lock (&u->netif.lock);
+	mutex_lock (rx_lock);
 	p = buf_queue_get (&u->inq);
-	mutex_unlock (&u->netif.lock);
+	mutex_unlock (rx_lock);
 	return p;
 }
 
@@ -520,63 +598,137 @@ eth_set_address (eth_t *u, unsigned char *addr)
 static void
 eth_receive_frame (eth_t *u)
 {
+    if (u->dma_rx.byf_phys != 0){
+        return;
+    }
+
 	unsigned frame_status = MC_MAC_RX_FRAME_STATUS_FIFO;
 	if (! (frame_status & RX_FRAME_STATUS_OK)) {
 		/* Invalid frame */
-debug_printf ("eth_receive_data: failed, frame_status=%#08x\n", frame_status);
+	    ETHFAIL_printf("eth_receive_data: failed, frame_status=%#08x\n", frame_status);
 		++u->netif.in_errors;
 		return;
 	}
+
+#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
+	buf_t *p = 0;
+
 	/* Extract data from RX FIFO. */
 	unsigned len = RX_FRAME_STATUS_LEN (frame_status);
-#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
-	chip_read_rxfifo (u->rxbuf_physaddr+2, len);
-#else
-    chip_read_rxfifo (u->rxbuf_physaddr, len);
-#endif
 
-	if (len < 4 || len > ETH_MTU) {
-		/* Skip this frame */
-debug_printf ("eth_receive_data: bad length %d bytes, frame_status=%#08x\n", len, frame_status);
-		++u->netif.in_errors;
-		return;
-	}
-	++u->netif.in_packets;
-	u->netif.in_bytes += len;
-	if (0)
+	if (len < 4 || len > ETH_MTU) 
 	{
-#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
-	    unsigned char* buf = u->rxbuf+2;
+        /* Skip this frame */
+	    ETHFAIL_printf("eth_receive_data: bad length %d bytes, frame_status=%#08x\n", len, frame_status);
+        ++u->netif.in_errors;
+    }
+	else if (buf_queue_is_full (&u->inq)) {
+	        ETHFAIL_printf ("eth_receive_data: input overflow\n");
+	        ++u->netif.in_discards;
+	}
+	else {
+	    /* Allocate a buf chain with total length 'len' */
+	    p = buf_alloc (u->pool, len, 2);
+	    if (! p) {
+	        /* Could not allocate a buf - skip received frame */
+	        ETHFAIL_printf("eth_receive_data: ignore packet - out of memory\n");
+	        ++u->netif.in_discards;
+	    }
+	}
+
+	unsigned buf = (p != 0)? virt_to_phys((unsigned)(p->payload) ) : u->rxbuf_physaddr;
+#if ETH_OPTIMISE_SPEED > 0
+	u->dma_rx.buf = p;
+	u->dma_rx.byf_phys = buf;
+    chip_start_rxfifo (u, len);
+    if (chip_wait_rxfifo(u)) {
+        ++u->netif.in_packets;
+        u->netif.in_bytes += len;
+        u->dma_rx.buf = 0;
+        u->dma_rx.byf_phys = 0;
+    }
+    else {
+        u->dma_rx.buf = 0;
+        u->dma_rx.byf_phys = 0;
+        p = 0;
+    }
 #else
+    chip_read_rxfifo(buf, len);
+#endif
+
+    if (p != 0){
+#       if ETH_OPTIMISE_SPEED > 0
+        buf_queue_put (&u->inq, p);
+        mutex_signal(&u->netif.lock, u);
+#       else
+        buf_queue_put (&u->inq, p);
+#       endif
+    }
+//    else
+//        debug_putchar(0, '#');
+
+    if (0)
+    {
+        ETH_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
+        ETH_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
+    }
+
+#else
+    /* Extract data from RX FIFO. */
+    unsigned len = RX_FRAME_STATUS_LEN (frame_status);
+#if ETH_OPTIMISE_SPEED > 0
+    u->dma_rx.buf = 0;
+    u->dma_rx.byf_phys = u->rxbuf_physaddr;
+    chip_start_rxfifo (u, len);
+    if (chip_wait_rxfifo(u)) {
+        ++u->netif.in_packets;
+        u->netif.in_bytes += len;
+        u->dma_rx.buf = 0;
+        u->dma_rx.byf_phys = 0;
+    }
+#else
+    chip_read_rxfifo(u->rxbuf_physaddr, len);
+#endif
+
+    if (len < 4 || len > ETH_MTU) {
+        /* Skip this frame */
+        ETHFAIL_printf ("eth_receive_data: bad length %d bytes, frame_status=%#08x\n", len, frame_status);
+        ++u->netif.in_errors;
+        return;
+    }
+    ++u->netif.in_packets;
+    u->netif.in_bytes += len;
+    if (0)
+    {
         unsigned char* buf = u->rxbuf;
-#endif
-debug_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
-debug_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
-	}
+        ETH_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
+        ETH_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
+    }
 
-	if (buf_queue_is_full (&u->inq)) {
-/*debug_printf ("eth_receive_data: input overflow\n");*/
-		++u->netif.in_discards;
-		return;
-	}
+    if (buf_queue_is_full (&u->inq)) {
+        ETHFAIL_printf ("eth_receive_data: input overflow\n");
+        ++u->netif.in_discards;
+        return;
+    }
 
-	/* Allocate a buf chain with total length 'len' */
-	buf_t *p = buf_alloc (u->pool, len, 2);
-	if (! p) {
-		/* Could not allocate a buf - skip received frame */
-debug_printf ("eth_receive_data: ignore packet - out of memory\n");
-		++u->netif.in_discards;
-		return;
-	}
+    /* Allocate a buf chain with total length 'len' */
+    buf_t *p = buf_alloc (u->pool, len, 2);
+    if (! p) {
+        /* Could not allocate a buf - skip received frame */
+        ETHFAIL_printf ("eth_receive_data: ignore packet - out of memory\n");
+        ++u->netif.in_discards;
+        return;
+    }
 
-	/* Copy the packet data. */
-//debug_printf ("receive %08x <- %08x, %d bytes\n", p->payload, u->rxbuf, len);
-#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
-	memcpy ((p->payload)-2, u->rxbuf, len+2);
-#else
+    /* Copy the packet data. */
     memcpy (p->payload, u->rxbuf, len);
+#   if ETH_OPTIMISE_SPEED > 0
+    buf_queue_put (&u->inq, p);
+    mutex_signal(&u->netif.lock, u);
+#   else
+    buf_queue_put (&u->inq, p);
+#   endif
 #endif
-	buf_queue_put (&u->inq, p);
 /*debug_printf ("[%d]", p->tot_len); buf_print_ethernet (p);*/
 }
 
@@ -657,9 +809,12 @@ void
 eth_poll (eth_t *u)
 {
 	mutex_lock (&u->netif.lock);
-	if (handle_receive_interrupt (u))
+	if (handle_receive_interrupt (u)) {
 		mutex_signal (&u->netif.lock, 0);
+		chip_poll_rxfifo(u);
+	}
 	mutex_unlock (&u->netif.lock);
+	
 
 	mutex_lock (&u->tx_lock);
 //if (MC_MAC_STATUS_TX & STATUS_TX_DONE)
@@ -674,13 +829,19 @@ static void
 eth_receiver (void *arg)
 {
 	eth_t *u = (eth_t *)arg;
+#if ETH_OPTIMISE_SPEED > 0
+    mutex_t* const rx_lock = &u->rx_lock;
+    mutex_lock_irq (&u->dma_rx.lock, ETH_IRQ_DMA_RX, 0, 0);
+#else
+    const mutex_t* rx_lock = &u->netif.lock;
+#endif
 
 	/* Register receive interrupt. */
-	mutex_lock_irq (&u->netif.lock, ETH_IRQ_RECEIVE, 0, 0);
+    mutex_lock_irq (rx_lock, ETH_IRQ_RECEIVE, 0, 0);
 
 	for (;;) {
 		/* Wait for the receive interrupt. */
-		mutex_wait (&u->netif.lock);
+		mutex_wait (rx_lock);
 		++u->intr;
 		handle_receive_interrupt (u);
 	}

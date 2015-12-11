@@ -15,6 +15,8 @@
  * As a special exception to the GPL, permission is granted for additional
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
+ * 
+ * UTF-8 ru-RU
  */
 #ifndef __NVCOM_ETH_H
 #define __NVCOM_ETH_H
@@ -64,6 +66,16 @@ typedef struct __attribute__ ((aligned(8))) _eth_t {
 	unsigned char *txbuf;		/* aligned txbuf[] */
 	unsigned rxbuf_physaddr;	/* phys address of rxbuf[] */
 	unsigned txbuf_physaddr;	/* phys address of txbuf[] */
+
+#if ETH_OPTIMISE_SPEED > 0 
+    mutex_t rx_lock;        /* get rx interrupts here */
+	struct {
+        mutex_t  lock;        /* get rx interrupts here */
+	    unsigned status;
+	    buf_t*   buf;
+	    unsigned byf_phys;
+	} dma_rx;
+#endif
 
 	ARRAY (stack, ETH_STACKSZ);	/* stack for receive task */
 	ARRAY (tstack, ETH_STACKSZ);	/* stack for transmit task */

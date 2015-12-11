@@ -147,6 +147,8 @@
 //#define MEM_DEBUG 1
 
 //*****************************     net       *****************************
+//#define DEBUG_NET_ETH
+//#define DEBUG_NET_ETH_FAIL
 //#define ARP_TRACE
 //#define DEBUG_NET_ARPTABLE
 //#define DEBUG_NET_ROUTE
@@ -178,7 +180,8 @@
 //#   define ETH_INQ_SIZE       16
 //#   define ETH_OUTQ_SIZE      8
 //#   define ETH_MTU            1518    /* maximum ethernet frame length */
+#define ETH_OPTIMISE_SPEED      1
 
-
+//#define UDP_CHECKSUM_DISABLE
 
 #endif /* UOS_CONF_H_ */
