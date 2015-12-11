@@ -1,7 +1,13 @@
 #ifndef __BUF_QUEUE_H_
 #define	__BUF_QUEUE_H_ 1
 
-struct _buf_t;
+#include <buf/buf.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 
 typedef struct _buf_queue_t buf_queue_t;
 
@@ -49,5 +55,10 @@ static inline __attribute__((always_inline)) struct _buf_t **buf_queue_next (buf
 }
 
 void buf_queue_clean (buf_queue_t *q);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__BUF_QUEUE_H_ */

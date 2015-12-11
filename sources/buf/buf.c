@@ -68,7 +68,7 @@ buf_truncate (buf_t *p, unsigned short size)
 bool_t
 buf_add_header (buf_t *p, short header_size)
 {
-	if (p->payload - header_size < (unsigned char*) p + sizeof (buf_t))
+	if ((p->payload - header_size) < ((unsigned char*) p + sizeof (buf_t)) )
 		return 0;
 
 	p->payload -= header_size;

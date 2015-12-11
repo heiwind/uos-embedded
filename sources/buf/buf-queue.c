@@ -43,6 +43,7 @@ buf_queue_put (buf_queue_t *q, buf_t *p)
 		head += q->size;
 
 	/* Put the packet in. */
+    assert (p != 0);
 	*head = p;
 	++q->count;
 	/*debug_printf ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/
