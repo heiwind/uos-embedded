@@ -131,10 +131,8 @@ arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char 
 			if (q->age > e->age)
 				e = q;
 		}
-		ARPTABLE_printf ("arp: delete entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x netif %s age %d\n",
-			e->ipaddr.ucs[0], e->ipaddr.ucs[1], e->ipaddr.ucs[2], e->ipaddr.ucs[3],
-			e->ethaddr.ucs[0], e->ethaddr.ucs[1], e->ethaddr.ucs[2],
-			e->ethaddr.ucs[3], e->ethaddr.ucs[4], e->ethaddr.ucs[5],
+		ARPTABLE_printf ("arp: delete entry %@.4D %#6D netif %s age %d\n",
+			e->ipaddr.ucs, e->ethaddr.ucs,
 			e->netif->name, e->age);
 	}
 
@@ -143,11 +141,8 @@ arp_add_entry (netif_t *netif, const unsigned char *ipaddr, const unsigned char 
 	macadr_assign_ucs(e->ethaddr.ucs, ethaddr);
 	e->netif = netif;
 	e->age = 0;
-	ARPTABLE_printf ("arp: create entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
-        e->ipaddr.ucs[0], e->ipaddr.ucs[1], e->ipaddr.ucs[2], e->ipaddr.ucs[3],
-        e->ethaddr.ucs[0], e->ethaddr.ucs[1], e->ethaddr.ucs[2],
-        e->ethaddr.ucs[3], e->ethaddr.ucs[4], e->ethaddr.ucs[5],
-		e->netif->name);
+	ARPTABLE_printf ("arp: create entry %@.4D %#6D netif %s\n",
+        e->ipaddr.ucs, e->ethaddr.ucs, e->netif->name);
 }
 
 /*
@@ -166,23 +161,17 @@ arp_input (netif_t *netif, buf_t *p)
 	switch (h->eth.proto) {
 	default:
 		/* Unknown protocol. */
-		/* debug_printf ("arp_input: unknown protocol 0x%x\n", h->eth.proto); */
+	    ARPTRACE_printf ("arp_input: unknown protocol 0x%x\n", h->eth.proto);
 		buf_free (p);
 		return 0;
 
 	case PROTO_IP:
-		/*debug_printf ("arp: ip packet from %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-			h->ip_src[0], h->ip_src[1], h->ip_src[2], h->ip_src[3],
-			h->eth.src[0], h->eth.src[1], h->eth.src[2],
-			h->eth.src[3], h->eth.src[4], h->eth.src[5]);*/
+	    //ARPTRACE_printf ("arp: ip packet from %@.4D %#6D\n", h->ip_src, h->eth.src);
 
 		/* For unicasts, update an ARP entry, independent of
 		 * the source IP address. */
 		if (h->eth.dest[0] != 255) {
-			/* debug_printf ("arp: add entry %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-				h->ip_src[0], h->ip_src[1], h->ip_src[2], h->ip_src[3],
-				h->eth.src[0], h->eth.src[1], h->eth.src[2],
-				h->eth.src[3], h->eth.src[4], h->eth.src[5]); */
+		    ARPTRACE_printf ("arp: add entry %@.4D %#6D\n", h->ip_src, h->eth.src);
 			arp_add_entry (netif, h->ip_src, h->eth.src);
 		}
 
@@ -208,12 +197,8 @@ arp_input (netif_t *netif, buf_t *p)
 			return 0;
 
 		case ARP_REQUEST:
-			ARPTRACE_printf ("arp: got request for %d.%d.%d.%d\n",
-				ah->dst_ipaddr[0], ah->dst_ipaddr[1], ah->dst_ipaddr[2], ah->dst_ipaddr[3]);
-			ARPTRACE_printf ("     from %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-				ah->src_ipaddr[0], ah->src_ipaddr[1], ah->src_ipaddr[2], ah->src_ipaddr[3],
-				ah->src_hwaddr[0], ah->src_hwaddr[1], ah->src_hwaddr[2],
-				ah->src_hwaddr[3], ah->src_hwaddr[4], ah->src_hwaddr[5]);
+			ARPTRACE_printf ("arp: got request for %@.4D\n", ah->dst_ipaddr);
+			ARPTRACE_printf ("     from %@.4D %#6D\n", ah->src_ipaddr, ah->src_hwaddr);
 
 			//arp_add_entry (netif, ah->src_ipaddr, ah->src_hwaddr);
 
@@ -226,7 +211,6 @@ arp_input (netif_t *netif, buf_t *p)
 				buf_free (p);
 				return 0;
 			}
-
 			ah->opcode = ARP_REPLY;
 
 			ipadr_assign_ucs(ah->dst_ipaddr, ah->src_ipaddr);
@@ -239,14 +223,9 @@ arp_input (netif_t *netif, buf_t *p)
 
 			ah->eth.proto = PROTO_ARP;
 
-			ARPTRACE_printf ("arp: send reply %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-				ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
-				netif->ethaddr[0], netif->ethaddr[1], netif->ethaddr[2],
-				netif->ethaddr[3], netif->ethaddr[4], netif->ethaddr[5]);
-			ARPTRACE_printf ("     to %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-				ah->dst_ipaddr[0], ah->dst_ipaddr[1], ah->dst_ipaddr[2], ah->dst_ipaddr[3],
-				ah->dst_hwaddr[0], ah->dst_hwaddr[1], ah->dst_hwaddr[2],
-				ah->dst_hwaddr[3], ah->dst_hwaddr[4], ah->dst_hwaddr[5]);
+			ARPTRACE_printf ("arp: send reply %@.4D %s %#6D\n"
+			        , ipaddr, netif->name, netif->ethaddr.ucs);
+			ARPTRACE_printf ("     to %@.4D %#6D\n", ah->dst_ipaddr, ah->dst_hwaddr);
 
 			netif->interface->output (netif, p, 0);
 			return 0;
@@ -254,10 +233,8 @@ arp_input (netif_t *netif, buf_t *p)
 		case ARP_REPLY:
 			/* ARP reply. We insert or update the ARP table.
 			 * No need to check the destination IP address. */
-			/* debug_printf ("arp: got reply from %d.%d.%d.%d %02x-%02x-%02x-%02x-%02x-%02x\n",
-				ah->src_ipaddr[0], ah->src_ipaddr[1], ah->src_ipaddr[2], ah->src_ipaddr[3],
-				ah->src_hwaddr[0], ah->src_hwaddr[1], ah->src_hwaddr[2],
-				ah->src_hwaddr[3], ah->src_hwaddr[4], ah->src_hwaddr[5]); */
+		    ARPTRACE_printf ("arp: got reply from %@.4D %#6D\n"
+		                     , ah->src_ipaddr,ah->src_hwaddr);
 			arp_add_entry (netif, ah->src_ipaddr, ah->src_hwaddr);
 			buf_free (p);
 			return 0;

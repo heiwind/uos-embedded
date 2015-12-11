@@ -145,7 +145,12 @@
 
 //#define MEM_DEBUG 1
 
-/**************************************************************************
+//*****************************     net       *****************************
+//#define ARP_TRACE
+//#define DEBUG_NET_ARPTABLE
+//#define DEBUG_NET_ROUTE
+
+ /**************************************************************************
  *                              Task Hooks
  ************************************************************************** */
 //#define UOS_ON_NEW_TASK(t)
@@ -161,7 +166,6 @@
 //#define CODE_FAST __attribute__((section(".text.hot")))
 //#define CODE_ISR  __attribute__((section(".text.isr_used")))
 //#define USED_ISR  __attribute__((section(".text.isr_used")))
-
 
 
 #endif /* UOS_CONF_H_ */

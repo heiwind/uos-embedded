@@ -250,12 +250,10 @@ const unsigned char *route_lookup_ipaddr (ip_t *ip, const unsigned char *ipaddr,
 	const route_t *r, *best;
 
 	best = 0;
-	ROUTE_printf ("route: lookup ipaddr %d.%d.%d.%d for %s\n",
-		ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3], netif->name);
+	ROUTE_printf ("route: lookup ipaddr %@.4D for %s\n", ipaddr, netif->name);
 	for (r=ip->route; r; r=r->next) {
-	    ROUTE_printf ("route: lookup gateaway %d.%d.%d.%d for %s\n",
-	              r->gateway[0], r->gateway[1], r->gateway[2], r->gateway[3]
-	            , r->netif->name);
+	    ROUTE_printf ("route: lookup gateaway %@.4D for %s\n",
+	              r->gateway , r->netif->name);
 		/* Search through all interface records. */
 		if (r->netif != netif || r->gateway[0])
 			continue;
@@ -269,10 +267,8 @@ const unsigned char *route_lookup_ipaddr (ip_t *ip, const unsigned char *ipaddr,
 			continue;
 
 		best = r;
-		ROUTE_printf ("route match: %d.%d.%d.%d with %d.%d.%d.%d / %d\n",
-			ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
-			r->ipaddr[0], r->ipaddr[1], r->ipaddr[2], r->ipaddr[3],
-			r->masklen);
+		ROUTE_printf ("route match: %@.4D with %@.4D / %d\n",
+			ipaddr, r->ipaddr, r->masklen);
 	}
 	if (! best)
 		return 0;
