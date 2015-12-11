@@ -170,4 +170,14 @@
 //#define USED_ISR  __attribute__((section(".text.isr_used")))
 
 
+/**************************************************************************
+ *                              net
+ ************************************************************************** */
+//#   define ETH_STACKSZ        1000
+//#   define ETH_INQ_SIZE       16
+//#   define ETH_OUTQ_SIZE      8
+//#   define ETH_MTU            1518    /* maximum ethernet frame length */
+
+
+
 #endif /* UOS_CONF_H_ */
