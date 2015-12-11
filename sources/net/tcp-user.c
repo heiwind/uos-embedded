@@ -58,7 +58,7 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 	mutex_lock (&ip->lock);
 
 	s = tcp_alloc (ip);
-	ipadr_assign_ucs(s->remote_ip, ipaddr);
+	s->remote_ip = ipadr_4ucs(ipaddr);
 	s->remote_port = port;
 	if (s->local_port == 0) {
 		s->local_port = tcp_new_port (ip);
@@ -326,9 +326,9 @@ again:
 	iph = ((ip_hdr_t*) p->payload) - 1;
 
 	/* Set up the new PCB. */
-	ipadr_assign_ucs(ns->local_ip, iph->dest);
+	ipadr_assignl_ucs(ns->local_ip, iph->dest.val);
 	ns->local_port = s->local_port;
-	ipadr_assign_ucs(ns->remote_ip, iph->src);
+	ns->remote_ip  = iph->src;
 	ns->remote_port = h->src;
 	ns->state = SYN_RCVD;
 	ns->rcv_nxt = s->ip->tcp_input_seqno + 1;
@@ -427,7 +427,8 @@ tcp_abort (tcp_socket_t *s)
 	ip_t *ip = s->ip;
 	unsigned long seqno, ackno;
 	unsigned short remote_port, local_port;
-	unsigned char remote_ip[4], local_ip[4];
+	ip_addr remote_ip;
+	ip_addr local_ip;
 
 	mutex_lock (&s->lock);
 
@@ -443,8 +444,8 @@ tcp_abort (tcp_socket_t *s)
 	}
 	seqno = s->snd_nxt;
 	ackno = s->rcv_nxt;
-	ipadr_assign_ucs(local_ip, s->local_ip);
-	ipadr_assign_ucs(remote_ip, s->remote_ip);
+	local_ip = ipadr_4ucs(s->local_ip);
+	remote_ip = s->remote_ip;
 	local_port = s->local_port;
 	remote_port = s->remote_port;
 	tcp_queue_free (s);
@@ -460,7 +461,7 @@ tcp_abort (tcp_socket_t *s)
 	}
 
 	tcp_debug ("tcp_abort: sending RST\n");
-	tcp_rst (ip, seqno, ackno, local_ip, remote_ip,
+	tcp_rst (ip, seqno, ackno, local_ip.ucs, remote_ip.ucs,
 		local_port, remote_port);
 	mutex_unlock (&ip->lock);
 }

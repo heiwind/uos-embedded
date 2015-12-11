@@ -260,6 +260,35 @@ bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
     return tmp != 0;
 }
 
+INLINE 
+bool_t __CONST ipadr_is_broadcast(const ip_addr a) __THROW
+{
+        return ((a.val == 0) || (~a.val == 0)) ? true : false;
+}
+
+INLINE 
+bool_t __CONST ipadr_is_broadcast_ucs(const unsigned char* a) __THROW
+{
+#if CPU_ACCESSW_ALIGNMASK > 0
+    if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){
+        return (((ip_addr*)a)->val != 0)? true : false;
+    }
+#endif
+#if defined (__AVR__)
+    unsigned tmp = *a++ | *a++ | *a++ | *a++;
+#else
+    unsigned tmp0 = a[0];
+    unsigned tmpf = a[0];
+    tmp0 |= a[1];
+    tmpf &= a[1];
+    tmp0 |= a[2];
+    tmpf &= a[2];
+    tmp0 |= a[3];
+    tmpf &= a[3];
+#endif
+    return (tmp0 == 0) || (tmpf == 0xff);
+}
+
 /** надо стараться придерживаться этого шаблона сокета, для создания протокольных сокетов
  * */
 
@@ -392,7 +421,7 @@ typedef struct _ip_t {
 	ARRAY (stack, IP_STACKSZ);	/* task stack */
 } ip_t;
 
-typedef struct _ip_hdr_t {
+typedef struct  __attribute__ ((packed)) _ip_hdr_t {
 	unsigned char	version;	/* version / header length */
 	unsigned char	tos;		/* type of service */
 	unsigned char	len_h, len_l;	/* total length */
@@ -412,8 +441,8 @@ typedef struct _ip_hdr_t {
 
 	unsigned char	chksum_h, chksum_l; /* checksum */
 
-	unsigned char	src [4];	/* source destination IP address */
-	unsigned char	dest [4];	/* destination IP address */
+	ip_addr         src;	/* source destination IP address */
+	ip_addr         dest;	/* destination IP address */
 } ip_hdr_t;
 
 #define IP_HLEN		20		/* IP header length */
@@ -447,7 +476,7 @@ typedef struct _ip_hdr_t {
 #define	ICMP_TE_TTL	0	/* time to live exceeded in transit */
 #define ICMP_TE_FRAG	1	/* fragment reassembly time exceeded */
 
-typedef struct _icmp_hdr_t {
+typedef struct __attribute__ ((packed)) _icmp_hdr_t {
 	ip_hdr_t	ip;
 	unsigned char	type;
 	unsigned char	code;

@@ -148,7 +148,7 @@ struct _tcp_socket_t {//: base_socket_t
 	unsigned char local_ip [4];
 	unsigned short local_port;
 	//remote_ip for ordinary sockets only, LISTEN socket not demand it
-    unsigned char remote_ip [4];
+    ip_addr remote_ip;
     unsigned short remote_port;
 
 	tcp_state_t state;		/* TCP state */

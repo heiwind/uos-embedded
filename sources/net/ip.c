@@ -45,7 +45,7 @@ ip_forward (ip_t *ip, buf_t *p, const unsigned char *gateway, netif_t *netif,
 
 	/* Forwarding packet to netif. */
 	if (! gateway)
-		gateway = iphdr->dest;
+		gateway = iphdr->dest.ucs;
 	netif_output (netif, p, gateway, netif_ipaddr);
 	++ip->forw_datagrams;
 }
@@ -100,26 +100,24 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	buf_truncate (p, iphdr->len_h << 8 | iphdr->len_l);
 
 	/* Is this packet for us? */
-	broadcast = IS_BROADCAST (iphdr->dest);
+	broadcast = ipadr_is_broadcast(iphdr->dest);
 	if (! broadcast) {
 		netif_t *netif;
 
-		netif = route_lookup_self (ip, iphdr->dest, &broadcast);
+		netif = route_lookup_self (ip, iphdr->dest.ucs, &broadcast);
 		if (! netif) {
 			/* Packet not for us, route or discard */
 			if (ip->forwarding && ! broadcast) {
 				const unsigned char *netif_ipaddr, *gateway;
 
-				netif = route_lookup (ip, iphdr->dest,
-					&gateway, &netif_ipaddr);
+				netif = route_lookup (ip, iphdr->dest.ucs, &gateway, &netif_ipaddr);
 				if (! gateway)
-					gateway = iphdr->dest;
+					gateway = iphdr->dest.ucs;
 
 				/* Don't forward packets onto the same
 				 * network interface on which they arrived. */
 				if (netif && netif != inp)
-					ip_forward (ip, p, gateway, netif,
-						netif_ipaddr);
+					ip_forward (ip, p, gateway, netif, netif_ipaddr);
 				else
 					buf_free (p);
 			} else {
@@ -160,7 +158,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 			/* No match was found, send ICMP destination
 			 * port unreachable unless destination address
 			 * was broadcast/multicast. */
-			if (! broadcast && ! IS_MULTICAST (iphdr->dest)) {
+			if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs)) {
 				buf_add_header (p, IP_HLEN);
 				icmp_dest_unreach (ip, p, ICMP_DUR_PORT);
 			} else
@@ -181,7 +179,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 		case ICMP_ECHO:
 			/* Ignore ICMP messages on broadcasts */
 			++ip->icmp_in_echos;
-			if (! broadcast && ! IS_MULTICAST (iphdr->dest))
+			if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs))
 				icmp_echo_request (ip, p, inp);
 			else
 				buf_free (p);
@@ -201,7 +199,7 @@ proto_unreach:
 
 		/* Send ICMP destination protocol unreachable
 		 * unless is was a broadcast */
-		if (! broadcast && ! IS_MULTICAST (iphdr->dest)) {
+		if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs)) {
 			icmp_dest_unreach (ip, p, ICMP_DUR_PROTO);
 		} else
 			buf_free (p);
@@ -261,8 +259,8 @@ ip_output_netif (ip_t *ip, buf_t *p
 	iphdr->id_h = ip->id >> 8;
 	iphdr->id_l = ip->id;
 
-	ipadr_assign_ucs(iphdr->dest, dest);
-	ipadr_assign_ucs(iphdr->src, src ? src : netif_ipaddr);
+	iphdr->dest = ipadr_4ucs(dest);
+	iphdr->src = ipadr_4ucs(src ? src : netif_ipaddr);
 
 	iphdr->chksum_h = 0;
 	iphdr->chksum_l = 0;

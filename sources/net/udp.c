@@ -140,9 +140,9 @@ drop:
 	if (len > p->tot_len)
 		goto drop;
 
-	if ((h->chksum_h | h->chksum_l) != 0 &&
-	    buf_chksum (p, crc16_inet_header (iph->src,
-	    iph->dest, IP_PROTO_UDP, len)) != 0) {
+	if ((h->chksum_h | h->chksum_l) != 0)
+	if (buf_chksum (p, crc16_inet_header (iph->src.ucs, iph->dest.ucs, IP_PROTO_UDP, len)) != 0) 
+	{
 		/* Checksum failed for received UDP packet. */
 		/*debug_printf ("udp_input: bad checksum\n");*/
 		goto drop;
@@ -165,7 +165,7 @@ drop:
 			continue;
 
 		/* Compare peer IP address (or broadcast). */
-		if (ipadr_not0_ucs(s->peer_ip) && ipadr_is_same_ucs(s->peer_ip, iph->src))
+		if (ipadr_not0(s->peer_ip) && ipadr_is_same(s->peer_ip, iph->src))
 			continue;
 
 		/* Put packet to socket. */
@@ -176,7 +176,7 @@ drop:
 			/*debug_printf ("udp_input: socket overflow\n");*/
 			goto drop;
 		}
-		udp_queue_put (s, p, iph->src, src);
+		udp_queue_put (s, p, iph->src.ucs, src);
 		mutex_signal (&s->lock, p);
 		mutex_unlock (&s->lock);
 		/*debug_printf ("udp_input: signaling socket on port %d\n",
@@ -294,7 +294,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 {
 	/* To send packets using UDP socket, it must
 	 * have nonzero remote IP address and port number. */
-	if (! s->peer_port || !ipadr_not0_ucs(s->peer_ip) ) {
+	if (! s->peer_port || !ipadr_not0(s->peer_ip) ) {
 		return 0;
 	}
 
@@ -302,7 +302,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 	if (! s->netif) {
 		return 0;
 	}
-	return udp_send_netif (s, p, s->peer_ip, s->peer_port, s->netif,
+	return udp_send_netif (s, p, s->peer_ip.ucs, s->peer_port, s->netif,
 		s->local_ip, s->gateway);
 }
 
@@ -372,7 +372,7 @@ udp_connect (udp_socket_t *s, const unsigned char *ipaddr, unsigned short port)
 	mutex_lock (&s->lock);
 	s->peer_port = port;
 	if (ipaddr) {
-		ipadr_assign_ucs(s->peer_ip, ipaddr);
+		s->peer_ip = ipadr_4ucs(ipaddr);
 
 		/* Find the outgoing network interface. */
 		s->netif = route_lookup (s->ip, ipaddr

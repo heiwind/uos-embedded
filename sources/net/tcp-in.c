@@ -615,8 +615,8 @@ find_active_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 		assert (s->state != LISTEN);
 
 		if (s->local_port != h->dest || s->remote_port != h->src ||
-		    !ipadr_is_same_ucs(s->remote_ip, iph->src) ||
-		    !ipadr_is_same_ucs(s->local_ip, iph->dest)
+		    !ipadr_is_same(s->remote_ip, iph->src) ||
+		    !ipadr_is_same_ucs(s->local_ip, iph->dest.ucs)
 		   )
 			continue;
 
@@ -643,8 +643,8 @@ find_closing_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (s=ip->tcp_closing_sockets; s; s=s->next) {
 		assert (s->state == TIME_WAIT);
 		if (s->local_port != h->dest || s->remote_port != h->src ||
-            !ipadr_is_same_ucs(s->remote_ip, iph->src) ||
-            !ipadr_is_same_ucs(s->local_ip, iph->dest)
+            !ipadr_is_same(s->remote_ip, iph->src) ||
+            !ipadr_is_same_ucs(s->local_ip, iph->dest.ucs)
            )
 			continue;
 
@@ -666,7 +666,7 @@ find_listen_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (ls=ip->tcp_listen_sockets; ls; prev=ls, ls=ls->next) {
 		if (ls->local_port != h->dest)
 			continue;
-		if ( !ipadr_is_same_ucs(ls->local_ip, iph->dest) )
+		if ( !ipadr_is_same_ucs(ls->local_ip, iph->dest.ucs) )
 			continue;
 
 		/* Move this PCB to the front of the list so
@@ -712,15 +712,18 @@ drop:		buf_free (p);
 /*	buf_print_tcp (p);*/
 
 	/* Don't even process incoming broadcasts/multicasts. */
-	if (IS_BROADCAST (iph->dest) || IS_MULTICAST (iph->dest)) {
+	if (ipadr_is_broadcast(iph->dest) || IS_MULTICAST (iph->dest.ucs)) {
 		/* TODO: increment statistics counters */
 		goto drop;
 	}
 	h = (tcp_hdr_t*) p->payload;
 
 	/* Verify TCP checksum. */
-	if (buf_chksum (p, crc16_inet_header (iph->src,
-	    iph->dest, IP_PROTO_TCP, p->tot_len)) != 0) {
+	if (buf_chksum (p
+	                , crc16_inet_header (iph->src.ucs, iph->dest.ucs
+	                                    , IP_PROTO_TCP, p->tot_len)
+	                ) != 0) 
+	{
 		tcp_debug ("tcp_input: bad checksum\n");
 		tcp_debug_print_header (h);
 		++ip->tcp_in_errors;
@@ -776,7 +779,7 @@ drop:		buf_free (p);
 				tcp_debug ("tcp_input: ACK in LISTEN, sending reset\n");
 				tcp_rst (ip, ip->tcp_input_ackno + 1,
 					ip->tcp_input_seqno + ip->tcp_input_len,
-					iph->dest, iph->src, h->dest, h->src);
+					iph->dest.ucs, iph->src.ucs, h->dest, h->src);
 				goto drop;
 			}
 			if (! (ip->tcp_input_flags & TCP_SYN)) {
@@ -803,7 +806,7 @@ drop:		buf_free (p);
 			/* TODO: increment statistics counters */
 			tcp_rst (ip, ip->tcp_input_ackno,
 				ip->tcp_input_seqno + ip->tcp_input_len,
-				iph->dest, iph->src, h->dest, h->src);
+				iph->dest.ucs, iph->src.ucs, h->dest, h->src);
 		}
 		goto drop;
 	}

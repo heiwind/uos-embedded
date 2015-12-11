@@ -222,20 +222,20 @@ arp_input (netif_t *netif, buf_t *p)
 			ipaddr = route_lookup_ipaddr (netif->arp->ip,
 				ah->dst_ipaddr, netif);
 
-			if (! ipaddr || memcmp (ipaddr, ah->dst_ipaddr, 4) != 0) {
+			if (!ipadr_or0_is_same_ucs(ipaddr, ah->dst_ipaddr)) {
 				buf_free (p);
 				return 0;
 			}
 
 			ah->opcode = ARP_REPLY;
 
-			memcpy (ah->dst_ipaddr, ah->src_ipaddr, 4);
-			memcpy (ah->src_ipaddr, ipaddr, 4);
+			ipadr_assign_ucs(ah->dst_ipaddr, ah->src_ipaddr);
+			ipadr_assign_ucs(ah->src_ipaddr, ipaddr);
 
-			memcpy (ah->dst_hwaddr, ah->src_hwaddr, 6);
-			memcpy (ah->src_hwaddr, netif->ethaddr, 6);
-			memcpy (ah->eth.dest, ah->dst_hwaddr, 6);
-			memcpy (ah->eth.src, netif->ethaddr, 6);
+			macadr_assign_ucs(ah->dst_hwaddr, ah->src_hwaddr);
+			macadr_assign_ucs(ah->src_hwaddr, netif->ethaddr.ucs);
+			macadr_assign_ucs(ah->eth.dest, ah->dst_hwaddr);
+			macadr_assign_ucs(ah->eth.src, netif->ethaddr.ucs);
 
 			ah->eth.proto = PROTO_ARP;
 
@@ -293,7 +293,7 @@ arp_request (netif_t *netif, buf_t *p
 	ah = (struct arp_hdr*) p->payload;
 	ah->eth.proto = PROTO_ARP;
 	macadr_assign_ucs(ah->eth.dest, BROADCAST);
-	macadr_assign_ucs(ah->eth.src, netif->ethaddr);
+	macadr_assign_ucs(ah->eth.src, netif->ethaddr.ucs);
 
 	ah->opcode = ARP_REQUEST;
 	ah->hwtype = HWTYPE_ETHERNET;
@@ -303,7 +303,7 @@ arp_request (netif_t *netif, buf_t *p
 
 	/* Most implementations set dst_hwaddr to zero. */
 	memset (ah->dst_hwaddr, 0, 6);
-	macadr_assign_ucs (ah->src_hwaddr, netif->ethaddr);
+	macadr_assign_ucs (ah->src_hwaddr, netif->ethaddr.ucs);
 	ipadr_assign_ucs(ah->dst_ipaddr, ipdest);
 	ipadr_assign_ucs(ah->src_ipaddr, ipsrc);
 
@@ -358,7 +358,7 @@ arp_add_header (netif_t *netif, buf_t *p
 	}
 
 	h->proto = PROTO_IP;
-	macadr_assign_ucs (h->src, netif->ethaddr);
+	macadr_assign_ucs (h->src, netif->ethaddr.ucs);
 	return 1;
 }
 

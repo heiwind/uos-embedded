@@ -197,12 +197,8 @@ chip_init (eth_t *u)
 	MC_MAC_MD_MODE = MD_MODE_DIVIDER (KHZ / 2000);
 
 	/* Свой адрес. */
-	MC_MAC_UCADDR_L = u->netif.ethaddr[0] |
-			 (u->netif.ethaddr[1] << 8) |
-			 (u->netif.ethaddr[2] << 16)|
-			 (u->netif.ethaddr[3] << 24);
-	MC_MAC_UCADDR_H = u->netif.ethaddr[4] |
-			 (u->netif.ethaddr[5] << 8);
+	MC_MAC_UCADDR_L = u->netif.ethaddr.val.l;
+	MC_MAC_UCADDR_H = u->netif.ethaddr.val.h;
 /*debug_printf ("UCADDR=%02x:%08x\n", MC_MAC_UCADDR_H, MC_MAC_UCADDR_L);*/
 
 	/* Максимальный размер кадра. */
@@ -501,14 +497,10 @@ static void
 eth_set_address (eth_t *u, unsigned char *addr)
 {
 	mutex_lock (&u->netif.lock);
-	memcpy (&u->netif.ethaddr, addr, 6);
+	u->netif.ethaddr = macadr_4ucs(addr);
 
-	MC_MAC_UCADDR_L = u->netif.ethaddr[0] |
-			 (u->netif.ethaddr[1] << 8) |
-			 (u->netif.ethaddr[2] << 16)|
-			 (u->netif.ethaddr[3] << 24);
-	MC_MAC_UCADDR_H = u->netif.ethaddr[4] |
-			 (u->netif.ethaddr[5] << 8);
+	MC_MAC_UCADDR_L = u->netif.ethaddr.val.l;
+	MC_MAC_UCADDR_H = u->netif.ethaddr.val.h;
 /*debug_printf ("UCADDR=%02x:%08x\n", MC_MAC_UCADDR_H, MC_MAC_UCADDR_L);*/
 
 	mutex_unlock (&u->netif.lock);
@@ -717,7 +709,7 @@ eth_init (eth_t *u, const char *name, int prio, mem_pool_t *pool,
 	u->netif.mtu = 1500;
 	u->netif.type = NETIF_ETHERNET_CSMACD;
 	u->netif.bps = 10000000;
-	memcpy (&u->netif.ethaddr, macaddr, 6);
+	u->netif.ethaddr = macadr_4ucs(macaddr);
 
 	u->pool = pool;
 	u->rxbuf = (unsigned char*) (((unsigned) u->rxbuf_data + 7) & ~7);

@@ -10,7 +10,7 @@ void
 icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 {
 	icmp_hdr_t *h;
-	unsigned char buf [4];
+	ip_addr_t buf;
 
 	if (p->tot_len < sizeof(icmp_hdr_t)) {
 		/* Bad ICMP echo received. */
@@ -26,9 +26,9 @@ icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 		return;
 	}
 	h = (icmp_hdr_t*) p->payload;
-	memcpy (buf, h->ip.src, 4);
-	memcpy (h->ip.src, h->ip.dest, 4);
-	memcpy (h->ip.dest, buf, 4);
+	buf = h->ip.src.val;
+	h->ip.src.val = h->ip.dest.val;
+	h->ip.dest.val = buf;
 	h->type = ICMP_ER;
 
 	/* adjust the checksum */
@@ -40,7 +40,7 @@ icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 	/*if (buf_chksum (p, 0) != 0) debug_printf ("icmp_echo_request: bad reply checksum\n");*/
 
 /*	debug_printf ("icmp_echo_request: send reply\n");*/
-	netif_output (inp, p, h->ip.dest, h->ip.src);
+	netif_output (inp, p, h->ip.dest.ucs, h->ip.src.ucs);
 	++ip->icmp_out_msgs;
         ++ip->icmp_out_echo_reps;
 	++ip->out_requests;
@@ -74,7 +74,7 @@ icmp_dest_unreach (ip_t *ip, buf_t *p, small_uint_t op)
 	h->chksum = ~crc16_inet (0, q->payload, q->tot_len);
 
 	/*debug_printf ("icmp_dest_unreach: send %d bytes\n", q->tot_len);*/
-	ip_output (ip, q, iphdr->src, 0, IP_PROTO_ICMP);
+	ip_output (ip, q, iphdr->src.ucs, 0, IP_PROTO_ICMP);
 	++ip->icmp_out_msgs;
         ++ip->icmp_out_dest_unreachs;
 }
@@ -105,7 +105,7 @@ icmp_time_exceeded (ip_t *ip, buf_t *p)
 	h->chksum = 0;
 	h->chksum = ~crc16_inet (0, q->payload, q->len);
 
-	ip_output (ip, q, iphdr->src, 0, IP_PROTO_ICMP);
+	ip_output (ip, q, iphdr->src.ucs, 0, IP_PROTO_ICMP);
 	++ip->icmp_out_msgs;
 	++ip->icmp_out_time_excds;
 }

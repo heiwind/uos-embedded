@@ -140,7 +140,7 @@ snmp_get_ifPhysAddress (snmp_t *snmp, unsigned nif, ...)
 		return 0;
 	if (! u->arp)
 		return asn_make_stringn (snmp->pool, 0, 0);
-	return asn_make_stringn (snmp->pool, u->ethaddr, 6);
+	return asn_make_stringn (snmp->pool, u->ethaddr.ucs, 6);
 }
 
 asn_t *
@@ -157,7 +157,7 @@ snmp_next_ifPhysAddress (snmp_t *snmp, bool_t nextflag, unsigned *nif, ...)
 		return 0;
 	if (! u->arp)
 		return asn_make_stringn (snmp->pool, 0, 0);
-	return asn_make_stringn (snmp->pool, u->ethaddr, 6);
+	return asn_make_stringn (snmp->pool, u->ethaddr.ucs, 6);
 }
 
 asn_t *

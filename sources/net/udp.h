@@ -27,7 +27,7 @@ typedef struct _udp_socket_t { //: base_socket_t
 
     unsigned char   *local_ip;
     unsigned short  local_port;
-	unsigned char	peer_ip [4];
+	ip_addr         peer_ip;
 	unsigned short	peer_port;
 
 	struct _netif_t	*netif;

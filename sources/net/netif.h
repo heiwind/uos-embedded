@@ -24,7 +24,7 @@ typedef struct _netif_t {
 
 	const char *name;
 	struct _arp_t *arp;
-	unsigned char ethaddr [6];	/* MAC-адрес */
+	mac_addr        ethaddr;	/* MAC-адрес */
 	unsigned short mtu;		/* max packet length */
 	unsigned char type;		/* SNMP-compatible */
 	unsigned long bps;		/* speed in bits per second */
