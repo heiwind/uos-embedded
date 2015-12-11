@@ -102,7 +102,19 @@ INLINE unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
         return dst;
     }
 #endif
+#if UOS_FOR_SIZE > 0
     memcpy(dst, src, 4);
+#elif defined (__AVR__)
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+#else //ifdef MIPS32
+    dst[0] = src[0];
+    dst[1] = src[1];
+    dst[2] = src[2];
+    dst[3] = src[3];
+#endif
     return dst;
 }
 
@@ -161,12 +173,23 @@ bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
         return ipadr_is_same(*ipa, *ipb);
     }
 #endif
+#if UOS_FOR_SIZE > 0
+    return (memcmp(a,b,4) == 0);
+#elif defined (__AVR__)
     if (*a++ == *b++)
     if (*a++ == *b++)
     if (*a++ == *b++)
     if (*a++ == *b++)
         return true;
     return false;
+#else //ifdef MIPS32
+    unsigned tmp; 
+    tmp =  (a[0] - b[0]);
+    tmp |= (a[1] - b[1]);
+    tmp |= (a[2] - b[2]);
+    tmp |= (a[3] - b[3]);
+    return (tmp == 0);
+#endif
 }
 
 // тоже самое, но false eсли  a==NULL
@@ -229,12 +252,12 @@ bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
         return (((ip_addr*)a)->val != 0)? true : false;
     }
 #endif
-    if (*a++ == 0)
-    if (*a++ == 0)
-    if (*a++ == 0)
-    if (*a++ == 0)
-        return false;
-    return true;
+#if defined (__AVR__)
+    unsigned tmp = *a++ | *a++ | *a++ | *a++;
+#else
+    unsigned tmp = a[0] | a[1] | a[2] | a[3];
+#endif
+    return tmp != 0;
 }
 
 /** надо стараться придерживаться этого шаблона сокета, для создания протокольных сокетов

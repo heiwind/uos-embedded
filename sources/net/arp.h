@@ -42,12 +42,24 @@ mac_addr macadr_4ucs(const unsigned char* __restrict__ x) __THROW
         return res;
     }
 #endif
+#if UOS_FOR_SIZE > 0
+    return (memcpy(res.ucs, x, 6) == 0);
+#elif defined (__AVR__)
+    unsigned char* tmp = res.ucs;
+    *tmp++ = *x++;
+    *tmp++ = *x++;
+    *tmp++ = *x++;
+    *tmp++ = *x++;
+    *tmp++ = *x++;
+    *tmp++ = *x++;
+#else
     res.ucs[0] = x[0];
     res.ucs[1] = x[1];
     res.ucs[2] = x[2];
     res.ucs[3] = x[3];
     res.ucs[4] = x[4];
     res.ucs[5] = x[5];
+#endif
     return res;
 }
 
@@ -73,7 +85,24 @@ INLINE unsigned char* macadr_assign_ucs(      unsigned char* __restrict__ dst
         return dst;
     }
 #endif
-    memcpy(dst,src,6);
+#if UOS_FOR_SIZE > 0
+    return (memcpy(dst, src, 6) == 0);
+#elif defined (__AVR__)
+    unsigned char* tmp = res.ucs;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+#else
+    dst[0] = src[0];
+    dst[1] = src[1];
+    dst[2] = src[2];
+    dst[3] = src[3];
+    dst[4] = src[4];
+    dst[5] = src[5];
+#endif
     return dst;
 }
 
@@ -97,7 +126,27 @@ bool_t macadr_is_same_ucs( const unsigned char* __restrict__ a
         return macadr_is_same(*maca, *macb);
     }
 #endif
-    return (memcmp(a,b,6) == 0)?true:false;
+#if UOS_FOR_SIZE > 0
+    return (memcpy(a,b,6) == 0);
+#elif defined (__AVR__)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+    if (*a++ == *b++)
+        return true;
+    return false;
+#else //ifdef MIPS32
+    unsigned tmp; 
+    tmp =  (a[0] - b[0]);
+    tmp |= (a[1] - b[1]);
+    tmp |= (a[2] - b[2]);
+    tmp |= (a[3] - b[3]);
+    tmp |= (a[4] - b[4]);
+    tmp |= (a[5] - b[5]);
+    return (tmp == 0);
+#endif
 }
 
 INLINE  
@@ -115,11 +164,25 @@ bool_t macadr_not0_ucs(const unsigned char* a) __THROW
         return macadr_not0(*tmp);
     }
 #endif
+#if UOS_FOR_SIZE > 0
     unsigned l = 6;
     for(l = 6; l > 0; l--, a++)
         if (*a != 0)
             return true;
     return false;
+#elif defined (__AVR__)
+    if (*a++ == 0)
+    if (*a++ == 0)
+    if (*a++ == 0)
+    if (*a++ == 0)
+    if (*a++ == 0)
+    if (*a++ == 0)
+        return false;
+    return true;
+#else
+    unsigned tmp = a[0] | a[1] | a[2] | a[3] | a[4] | a[5];
+    return tmp != 0;
+#endif
 }
 
 
