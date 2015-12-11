@@ -58,11 +58,17 @@ typedef union  __attribute__ ((packed,aligned(4))) _ip_addr{
 //ссылки и константы - это ссылки на ип-адреса. на малых платформах (16бит-адрес)
 //  в этом качестве используеются указатель, на нормальных - значение. 
 #ifdef __AVR__
+//это рекомендуемое выравнивание для данных отсылаемого пакета 
+//  с этим же выравниванием выдаются принятые данные  
+#define IP_PAYLOAD_ALIGN    1
 #define IPREF_IS_ADDR
 typedef unsigned char* ip_addr_ref;
 typedef const unsigned char* ip_addr_const;
 #define ipref_as_ucs(x) x
 #else
+//это рекомендуемое выравнивание для данных отсылаемого пакета 
+//  с этим же выравниванием выдаются принятые данные  
+#define IP_PAYLOAD_ALIGN    4U
 #define IPREF_IS_VAL
 typedef ip_addr_t       ip_addr_ref;
 typedef ip_addr_t       ip_addr_const;
@@ -76,6 +82,8 @@ typedef ip_addr_t       ip_addr_const;
 #define ipadr_assignref(dst, x)     ipadr_assign_l(dst, x)
 #define ipadr_is_same_ref(a,x)      ipadr_is_same_l(a,x)
 #endif
+
+#define IP_ALIGNED(x) ( ((x) + IP_PAYLOAD_ALIGN-1U) & ~(IP_PAYLOAD_ALIGN-1U) ) 
 
 //ip adress in network byte-order
 typedef ip_addr ip_naddr;

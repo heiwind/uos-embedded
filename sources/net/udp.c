@@ -14,7 +14,7 @@ typedef struct _udp_hdr_t {
 	unsigned char chksum_h, chksum_l;	/* packet checksum */
 } udp_hdr_t;
 
-#define UDP_HLEN	8		/* UDP header length */
+
 
 static buf_t *
 udp_queue_get (udp_socket_t *q, unsigned char *paddr,
