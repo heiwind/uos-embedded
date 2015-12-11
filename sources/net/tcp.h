@@ -155,9 +155,9 @@ struct _tcp_socket_t {//: base_socket_t
 
 	/* queue of received packets */
 #define TCP_SOCKET_QUEUE_SIZE	16
+    unsigned char count;
 	struct _buf_t *queue [TCP_SOCKET_QUEUE_SIZE];
 	struct _buf_t **head;
-	unsigned char count;
 
 	/*
 	 * Only above data are valid for sockets in LISTEN state.
@@ -176,14 +176,6 @@ struct _tcp_socket_t {//: base_socket_t
 
 	unsigned short mss;		/* maximum segment size */
 
-	unsigned char flags;
-#define TF_ACK_DELAY	0x01		/* Delayed ACK. */
-#define TF_ACK_NOW	0x02		/* Immediate ACK. */
-#define TF_INFR		0x04		/* In fast recovery. */
-#define TF_RESET	0x08		/* Connection was reset. */
-#define TF_CLOSED	0x10		/* Connection was sucessfully closed. */
-#define TF_GOT_FIN	0x20		/* Connection closed by remote end. */
-
 	/* RTT estimation variables. */
 	unsigned short rttest;		/* RTT estimate in 500ms ticks */
 	unsigned long rtseq;		/* sequence number being timed */
@@ -193,8 +185,8 @@ struct _tcp_socket_t {//: base_socket_t
 	unsigned char nrtx;		/* number of retransmissions */
 
 	/* fast retransmit/recovery */
+    unsigned char dupacks;
 	unsigned long lastack;		/* Highest acknowledged seqno. */
-	unsigned char dupacks;
 
 	/* congestion avoidance/control variables */
 	unsigned short cwnd;
@@ -212,6 +204,14 @@ struct _tcp_socket_t {//: base_socket_t
 
 	unsigned short snd_buf;		/* Available bytes for sending. */
 	unsigned char snd_queuelen;	/* Available tcp_segment's for sending. */
+
+    unsigned char flags;
+#define TF_ACK_DELAY    0x01        /* Delayed ACK. */
+#define TF_ACK_NOW  0x02        /* Immediate ACK. */
+#define TF_INFR     0x04        /* In fast recovery. */
+#define TF_RESET    0x08        /* Connection was reset. */
+#define TF_CLOSED   0x10        /* Connection was sucessfully closed. */
+#define TF_GOT_FIN  0x20        /* Connection closed by remote end. */
 
 	/* These are ordered by sequence number: */
 	tcp_segment_t *unsent;		/* Unsent (queued) segments. */
