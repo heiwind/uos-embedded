@@ -58,7 +58,14 @@ typedef struct __attribute__ ((aligned(8))) _eth_t {
 	buf_queue_t outq;		/* queue of packets to transmit */
 	struct _buf_t *outqdata[ETH_OUTQ_SIZE];
 
-	unsigned phy;			/* address of external PHY */
+    struct {
+        unsigned adr;           /* address of external PHY */
+        unsigned last_status;
+#if ETH_OPTIMISE_SPEED > 0 
+        mutex_t  lock;          /* access to MDIO */
+        unsigned last_time;
+#endif
+    } phy;
 	unsigned long intr;		/* interrupt counter */
 	unsigned char rxbuf_data [ETH_MTU + 8] __attribute__ ((aligned(8)));
 	unsigned char txbuf_data [ETH_MTU + 8] __attribute__ ((aligned(8)));
@@ -152,6 +159,16 @@ void eth_set_promisc (eth_t *u, int station, int group);
 //	u		указатель на структуру, описывающую интерфейс
 //
 void eth_poll (eth_t *u);
+
+
+void        eth_phy_write (eth_t *u, unsigned address, unsigned data);
+unsigned    eth_phy_read (eth_t *u, unsigned address);
+//*   опросить статус PHY 
+//*   таймаут ETH_PHY_STASTUS_TOus задает время устаревания PHY_STASTUS, 
+//    после которого eth_phy_poll форсирует запрос статуса с блокированием нитки 
+void        eth_phy_poll(eth_t *u);
+//\return != если есть соединение
+unsigned    eth_phy_link_online(eth_t *u);
 
 
 

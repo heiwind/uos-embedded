@@ -63,64 +63,208 @@ virt_to_phys (unsigned virtaddr)
 	}
 }
 
+#ifndef ETH_MDIO_KHZ
+#define ETH_MDIO_KHZ 2500ul
+#endif
+
 /*
  * PHY register write
  */
-static void
-phy_write (eth_t *u, unsigned address, unsigned data)
+#ifdef ELVEES_NVCOM01
+unsigned eth_phy_wait_poll(eth_t *u)   { 
+    unsigned status;
+    const unsigned MDIO_CPUTO = (KHZ/ETH_MDIO_KHZ + 1)*66;
+    unsigned now;
+    unsigned start = mips_read_c0_register (C0_COUNT);
+    /* Wait until the PHY write completes. */
+    do {
+        status = MC_MAC_MD_STATUS;
+        if (! (status & MD_STATUS_BUSY))
+            break;
+        now = mips_read_c0_register (C0_COUNT);
+    } while ((now-start) < MDIO_CPUTO);
+    return status;
+}
+#else
+unsigned eth_phy_wait_poll(eth_t *u)   { 
+    unsigned status, i;
+    /* Wait until the PHY write completes. */
+    for (i=0; i<100000; ++i) {
+        status = MC_MAC_MD_STATUS;
+        if (! (status & MD_STATUS_BUSY))
+            break;
+    }
+    return status;
+}
+#endif
+
+#if ETH_OPTIMISE_SPEED > 0
+static inline 
+void phy_lock(eth_t *u)   {
+    mutex_lock(&u->phy.lock);
+}
+
+static inline 
+bool_t phy_trylock(eth_t *u)   {
+    return mutex_trylock(&u->phy.lock);
+}
+
+static inline 
+void phy_unlock(eth_t *u) { 
+    mutex_unlock(&u->phy.lock);
+}
+
+static 
+unsigned phy_wait(eth_t *u)    {
+        return (unsigned)mutex_wait(&u->phy.lock);
+}
+
+//проверяет завершение операции на шине и сигналит если операция завершилась
+static 
+bool_t phy_check(eth_t *u)   {
+    unsigned tmp = MC_MAC_MD_STATUS;
+
+    if ((tmp & MD_STATUS_BUSY) != 0)
+        return 0;
+
+    if ((tmp & MD_STATUS_END_READ) != 0){
+        const unsigned cmd_mask = MD_CONTROL_REG(~0) | MD_CONTROL_PHY(~0);
+        unsigned tmp_cmd = tmp | (MC_MAC_MD_CONTROL & cmd_mask); 
+        if ( ((tmp_cmd ^ u->phy.last_status) >> 16) == 0){
+            u->phy.last_status = tmp_cmd;
+        }
+    }
+    else if ((tmp & MD_STATUS_END_WRITE) == 0)
+        return 0;
+
+    if (mutex_is_wait(&u->phy.lock))
+        mutex_signal(&u->phy.lock, (void*)tmp);
+    return 1;
+}
+
+#else
+#define phy_lock(u)
+#define phy_trylock(u)  0
+#define phy_unlock(u)
+#define phy_wait(u)  etc_phy_wait_poll(u)
+
+static 
+bool_t phy_check(eth_t *u)   {
+    unsigned tmp = MC_MAC_MD_STATUS;
+    if (((tmp ^ u->phy.last_status) >> 16) == 0){
+        u->phy.last_status = tmp;
+    }
+    if ((tmp & MD_STATUS_BUSY) == 0)
+        return 1;
+    return 0;
+}
+
+#endif
+
+//запускает операцию MDIO
+void eth_phy_io_post(eth_t *u, unsigned address, unsigned cmd_data)
 {
-	unsigned i, status;
+    bool_t ready = phy_check(u);
+    phy_lock(u);
 
-	/* Issue the command to PHY. */
-	MC_MAC_MD_CONTROL = MD_CONTROL_OP_WRITE |	/* операция записи */
-		MD_CONTROL_DATA (data) |		/* данные для записи */
-		MD_CONTROL_PHY (u->phy) |		/* адрес PHY */
-		MD_CONTROL_REG (address);		/* адрес регистра PHY */
+    // wait current operation completes
+    if (!ready)
+    if ((MC_MAC_MD_STATUS & MD_STATUS_BUSY) != 0)
+        eth_phy_wait_poll(u);
 
-	/* Wait until the PHY write completes. */
-	for (i=0; i<100000; ++i) {
-		status = MC_MAC_MD_STATUS;
-		if (! (status & MD_STATUS_BUSY))
-			break;
-	}
-	/*debug_printf ((status & MD_STATUS_BUSY) ?
-		"phy_write(%d, 0x%02x, 0x%04x) TIMEOUT\n" :
-		"phy_write(%d, 0x%02x, 0x%04x)\n", u->phy, address, data);*/
+    /* Issue the command to PHY. */
+    MC_MAC_MD_CONTROL = cmd_data |   /* операция MD_CONTROL_OP_WRITE/READ и данные */
+        MD_CONTROL_PHY (u->phy.adr) |       /* адрес PHY */
+        MD_CONTROL_REG (address);       /* адрес регистра PHY */
+}
+
+//блокирующий обмен по MDIO
+unsigned eth_phy_io(eth_t *u, unsigned address, unsigned cmd_data){
+
+    eth_phy_io_post(u, address, cmd_data);
+    /* Wait until the PHY write completes. */
+    unsigned res = eth_phy_wait_poll(u);
+    phy_unlock(u);
+    /*debug_printf ((status & MD_STATUS_BUSY) ?
+        "phy_write(%d, 0x%02x, 0x%04x) TIMEOUT\n" :
+        "phy_write(%d, 0x%02x, 0x%04x)\n", u->phy, address, data);*/
+    return res;
+}
+
+void
+eth_phy_write (eth_t *u, unsigned address, unsigned data)
+{
+    eth_phy_io(u, address, MD_CONTROL_DATA (data) | MD_CONTROL_OP_WRITE);
 }
 
 /*
  * PHY register read
  */
-static unsigned
-phy_read (eth_t *u, unsigned address)
+unsigned
+eth_phy_read (eth_t *u, unsigned address)
 {
-#ifndef DEBUG_SIMULATE
-	unsigned status, i;
+    return eth_phy_io(u, address, MD_CONTROL_OP_READ);
+}
 
-	/* Issue the command to PHY. */
-	MC_MAC_MD_CONTROL = MD_CONTROL_OP_READ |	/* операция чтения */
-		MD_CONTROL_PHY (u->phy) |		/* адрес PHY */
-		MD_CONTROL_REG (address);		/* адрес регистра PHY */
+static inline 
+void phy_write (eth_t *u, unsigned address, unsigned data)
+{
+    eth_phy_write(u, address, data);
+}
 
-	/* Wait until the PHY read completes. */
-	for (i=0; i<100000; ++i) {
-		status = MC_MAC_MD_STATUS;
-		if (! (status & MD_STATUS_BUSY))
-			break;
-	}
-	/*debug_printf ((status & MD_STATUS_BUSY) ?
-		"phy_read(%d, 0x%02x) TIMEOUT\n" :
-		"phy_read(%d, 0x%02x) returned 0x%04x\n",
-		u->phy, address, status & MD_STATUS_DATA);*/
-	return status & MD_STATUS_DATA;
-#else  //DEBUG_SIMULATE
-    return PHY_ID_KS8721BL;
-#endif //DEBUG_SIMULATE
+static inline 
+unsigned    phy_read (eth_t *u, unsigned address)
+{
+    return eth_phy_read(u, address);
+}
+
+bool_t phy_status_ask(eth_t* u){
+    if(!phy_check(u))
+        return 0;
+    if (phy_trylock(u)){
+        MC_MAC_MD_CONTROL = MD_CONTROL_OP_READ |    /* операция чтения */
+            MD_CONTROL_PHY (u->phy.adr) |       /* адрес PHY */
+            MD_CONTROL_REG (PHY_STS);       /* адрес регистра PHY */
+#if ETH_OPTIMISE_SPEED > 0
+        u->phy.last_time = mips_read_c0_register (C0_COUNT);
+#endif
+        phy_unlock(u);
+        return 1;
+    }
+    return 0;
+}
+
+#ifndef ETH_PHY_STASTUS_TOus
+#define ETH_PHY_STASTUS_TOus    10000ul
+#endif
+
+#if ETH_OPTIMISE_SPEED > 0
+void eth_phy_poll(eth_t *u){
+    unsigned now = mips_read_c0_register (C0_COUNT);
+    if ((now - u->phy.last_time) > (ETH_PHY_STASTUS_TOus * (KHZ/1000)) ){
+        if (phy_status_ask(u))
+            return;
+        eth_phy_io_post(u, PHY_STS, MD_CONTROL_OP_READ);
+        u->phy.last_time = mips_read_c0_register (C0_COUNT);
+        phy_unlock(u);
+    } 
+}
+#else
+void eth_phy_poll(eth_t *u){
+    phy_status_ask(u);
+}
+#endif
+
+unsigned eth_phy_link_online(eth_t *u)
+{
+    phy_check(u);
+    return (u->phy.last_status & PHY_STS_LINK);
 }
 
 /*
  * Set default values to Ethernet controller registers.
  */
+
 static void
 chip_init (eth_t *u)
 {
@@ -128,33 +272,46 @@ chip_init (eth_t *u)
 	MC_CLKEN |= MC_CLKEN_EMAC;
 	udelay (10);
 
+    /* Тактовый сигнал MDC не должен превышать 2.5 МГц. */
+	const unsigned mdio_div = ((KHZ + ETH_MDIO_KHZ-1)/ETH_MDIO_KHZ);
+	MC_MAC_MD_MODE = MD_MODE_DIVIDER(mdio_div);
+
 	/* Find a device address of PHY transceiver.
 	 * Count down from 31 to 0, several times. */
 	unsigned id, retry = 0;
-	u->phy = 31;
+	u->phy.adr = 31;
+#ifndef DEBUG_SIMULATE
 	for (;;) {
 		id = phy_read (u, PHY_ID1) << 16 |
 			phy_read (u, PHY_ID2);
 		if (id != 0 && id != 0xffffffff)
 			break;
-		if (u->phy > 0)
-			u->phy--;
+		if (u->phy.adr > 0)
+			u->phy.adr--;
 		else {
-			u->phy = 31;
+			u->phy.adr = 31;
 			retry++;
 			if (retry > 3) {
 				debug_printf ("eth_init: no PHY detected\n");
-#ifndef DEBUG_SIMULATE
 				uos_halt (0);
-#endif
 			}
 		}
 	}
+#else
+	id = PHY_ID_KS8721BL;
+#endif
 #ifndef NDEBUG
 	debug_printf ("eth_init: transceiver `%s' detected at address %d\n",
 		((id & PHY_ID_MASK) == PHY_ID_KS8721BL) ? "KS8721" : "Unknown",
-		u->phy);
+		u->phy.adr);
 #endif
+
+	//подготовлю шаблон для поллинга статуса в phy_check
+	u->phy.last_status = MD_CONTROL_OP_READ |   /* операция чтения */
+                        MD_CONTROL_PHY (u->phy.adr) |
+                        MD_CONTROL_REG (PHY_STS);
+
+	
 	/* Reset transceiver. */
 	phy_write (u, PHY_CTL, PHY_CTL_RST);
 	int count;
@@ -169,6 +326,8 @@ chip_init (eth_t *u)
 	phy_write (u, PHY_ADVRT, PHY_ADVRT_CSMA | PHY_ADVRT_10_HDX |
 		PHY_ADVRT_10_FDX | PHY_ADVRT_100_HDX | PHY_ADVRT_100_FDX);
 	phy_write (u, PHY_CTL, PHY_CTL_ANEG_EN | PHY_CTL_ANEG_RST);
+
+	phy_status_ask(u);
 
 	/* Reset TX and RX blocks and pointers */
 	MC_MAC_CONTROL = MAC_CONTROL_CP_TX | MAC_CONTROL_RST_TX |
@@ -208,9 +367,6 @@ chip_init (eth_t *u)
 		IFS_COLL_MODE_JAMB(0xC3) |
 		IFS_COLL_MODE_IFS(24);
 
-	/* Тактовый сигнал MDC не должен превышать 2.5 МГц. */
-	MC_MAC_MD_MODE = MD_MODE_DIVIDER (KHZ / 2000);
-
 	/* Свой адрес. */
 	MC_MAC_UCADDR_L = u->netif.ethaddr.val.l;
 	MC_MAC_UCADDR_H = u->netif.ethaddr.val.h;
@@ -225,14 +381,12 @@ eth_debug (eth_t *u, struct _stream_t *stream)
 {
 	unsigned short ctl, advrt, sts, extctl;
 
-	mutex_lock (&u->netif.lock);
 	ctl = phy_read (u, PHY_CTL);
 	sts = phy_read (u, PHY_STS);
 	advrt = phy_read (u, PHY_ADVRT);
 	extctl = phy_read (u, PHY_EXTCTL);
 	/*unsigned status_rx = MC_MAC_STATUS_RX;*/
 	/*unsigned status_tx = MC_MAC_STATUS_TX;*/
-	mutex_unlock (&u->netif.lock);
 
 	printf (stream, "CTL=%b\n", ctl, PHY_CTL_BITS);
 	printf (stream, "STS=%b\n", sts, PHY_STS_BITS);
@@ -255,9 +409,7 @@ int eth_get_carrier (eth_t *u)
 {
 	unsigned status;
 
-	mutex_lock (&u->netif.lock);
 	status = phy_read (u, PHY_STS);
-	mutex_unlock (&u->netif.lock);
 
 	return (status & PHY_STS_LINK) != 0;
 }
@@ -266,9 +418,7 @@ long eth_get_speed (eth_t *u, int *duplex)
 {
 	unsigned extctl;
 
-	mutex_lock (&u->netif.lock);
 	extctl = phy_read (u, PHY_EXTCTL);
-	mutex_unlock (&u->netif.lock);
 
 	switch (extctl & PHY_EXTCTL_MODE_MASK) {
 	case PHY_EXTCTL_MODE_10_HDX:	/* 10Base-T half duplex */
@@ -368,7 +518,7 @@ chip_write_txfifo (unsigned physaddr, unsigned nbytes)
 /*
  * Fetch data from receive FIFO to dma buffer.
  */
-static void
+static void __attribute__((unused)) 
 chip_read_rxfifo (unsigned physaddr, unsigned nbytes)
 {
 	/* Set the address and length for DMA. */
@@ -477,6 +627,11 @@ chip_transmit_packet (eth_t *u, buf_t *p)
                 , p->payload, p->payload+12
                 );
     }
+
+    //запрошу статус PHY, за время отсылки пакета, возможно успеем считать его, и 
+    //  по окончании отсылки фрейма вероятно поимеем актуальный статус 
+    phy_status_ask(u);
+
 	unsigned char *buf = (unsigned char*) u->txbuf;
 	for (q=p; q; q=q->next) {
 		/* Copy the packet into the transmit buffer. */
@@ -496,9 +651,7 @@ chip_transmit_packet (eth_t *u, buf_t *p)
 		TX_FRAME_CONTROL_DISPAD |
 		TX_FRAME_CONTROL_LENGTH (len);
 	chip_write_txfifo (u->txbuf_physaddr, len);
-/*debug_printf ("!");*/
 	MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
-/*debug_printf ("@");*/
 
 	++u->netif.out_packets;
 	u->netif.out_bytes += len;
@@ -515,20 +668,22 @@ chip_transmit_packet (eth_t *u, buf_t *p)
 static bool_t
 eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 {
+    assert (p != 0);
 	mutex_lock (&u->tx_lock);
 
 	/* Exit if link has failed */
 	if (p->tot_len < 4 || p->tot_len > ETH_MTU ||
-	    ! (phy_read (u, PHY_STS) & PHY_STS_LINK)) {
+	    ! eth_phy_link_online(u)
+	    ) 
+	{
 		++u->netif.out_errors;
 		mutex_unlock (&u->tx_lock);
-/*debug_printf ("eth_output: transmit %d bytes, link failed\n", p->tot_len);*/
+		ETHFAIL_printf("eth_output: transmit %d bytes, link failed\n", p->tot_len);
 		buf_free (p);
 		return 0;
 	}
-/*debug_printf ("eth_output: transmit %d bytes\n", p->tot_len);*/
-
 	if (! (MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) && buf_queue_is_empty (&u->outq)) {
+	    ETH_printf ("eth_output: tx %d bytes\n", p->tot_len);
 		/* Смело отсылаем. */
 		chip_transmit_packet (u, p);
 		mutex_unlock (&u->tx_lock);
@@ -546,6 +701,7 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		return 0;
 	}
 	#else
+    ETH_printf ("eth_output: tx que %d bytes\n", p->tot_len);
 	while (buf_queue_is_full (&u->outq)) {
 	    mutex_wait (&u->tx_lock);
 	}
@@ -673,7 +829,7 @@ eth_receive_frame (eth_t *u)
         ETH_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
     }
 
-#else
+#else //defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
     /* Extract data from RX FIFO. */
     unsigned len = RX_FRAME_STATUS_LEN (frame_status);
 #if ETH_OPTIMISE_SPEED > 0
@@ -740,6 +896,7 @@ static unsigned
 handle_receive_interrupt (eth_t *u)
 {
 	unsigned active = 0;
+	phy_status_ask(u);
 	for (;;) {
 		unsigned status_rx = MC_MAC_STATUS_RX;
 /*debug_printf ("eth rx irq: STATUS_RX = %08x\n", status_rx);*/
@@ -773,6 +930,7 @@ handle_receive_interrupt (eth_t *u)
 static void
 handle_transmit_interrupt (eth_t *u)
 {
+    phy_check(u);
 	unsigned status_tx = MC_MAC_STATUS_TX;
 	if (status_tx & STATUS_TX_ONTX_REQ) {
 		/* Передачик пока не закончил. */
