@@ -87,21 +87,23 @@ bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg
     return res;
 }
 
+
 CODE_FAST 
-void mutex_slaved_yield(mutex_t *m){
+void mutex_slave_task(mutex_t *m, task_t* t)
+{
     assert (task_current->lock == 0);
 #if RECURSIVE_LOCKS
     assert (m->deep > 0);
 #endif
-    task_current->lock = m;
+    t->lock = m;
 
     /* Put this task into the list of lock slaves. */
-    list_append (&m->slaves, &task_current->item);
+    list_append (&m->slaves, &t->item);
 
     /* Update the value of lock priority.
      * It must be the maximum of all slave task priorities. */
-    if (m->prio < task_current->prio) {
-        m->prio = task_current->prio;
+    if (m->prio < t->prio) {
+        m->prio = t->prio;
 
         /* Increase the priority of master task. */
         if (m->master->prio < m->prio) {
@@ -109,8 +111,28 @@ void mutex_slaved_yield(mutex_t *m){
             /* No need to set task_need_schedule here. */
         }
     }
+}
+
+CODE_FAST 
+void mutex_slaved_yield(mutex_t *m){
+    mutex_slave_task(m, task_current);
     task_schedule ();
 }
+
+CODE_FAST 
+bool_t mutex_wanted_task(task_t *t)
+{
+    if (t->MUTEX_WANT == 0)
+        return 0;
+    mutex_t *mm = t->MUTEX_WANT;
+    t->MUTEX_WANT = 0;
+    if ((mm->master == 0) || (mm->master == t))
+        return 0;
+
+    mutex_slave_task(mm, t);
+    return 1;
+}
+
 
 /*
  * Try to get the lock. Return 1 on success, 0 on failure.

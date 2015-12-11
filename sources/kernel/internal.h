@@ -68,10 +68,22 @@ extern "C" {
  * ---------- <-/----/----/
  */
 #define UOS_STACK_ALIGN     sizeof(void*)
+#ifndef UOS_SIGNAL_SMART
+#define UOS_SIGNAL_SMART 0
+#endif
+
+#if UOS_SIGNAL_SMART == 1
+#define MUTEX_WANT want
+#elif UOS_SIGNAL_SMART > 0
+#define MUTEX_WANT lock
+#endif
 
 struct _task_t {
 	list_t		item;		/* double linked list pointers */
 	mutex_t *	lock;		/* lock, blocking the task */
+#if UOS_SIGNAL_SMART == 1
+    mutex_t *   want;       /* lock, that task want to lock*/
+#endif
 	mutex_t *	wait;		/* lock, the task is waiting for */
 	list_t		slaves;		/* locks, acquired by task */
 	void *		message;	/* return value for mutex_wait() */
@@ -121,6 +133,13 @@ bool_t mutex_awake (mutex_t *m, void *message);
 
 // assign current task to m->slaves and schdule. priority adjusted
 void mutex_slaved_yield(mutex_t *m);
+void mutex_slave_task(mutex_t *m, task_t* t);
+// check that task wants t->MUTEX_WANT mutex, and sequenced to lock on it
+// \return 0 - task no need to slaved on mutex
+// \return 1 - task wanted mutex and slaved on it
+bool_t mutex_wanted_task(task_t* t);
+
+
 // assign current task to m->master
 INLINE void mutex_do_lock(mutex_t *m)
 {

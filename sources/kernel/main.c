@@ -100,7 +100,14 @@ mutex_activate (mutex_t *m, void *message)
 		t = (task_t*) list_first (&m->waiters);
 		assert (t->wait == m);
 		t->wait = 0;
-		t->message = message;
+        t->message = message;
+#if UOS_SIGNAL_SMART > 0
+        //получили сигнал, и жду захвата мутеха, потому пермещу нитку из ожидания сигнала в 
+        //  захватчик мутеха
+	    if (t->MUTEX_WANT != 0)
+		if (mutex_wanted_task(t))
+		    continue;
+#endif
 		task_activate (t);
 	}
 
@@ -115,6 +122,13 @@ mutex_activate (mutex_t *m, void *message)
 		    //  lock operation
 			//assert (list_is_empty (&t->item));
 			s->group->waiter = 0;
+#if UOS_SIGNAL_SMART > 0
+            //получили сигнал, и жду захвата мутеха, потому пермещу нитку из ожидания сигнала в 
+            //  захватчик мутеха
+            if (t->MUTEX_WANT != 0)
+            if (mutex_wanted_task(t))
+                continue;
+#endif
 			task_activate (t);
 		}
 	}

@@ -148,7 +148,14 @@ bool_t mutex_wait_until (mutex_t *m
     m->deep = 0;
 #endif
     mutex_do_unlock(m);
+
+#if UOS_SIGNAL_SMART > 0
+    if (waitfor == 0)
+        task_current->MUTEX_WANT = m;
+#endif
+
     task_schedule ();
+
     bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
 #if RECURSIVE_LOCKS
     m->deep = deep;
