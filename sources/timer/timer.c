@@ -14,7 +14,9 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 
+#if defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 extern volatile uint32_t __timer_ticks_uos;
+#endif
 
 #if I386
 #   include <runtime/i386/i8253.h>
@@ -177,10 +179,14 @@ static inline
 #endif
 void timer_update (timer_t *t)
 {
+
+#if defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 	__timer_ticks_uos++;
 
 	if (__timer_ticks_uos==0)
 		__timer_ticks_uos++;
+
+#endif
 
 /*debug_printf ("<ms=%ld> ", t->milliseconds);*/
 #if defined (ELVEES)
