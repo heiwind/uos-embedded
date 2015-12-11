@@ -25,13 +25,13 @@ typedef struct _udp_socket_t { //: base_socket_t
 	struct _ip_t	*ip;
 	struct _udp_socket_t *next;
 
-    unsigned char   *local_ip;
+	ip_addr_const   local_ip;
     unsigned short  local_port;
 	ip_addr         peer_ip;
 	unsigned short	peer_port;
 
 	struct _netif_t	*netif;
-	unsigned char	*gateway;
+	ip_addr_const   gateway;
 
 	/* queue of received packets */
 	udp_socket_queue_t queue [UDP_SOCKET_QUEUE_SIZE];

@@ -16,20 +16,20 @@ struct _ip_t;
 typedef struct _route_t {
 	struct _route_t *next;
 	struct _netif_t	*netif;
-	unsigned char	ipaddr [4];
-	unsigned char	broadcast [4];
-	unsigned char	netaddr [4];
-	unsigned char	gateway [4];
-	unsigned char	gwifaddr [4];
+	ip_addr         ipaddr;
+	ip_addr         broadcast;
+	ip_addr         netaddr;
+	ip_addr         gateway;
+	ip_addr         gwifaddr;
 	unsigned char	masklen;
 } route_t;
 
-struct _netif_t *route_lookup (struct _ip_t *ip, const unsigned char *ipaddr
-        , const unsigned char **gateway
-        , const unsigned char **netif_ipaddr);
-struct _netif_t *route_lookup_self (struct _ip_t *ip, unsigned char *ipaddr,
+struct _netif_t *route_lookup (struct _ip_t *ip, ip_addr_const ipaddr
+        , ip_addr_const *gateway
+        , ip_addr_const *netif_ipaddr);
+struct _netif_t *route_lookup_self (struct _ip_t *ip, ip_addr_const ipaddr,
 	unsigned char *broadcast);
-const unsigned char *route_lookup_ipaddr (struct _ip_t *ip, const unsigned char *ipaddr,
+const unsigned char *route_lookup_ipaddr (struct _ip_t *ip, ip_addr_const ipaddr,
 	struct _netif_t *netif);
 
 /*

@@ -46,7 +46,36 @@ typedef union  __attribute__ ((packed,aligned(4))) _ip_addr{
     ip_addr_t       val;
     char            cs[4];
     unsigned char   ucs[4];
+#ifdef __AVR__
+    //на малых платформах, 16бит-адрес выгоднее использовать чем 32бит значение
+    ip_addr_t       var[1];
+#else
+    ip_addr_t       var;
+#endif
 } ip_addr;
+
+
+//ссылки и константы - это ссылки на ип-адреса. на малых платформах (16бит-адрес)
+//  в этом качестве используеются указатель, на нормальных - значение. 
+#ifdef __AVR__
+#define IPREF_IS_ADDR
+typedef unsigned char* ip_addr_ref;
+typedef const unsigned char* ip_addr_const;
+#define ipref_as_ucs(x) x
+#else
+#define IPREF_IS_VAL
+typedef ip_addr_t       ip_addr_ref;
+typedef ip_addr_t       ip_addr_const;
+
+#define ipref_as_ucs(x) ((unsigned char*)&x)
+
+#define ipref_4ucs(x)   ipadr_4ucs(x).var
+#define ipref_4l(x)     (x)
+
+#define ipadr_assignref_ucs(dst, x) ipadr_assignl_ucs(dst, x)
+#define ipadr_assignref(dst, x)     ipadr_assign_l(dst, x)
+#define ipadr_is_same_ref(a,x)      ipadr_is_same_l(a,x)
+#endif
 
 //ip adress in network byte-order
 typedef ip_addr ip_naddr;
@@ -139,27 +168,29 @@ INLINE unsigned char* ipadr_assignl_ucs( unsigned char* __restrict__ dst
 }
 
 //!!! ip==0 - дает всегда true в сравнении
+#ifdef IPREF_IS_VAL
 INLINE 
-bool_t __CONST ipadr_is_same(     const ip_addr a_or0
-                                , const ip_addr b
+bool_t __CONST ipadr_is_same(     ip_addr_const a_or0
+                                , ip_addr_const b
                                 ) __THROW
 {
-        if (a_or0.val != 0)
-        if (b.val != 0)
-            return (a_or0.val == b.val);
+        if (a_or0 != 0)
+        if (b != 0)
+            return (a_or0 == b);
         return true;
 }
 
 INLINE 
-bool_t __CONST ipadr_is_same_l(   const ip_addr a
+bool_t __CONST ipadr_is_same_l(   ip_addr_const a
                                 , const ip_addr_t b
                                 ) __THROW
 {
-        if (a.val != 0)
+        if (a != 0)
         if (b != 0)
-            return (a.val == b);
+            return (a == b);
         return true;
 }
+#endif
 
 INLINE 
 bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
@@ -168,9 +199,11 @@ bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( (((uintptr_t)a|(uintptr_t)b)&CPU_ACCESSW_ALIGNMASK) == 0){
-        const ip_addr* __restrict__ ipa = (const ip_addr*) a;
-        const ip_addr* __restrict__ ipb = (const ip_addr*) b;
+#       ifdef IPREF_IS_VAL
+        ip_addr_const* __restrict__ ipa = (ip_addr_const*) a;
+        ip_addr_const* __restrict__ ipb = (ip_addr_const*) b;
         return ipadr_is_same(*ipa, *ipb);
+#       endif
     }
 #endif
 #if UOS_FOR_SIZE > 0
@@ -192,17 +225,31 @@ bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
 #endif
 }
 
+#ifdef IPREF_IS_VAL
 // тоже самое, но false eсли  a==NULL
 INLINE 
-bool_t ipadr_or0_is_same( const ip_addr* __restrict__ a_or0
-                        , const ip_addr* __restrict__ b
+bool_t ipadr_or0_is_same( ip_addr_const  a_or0
+                        , ip_addr_const  b
                         ) __THROW
 {
-    if (a_or0 != NULL)
-        return ipadr_is_same(*a_or0, *b);
+    if (a_or0 != 0)
+        return ipadr_is_same(a_or0, b);
     else
         return false;
 }
+
+// тоже самое, но true eсли  a==NULL
+INLINE 
+bool_t ipadr_is_same_or0( ip_addr_const  a_or0
+                        , ip_addr_const  b
+                        ) __THROW 
+{
+    if (a_or0 != 0)
+        return ipadr_is_same(a_or0, b);
+    else
+        return true;
+}
+#endif
 
 INLINE 
 bool_t ipadr_or0_is_same_ucs( const unsigned char* __restrict__ a_or0
@@ -215,17 +262,6 @@ bool_t ipadr_or0_is_same_ucs( const unsigned char* __restrict__ a_or0
         return false;
 }
 
-// тоже самое, но true eсли  a==NULL
-INLINE 
-bool_t ipadr_is_same_or0( const ip_addr* __restrict__ a_or0
-                        , const ip_addr* __restrict__ b
-                        ) __THROW 
-{
-    if (a_or0 != NULL)
-        return ipadr_is_same(*a_or0, *b);
-    else
-        return true;
-}
 
 INLINE 
 bool_t ipadr_is_same_or0_ucs( const unsigned char* __restrict__ a_or0
@@ -238,11 +274,19 @@ bool_t ipadr_is_same_or0_ucs( const unsigned char* __restrict__ a_or0
         return true;
 }
 
+#ifdef IPREF_IS_VAL
 INLINE  
-bool_t __CONST ipadr_not0(const ip_addr a) __THROW
+bool_t __CONST ipadr_not0(ip_addr_const a) __THROW
 {
-        return (a.val != 0)? true : false;
+        return (a != 0)? true : false;
 }
+
+INLINE 
+bool_t __CONST ipadr_is_broadcast(ip_addr_const a) __THROW
+{
+        return ((a == 0) || (~a == 0)) ? true : false;
+}
+#endif
 
 INLINE  
 bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
@@ -258,12 +302,6 @@ bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
     unsigned tmp = a[0] | a[1] | a[2] | a[3];
 #endif
     return tmp != 0;
-}
-
-INLINE 
-bool_t __CONST ipadr_is_broadcast(const ip_addr a) __THROW
-{
-        return ((a.val == 0) || (~a.val == 0)) ? true : false;
 }
 
 INLINE 
@@ -299,7 +337,7 @@ typedef struct _base_socket_t {
     struct _ip_t          *ip;
     struct _base_socket_t *next;
 
-    ip_addr*        local_ip;
+    ip_addr_const   local_ip;
     unsigned short  local_port;
     ip_addr         peer_ip;
     unsigned short  peer_port;

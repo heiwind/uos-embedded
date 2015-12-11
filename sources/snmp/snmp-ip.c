@@ -9,6 +9,7 @@
 #include <snmp/snmp-var.h>
 #include <snmp/snmp-ip.h>
 
+/* !!!! TODO need optimise to reduce it!*/
 #define LONG(p)         ((unsigned long)(p[0]) << 24 | \
 			 (unsigned long)(p[1]) << 16 | \
 			 (unsigned long)(p[2]) << 8 | (p[3]))
@@ -156,8 +157,10 @@ find_netif_by_addr (ip_t *ip, unsigned long addr)
 	route_t *u;
 
 	for (u=ip->route; u; u=u->next)
-		if (u->netif && ! u->gateway[0] &&
-		    memcmp (u->ipaddr, &addr, 4) == 0)
+		if (u->netif 
+		    && ! u->gateway.ucs[0] 
+		    && ipadr_is_same_l (u->ipaddr.var, addr)
+		    )
 			return u;
 	return 0;
 }
@@ -175,10 +178,10 @@ find_first_netif_by_addr (ip_t *ip, unsigned long *addr)
 	found = 0;
 	found_addr = 0;
 	for (u=ip->route; u; u=u->next) {
-		if (! u->netif || u->gateway[0])
+		if (! u->netif || u->gateway.ucs[0])
 			continue;
 
-		a = LONG (u->ipaddr);
+		a = LONG (u->ipaddr.ucs);
 /*debug_printf ("find_first_socket compare %p\n", found);*/
 		if (! found || a < found_addr) {
 			found = u;
@@ -203,10 +206,11 @@ find_next_netif_by_addr (ip_t *ip, unsigned long *addr)
 	found = 0;
 	found_addr = 0;
 	for (u=ip->route; u; u=u->next) {
-		if (! u->netif || u->gateway[0])
+		if (! u->netif || u->gateway.ucs[0])
 			continue;
 
-		a = LONG (u->ipaddr);
+		/*  TODO **a reason to optimise LONG() - is hard*/
+		a = LONG (u->ipaddr.ucs);
 		if (a <= *addr)
 			continue;
 
@@ -231,7 +235,7 @@ get_netif_index (ip_t *ip, route_t *target)
 	count = 0;
 	for (r=ip->route; r; r=r->next) {
 		/* Count all interface records. */
-		if (r->netif && ! r->gateway[0])
+		if (r->netif && ! r->gateway.ucs[0])
 			++count;
 		if (r == target)
 			return count;
@@ -360,8 +364,9 @@ find_route_by_addr (ip_t *ip, unsigned long addr)
 	route_t *u;
 
 	for (u=ip->route; u; u=u->next)
-		if (u->netif && u->gateway[0] &&
-		    memcmp (u->ipaddr, &addr, 4) == 0)
+		if (u->netif 
+		    && u->gateway.ucs[0] 
+		    && ipadr_is_same_l(u->ipaddr.var, addr) == 0)
 			return u;
 	return 0;
 }
@@ -379,10 +384,10 @@ find_first_route_by_addr (ip_t *ip, unsigned long *addr)
 	found = 0;
 	found_addr = 0;
 	for (u=ip->route; u; u=u->next) {
-		if (! u->netif || ! u->gateway[0])
+		if (! u->netif || ! u->gateway.ucs[0])
 			continue;
 
-		a = LONG (u->ipaddr);
+		a = LONG (u->ipaddr.ucs);
 /*debug_printf ("find_first_socket compare %p\n", found);*/
 		if (! found || a < found_addr) {
 			found = u;
@@ -407,10 +412,10 @@ find_next_route_by_addr (ip_t *ip, unsigned long *addr)
 	found = 0;
 	found_addr = 0;
 	for (u=ip->route; u; u=u->next) {
-		if (! u->netif || ! u->gateway[0])
+		if (! u->netif || ! u->gateway.ucs[0])
 			continue;
 
-		a = LONG (u->ipaddr);
+		a = LONG (u->ipaddr.ucs);
 		if (a <= *addr)
 			continue;
 
@@ -445,15 +450,15 @@ small_uint_t
 snmp_set_ipRouteDest (snmp_t *snmp, asn_t *val, unsigned long addr, ...)
 {
 	route_t *u;
-	unsigned char ipaddr [4];
+	ip_addr ipaddr;
 
 	u = find_route_by_addr (snmp->ip, addr);
 	if (! u)
 		return SNMP_NO_SUCH_NAME;
 	if (val->type != ASN_IP_ADDRESS)
 		return SNMP_BAD_VALUE;
-	memcpy (ipaddr, &val->int32.val, 4);
-	route_setup (snmp->ip, u, ipaddr, u->masklen, u->gateway);
+	ipaddr.val = val->int32.val;
+	route_setup (snmp->ip, u, ipaddr.ucs, u->masklen, u->gateway.ucs);
 	return SNMP_NO_ERROR;
 }
 
@@ -498,7 +503,7 @@ snmp_set_ipRouteMask (snmp_t *snmp, asn_t *val, unsigned long addr, ...)
 	for (masklen=0; v & 0x80000000; ++masklen)
 		v <<= 1;
 
-	route_setup (snmp->ip, u, u->ipaddr, masklen, u->gateway);
+	route_setup (snmp->ip, u, u->ipaddr.ucs, masklen, u->gateway.ucs);
 	return SNMP_NO_ERROR;
 }
 
@@ -509,7 +514,7 @@ asn_t *snmp_get_ipRouteNextHop (snmp_t *snmp, unsigned long addr, ...)
 	u = find_route_by_addr (snmp->ip, addr);
 	if (! u)
 		return 0;
-	return asn_make_int (snmp->pool, LONG (u->gateway), ASN_IP_ADDRESS);
+	return asn_make_int (snmp->pool, LONG (u->gateway.ucs), ASN_IP_ADDRESS);
 }
 
 asn_t *snmp_next_ipRouteNextHop (snmp_t *snmp, bool_t nextflag, unsigned long *addr, ...)
@@ -520,7 +525,7 @@ asn_t *snmp_next_ipRouteNextHop (snmp_t *snmp, bool_t nextflag, unsigned long *a
 		find_first_route_by_addr (snmp->ip, addr);
 	if (! u)
 		return 0;
-	return asn_make_int (snmp->pool, LONG (u->gateway), ASN_IP_ADDRESS);
+	return asn_make_int (snmp->pool, LONG (u->gateway.ucs), ASN_IP_ADDRESS);
 }
 
 small_uint_t
@@ -528,21 +533,21 @@ snmp_set_ipRouteNextHop (snmp_t *snmp, asn_t *val, unsigned long addr, ...)
 {
 	route_t *u;
 	netif_t *netif;
-	unsigned char ipaddr [4];
+	ip_addr ipaddr;
 
 	u = find_route_by_addr (snmp->ip, addr);
 	if (! u)
 		return SNMP_NO_SUCH_NAME;
 	if (val->type != ASN_IP_ADDRESS)
 		return SNMP_BAD_VALUE;
-	memcpy (ipaddr, &val->int32.val, 4);
+	ipaddr.val = val->int32.val;
 
 	/* Find the network interface. */
-	netif = route_lookup (snmp->ip, ipaddr, 0, 0);
+	netif = route_lookup (snmp->ip, ipaddr.var, 0, 0);
 	if (! netif)
 		return SNMP_GEN_ERR;
 
-	route_setup (snmp->ip, u, ipaddr, u->masklen, u->gateway);
+	route_setup (snmp->ip, u, ipaddr.ucs, u->masklen, u->gateway.ucs);
 	u->netif = netif;
 	return SNMP_NO_ERROR;
 }
@@ -680,7 +685,7 @@ get_netif_index_by_netif (ip_t *ip, netif_t *target)
 	count = 0;
 	for (r=ip->route; r; r=r->next) {
 		/* Count all interface records. */
-		if (r->netif && ! r->gateway[0]) {
+		if (r->netif && ! r->gateway.ucs[0]) {
 			++count;
 			if (r->netif == target)
 				return count;
@@ -820,7 +825,7 @@ find_arp_by_addr (ip_t *ip, unsigned nif, unsigned long addr)
 	if (! netif)
 		return 0;
 	for (e=arp->table; e<arp->table+arp->size; ++e)
-		if (e->netif == netif && ipadr_is_same_l(e->ipaddr, addr))
+		if (e->netif == netif && ipadr_is_same_l(e->ipaddr.var, addr))
 			return e;
 	return 0;
 }

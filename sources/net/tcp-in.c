@@ -615,8 +615,8 @@ find_active_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 		assert (s->state != LISTEN);
 
 		if (s->local_port != h->dest || s->remote_port != h->src ||
-		    !ipadr_is_same(s->remote_ip, iph->src) ||
-		    !ipadr_is_same(s->local_ip, iph->dest)
+		    !ipadr_is_same(s->remote_ip.var, iph->src.var) ||
+		    !ipadr_is_same(iph->dest.var, s->local_ip)
 		   )
 			continue;
 
@@ -643,8 +643,8 @@ find_closing_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (s=ip->tcp_closing_sockets; s; s=s->next) {
 		assert (s->state == TIME_WAIT);
 		if (s->local_port != h->dest || s->remote_port != h->src ||
-            !ipadr_is_same(s->remote_ip, iph->src) ||
-            !ipadr_is_same(s->local_ip, iph->dest)
+            !ipadr_is_same(s->remote_ip.var, iph->src.var) ||
+            !ipadr_is_same(iph->dest.var, s->local_ip)
            )
 			continue;
 
@@ -666,7 +666,7 @@ find_listen_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (ls=ip->tcp_listen_sockets; ls; prev=ls, ls=ls->next) {
 		if (ls->local_port != h->dest)
 			continue;
-		if ( !ipadr_is_same(ls->local_ip, iph->dest) )
+		if ( !ipadr_is_same(iph->dest.var, ls->local_ip) )
 			continue;
 
 		/* Move this PCB to the front of the list so
@@ -712,7 +712,7 @@ drop:		buf_free (p);
 /*	buf_print_tcp (p);*/
 
 	/* Don't even process incoming broadcasts/multicasts. */
-	if (ipadr_is_broadcast(iph->dest) || IS_MULTICAST (iph->dest.ucs)) {
+	if (ipadr_is_broadcast(iph->dest.var) || IS_MULTICAST (iph->dest.ucs)) {
 		/* TODO: increment statistics counters */
 		goto drop;
 	}

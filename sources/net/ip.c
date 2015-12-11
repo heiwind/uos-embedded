@@ -109,24 +109,25 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	          );
 	
 	/* Is this packet for us? */
-	broadcast = ipadr_is_broadcast(iphdr->dest);
+	broadcast = ipadr_is_broadcast(iphdr->dest.var);
 	if (! broadcast) {
 		netif_t *netif;
 
-		netif = route_lookup_self (ip, iphdr->dest.ucs, &broadcast);
+		netif = route_lookup_self (ip, iphdr->dest.var, &broadcast);
 		if (! netif) {
 			/* Packet not for us, route or discard */
 			if (ip->forwarding && ! broadcast) {
-				const unsigned char *netif_ipaddr, *gateway;
+			    ip_addr_const netif_ipaddr = 0;
+			    ip_addr_const gateway = 0;
 
-				netif = route_lookup (ip, iphdr->dest.ucs, &gateway, &netif_ipaddr);
+				netif = route_lookup (ip, iphdr->dest.var, &gateway, &netif_ipaddr);
 				if (! gateway)
-					gateway = iphdr->dest.ucs;
+					gateway = iphdr->dest.var;
 
 				/* Don't forward packets onto the same
 				 * network interface on which they arrived. */
 				if (netif && netif != inp)
-					ip_forward (ip, p, gateway, netif, netif_ipaddr);
+					ip_forward (ip, p, ipref_as_ucs(gateway), netif, ipref_as_ucs(netif_ipaddr));
 				else
 					buf_free (p);
 			} else {
@@ -188,8 +189,9 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 		case ICMP_ECHO:
 			/* Ignore ICMP messages on broadcasts */
 			++ip->icmp_in_echos;
-			if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs))
+			if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs)){
 				icmp_echo_request (ip, p, inp);
+			}
 			else
 				buf_free (p);
 			break;
@@ -300,10 +302,11 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	small_uint_t proto)
 {
 	netif_t *netif;
-	const unsigned char *gateway, *netif_ipaddr;
+    ip_addr_const netif_ipaddr;
+    ip_addr_const gateway;
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (ip, dest, &gateway, &netif_ipaddr);
+	netif = route_lookup (ip, ipref_4ucs(dest), &gateway, &netif_ipaddr);
 	if (! netif) {
 		/* No route to host. */
 		/*debug_printf ("ip_output: no route to host %d.%d.%d.%d\n",
@@ -313,8 +316,9 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 		buf_free (p);
 		return 0;
 	}
-	return ip_output_netif (ip, p, dest, src, proto, gateway, netif,
-		netif_ipaddr);
+	return ip_output_netif (ip, p, dest, src, proto
+	        , ipref_as_ucs(gateway), netif, ipref_as_ucs(netif_ipaddr)
+	        );
 }
 
 /*

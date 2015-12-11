@@ -165,7 +165,7 @@ drop:
 			continue;
 
 		/* Compare peer IP address (or broadcast). */
-		if (ipadr_not0(s->peer_ip) && ipadr_is_same(s->peer_ip, iph->src))
+		if (ipadr_not0(s->peer_ip.var) && ipadr_is_same(s->peer_ip.var, iph->src.var))
 			continue;
 
 		/* Put packet to socket. */
@@ -267,10 +267,11 @@ bool_t
 udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 {
 	netif_t *netif;
-	const unsigned char *local_ip, *gateway;
+	ip_addr_const local_ip;
+	ip_addr_const gateway;
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (s->ip, dest, &gateway, &local_ip);
+	netif = route_lookup (s->ip, ipref_4ucs(dest), &gateway, &local_ip);
 	if (! netif) {
 		buf_free (p);
 		return 0;
@@ -282,8 +283,9 @@ udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 		local_ip[0], local_ip[1], local_ip[2], local_ip[3],
 		s->local_port,
 		gateway[0], gateway[1], gateway[2], gateway[3]); */
-	return udp_send_netif (s, p, dest, port, netif, local_ip,
-		gateway);
+	return udp_send_netif (s, p, dest, port
+	        , netif, ipref_as_ucs(local_ip), ipref_as_ucs(gateway)
+	        );
 }
 
 /*
@@ -294,7 +296,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 {
 	/* To send packets using UDP socket, it must
 	 * have nonzero remote IP address and port number. */
-	if (! s->peer_port || !ipadr_not0(s->peer_ip) ) {
+	if (! s->peer_port || !ipadr_not0(s->peer_ip.var) ) {
 		return 0;
 	}
 
@@ -303,7 +305,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 		return 0;
 	}
 	return udp_send_netif (s, p, s->peer_ip.ucs, s->peer_port, s->netif,
-		s->local_ip, s->gateway);
+	        ipref_as_ucs(s->local_ip), ipref_as_ucs(s->gateway));
 }
 
 /*
@@ -375,9 +377,9 @@ udp_connect (udp_socket_t *s, const unsigned char *ipaddr, unsigned short port)
 		s->peer_ip = ipadr_4ucs(ipaddr);
 
 		/* Find the outgoing network interface. */
-		s->netif = route_lookup (s->ip, ipaddr
-		        , (const_ip4_ucs*)&s->gateway
-		        , (const_ip4_ucs*)&s->local_ip);
+		s->netif = route_lookup (s->ip, s->peer_ip.var
+		                        , &s->gateway, &s->local_ip
+		                        );
 	}
 	mutex_unlock (&s->lock);
 }

@@ -205,7 +205,7 @@ arp_input (netif_t *netif, buf_t *p)
 			/* ARP request. If it asked for our address,
 			 * we send out a reply. */
 			ipaddr = route_lookup_ipaddr (netif->arp->ip,
-				ah->dst_ipaddr, netif);
+			        ipref_4ucs(ah->dst_ipaddr), netif);
 
 			if (!ipadr_or0_is_same_ucs(ipaddr, ah->dst_ipaddr)) {
 				buf_free (p);

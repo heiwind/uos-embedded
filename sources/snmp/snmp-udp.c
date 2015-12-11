@@ -43,7 +43,7 @@ find_socket (ip_t *ip, unsigned long addr, unsigned port)
 
 	for (s=ip->udp_sockets; s; s=s->next)
 		if (s->local_port == port)
-		if ( ipadr_is_same_or0_ucs(s->local_ip, (unsigned char*)&addr) )
+		if ( ipadr_is_same_or0(s->local_ip, ipref_4l(addr) ) )
 			return 1;
 	return 0;
 }
@@ -62,7 +62,7 @@ find_first_socket (ip_t *ip)
 	found_addr = 0;
 	found_port = 0;
 	for (s=ip->udp_sockets; s; s=s->next) {
-		a = s->local_ip ? LONG (s->local_ip) : 0;
+		a = s->local_ip ? LONG (ipref_as_ucs(s->local_ip)) : 0;
 /*debug_printf ("find_first_socket compare %p\n", found);*/
 		if (! found || a < found_addr ||
 		    (a == found_addr && s->local_port < found_port)) {
@@ -88,7 +88,7 @@ find_next_socket (ip_t *ip, unsigned long addr, unsigned port)
 	found_addr = 0;
 	found_port = 0;
 	for (s=ip->udp_sockets; s; s=s->next) {
-		a = s->local_ip ? LONG (s->local_ip) : 0;
+		a = s->local_ip ? LONG (ipref_as_ucs(s->local_ip)) : 0;
 		if (a < addr || (a == addr && s->local_port <= port))
 			continue;
 
@@ -119,7 +119,7 @@ asn_t *snmp_next_udpLocalAddress (snmp_t *snmp, bool_t nextflag,
 		s = find_next_socket (snmp->ip, *addr, *port);
 	else	s = find_first_socket (snmp->ip);
 	if (s) {
-		*addr = s->local_ip ? LONG (s->local_ip) : 0;
+		*addr = s->local_ip ? LONG (ipref_as_ucs(s->local_ip)) : 0;
 		*port = s->local_port;
 	} else	return 0;
 
@@ -143,7 +143,7 @@ asn_t *snmp_next_udpLocalPort (snmp_t *snmp, bool_t nextflag,
 		s = find_next_socket (snmp->ip, *addr, *port);
 	else	s = find_first_socket (snmp->ip);
 	if (s) {
-		*addr = s->local_ip ? LONG (s->local_ip) : 0;
+		*addr = s->local_ip ? LONG (ipref_as_ucs(s->local_ip)) : 0;
 		*port = s->local_port;
 	} else	return 0;
 

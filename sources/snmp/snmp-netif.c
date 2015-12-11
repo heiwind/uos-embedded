@@ -19,7 +19,7 @@ snmp_get_ifNumber (snmp_t *snmp, ...)
 	count = 0;
 	for (r=snmp->ip->route; r; r=r->next)
 		/* Count all interface records. */
-		if (r->netif && ! r->gateway[0])
+		if (r->netif && ! r->gateway.ucs[0])
 			++count;
 
 	return asn_make_int (snmp->pool, count, ASN_INTEGER);
@@ -37,7 +37,7 @@ find_netif (route_t *tab, unsigned nif)
 	if (nif <= 0)
 		return 0;
 	for (r=tab; r; r=r->next)
-		if (r->netif && ! r->gateway[0])
+		if (r->netif && ! r->gateway.ucs[0])
 			if (--nif == 0)
 				return r->netif;
 	return 0;

@@ -262,7 +262,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	/* Check if the address already is in use. */
 	for (cs = ip->tcp_listen_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if ( ipadr_is_same(targetip, cs->local_ip) ) {
+			if ( ipadr_is_same(targetip.var, cs->local_ip) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -271,7 +271,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	}
 	for (cs = ip->tcp_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if (ipadr_is_same(targetip, cs->local_ip) ) {
+			if (ipadr_is_same(targetip.var, cs->local_ip) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -279,8 +279,8 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 		}
 	}
 
-	if ( ipadr_not0(targetip) ) {
-		s->local_ip = targetip;
+	if ( ipadr_not0(targetip.var) ) {
+		s->local_ip = targetip.var;
 	}
 	s->local_port = port;
 	s->state = LISTEN;
@@ -331,7 +331,7 @@ again:
 	iph = ((ip_hdr_t*) p->payload) - 1;
 
 	/* Set up the new PCB. */
-	ns->local_ip = iph->dest;
+	ns->local_ip = iph->dest.var;
 	ns->local_port = s->local_port;
 	ns->remote_ip  = iph->src;
 	ns->remote_port = h->src;
@@ -462,7 +462,7 @@ tcp_abort (tcp_socket_t *s)
 	}
 
 	tcp_debug ("tcp_abort: sending RST\n");
-	tcp_rst (ip, seqno, ackno, s->local_ip.ucs, s->remote_ip.ucs,
+	tcp_rst (ip, seqno, ackno, ipref_as_ucs(s->local_ip), s->remote_ip.ucs,
 		local_port, remote_port);
 	mutex_unlock (&ip->lock);
 }
