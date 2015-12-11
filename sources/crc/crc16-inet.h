@@ -1,3 +1,11 @@
+#ifndef UOS_CRCINET_H
+#define UOS_CRCINET_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /*
  * Computing 16-bit checksum (IP-compatible).
  */
@@ -9,3 +17,11 @@ unsigned short crc16_inet (unsigned short sum, unsigned const char *buf,
 unsigned short crc16_inet_header (unsigned char *src, unsigned char *dest,
 	unsigned char proto, unsigned short proto_len);
 unsigned short crc16_inet_byte (unsigned short sum, unsigned char data);
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // UOS_CRCINET_H

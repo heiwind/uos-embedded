@@ -35,22 +35,24 @@ bool_t task_need_schedule;
 /*
  * Switch to most priority task if needed.
  */
+CODE_ISR 
 void task_schedule ()
 {
-	task_t *new;
+	task_t *new_task;
 
 	task_need_schedule = 0;
-	new = task_policy ();
-	if (new != task_current) {
-		new->ticks++;
-		arch_task_switch (new);
+	new_task = task_policy ();
+	if (new_task != task_current) {
+		new_task->ticks++;
+		arch_task_switch (new_task);
 	}
 }
 
 /*
  * Activate all waiters of the lock.
  */
-void
+CODE_ISR 
+void 
 mutex_activate (mutex_t *m, void *message)
 {
 	task_t *t;
@@ -75,7 +77,9 @@ mutex_activate (mutex_t *m, void *message)
 		s->active = 1;
 		t = s->group->waiter;
 		if (t) {
-			assert (list_is_empty (&t->item));
+		    //group_lockwait - use groun in paralel with 
+		    //  lock operation
+			//assert (list_is_empty (&t->item));
 			s->group->waiter = 0;
 			task_activate (t);
 		}
@@ -98,6 +102,7 @@ uos_post_init ()
  * The idle task uses the default system stack.
  */
 int __attribute__ ((weak))
+__attribute ((noreturn))
 main (void)
 {
 	/* Create the idle task. */

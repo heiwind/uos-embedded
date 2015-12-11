@@ -42,11 +42,12 @@ static  void	ProcDeleteProc (void *clientData);
 
 	/* ARGSUSED */
 int
-Tcl_ProcCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    Tcl_Interp *interp;			/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_ProcCmd(
+    void *dummy			/* Not used. */
+    , Tcl_Interp *interp			/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
     register Proc *procPtr;
@@ -64,7 +65,7 @@ Tcl_ProcCmd(dummy, interp, argc, argv)
 
     procPtr = (Proc*) mem_alloc (interp->pool, sizeof(Proc));
     procPtr->iPtr = iPtr;
-    procPtr->command = mem_alloc (interp->pool, strlen(argv[3]) + 1);
+    procPtr->command = (unsigned char *)mem_alloc (interp->pool, strlen(argv[3]) + 1);
     strcpy(procPtr->command, argv[3]);
     procPtr->argPtr = 0;
 
@@ -150,7 +151,7 @@ Tcl_ProcCmd(dummy, interp, argc, argv)
     }
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -177,11 +178,12 @@ Tcl_ProcCmd(dummy, interp, argc, argv)
  */
 
 int
-TclGetFrame(interp, string, framePtrPtr)
-    Tcl_Interp *interp;		/* Interpreter in which to find frame. */
-    unsigned char *string;	/* String describing frame. */
-    CallFrame **framePtrPtr;	/* Store pointer to frame here (or NULL
+TclGetFrame(
+    Tcl_Interp *interp		/* Interpreter in which to find frame. */
+    , unsigned char *string	/* String describing frame. */
+    , CallFrame **framePtrPtr	/* Store pointer to frame here (or NULL
 				 * if global frame indicated). */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
     int level, result;
@@ -238,7 +240,7 @@ TclGetFrame(interp, string, framePtrPtr)
     *framePtrPtr = framePtr;
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -258,11 +260,12 @@ TclGetFrame(interp, string, framePtrPtr)
 
 	/* ARGSUSED */
 int
-Tcl_UplevelCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    Tcl_Interp *interp;			/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_UplevelCmd(
+    void *dummy			/* Not used. */
+    , Tcl_Interp *interp			/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
     int result;
@@ -323,7 +326,7 @@ Tcl_UplevelCmd(dummy, interp, argc, argv)
     iPtr->varFramePtr = savedVarFramePtr;
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -344,9 +347,10 @@ Tcl_UplevelCmd(dummy, interp, argc, argv)
  */
 
 Proc *
-TclFindProc(iPtr, procName)
-    Interp *iPtr;		/* Interpreter in which to look. */
-    unsigned char *procName;	/* Name of desired procedure. */
+TclFindProc(
+    Interp *iPtr		/* Interpreter in which to look. */
+    , unsigned char *procName	/* Name of desired procedure. */
+    )
 {
     Tcl_HashEntry *hPtr;
     Command *cmdPtr;
@@ -361,7 +365,7 @@ TclFindProc(iPtr, procName)
     }
     return (Proc *) cmdPtr->clientData;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -381,15 +385,16 @@ TclFindProc(iPtr, procName)
  */
 
 Proc *
-TclIsProc(cmdPtr)
-    Command *cmdPtr;		/* Command to test. */
+TclIsProc(
+    Command *cmdPtr		/* Command to test. */
+    )
 {
     if (cmdPtr->proc == InterpProc) {
 	return (Proc *) cmdPtr->clientData;
     }
     return (Proc *) 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -408,14 +413,12 @@ TclIsProc(cmdPtr)
  */
 
 static int
-InterpProc(clientData, interp, argc, argv)
-    void *clientData;		/* Record describing procedure to be
-				 * interpreted. */
-    Tcl_Interp *interp;		/* Interpreter in which procedure was
-				 * invoked. */
-    int argc;			/* Count of number of arguments to this
-				 * procedure. */
-    unsigned char **argv;	/* Argument values. */
+InterpProc(
+    void *clientData		/* Record describing procedure to be interpreted. */
+    , Tcl_Interp *interp		/* Interpreter in which procedure was invoked. */
+    , int argc			/* Count of number of arguments to this procedure. */
+    , unsigned char **argv	/* Argument values. */
+    )
 {
     register Proc *procPtr = (Proc *) clientData;
     register Arg *argPtr;
@@ -525,7 +528,7 @@ InterpProc(clientData, interp, argc, argv)
     TclDeleteVars(iPtr, &frame.varTable);
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -545,8 +548,9 @@ InterpProc(clientData, interp, argc, argv)
  */
 
 static void
-ProcDeleteProc(clientData)
-    void *clientData;		/* Procedure to be deleted. */
+ProcDeleteProc(
+    void *clientData		/* Procedure to be deleted. */
+    )
 {
     register Proc *procPtr = (Proc *) clientData;
     register Arg *argPtr;

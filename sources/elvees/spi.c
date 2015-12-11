@@ -165,7 +165,7 @@ repack_to_dma(void *dma_buf, const void *src_buf, unsigned words, unsigned bits)
     const uint8_t  *pu8 = (uint8_t *) src_buf;
     const uint16_t *pu16 = (uint16_t *) src_buf;
     uint32_t       *pdma = (uint32_t *) dma_buf;
-    int       i;
+    unsigned       i;
 
     if (bits <= 8) {
         if (!pu8)
@@ -188,10 +188,10 @@ repack_to_dma(void *dma_buf, const void *src_buf, unsigned words, unsigned bits)
 static void
 repack_from_dma(const void *dma_buf, void *dst_buf, unsigned words, unsigned bits)
 {
-    uint8_t         *pu8 = dst_buf;
-    uint16_t        *pu16 = dst_buf;
-    const uint32_t  *pdma = dma_buf;
-    int         i;
+    uint8_t         *pu8 = (uint8_t*)dst_buf;
+    uint16_t        *pu16 = (uint16_t*)dst_buf;
+    const uint32_t  *pdma = (const uint32_t*)dma_buf;
+    unsigned         i;
 
     if (!dst_buf)
         return;

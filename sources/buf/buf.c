@@ -13,7 +13,7 @@ buf_alloc (mem_pool_t *m, unsigned short size, unsigned short reserved)
 	buf_t *p;
 
 	/* Allocate memory for it. */
-	p = mem_alloc_dirty (m, sizeof(buf_t) + size + reserved);
+	p = (buf_t *)mem_alloc_dirty (m, sizeof(buf_t) + size + reserved);
 	if (! p)
 		return 0;
 
@@ -155,7 +155,7 @@ buf_make_continuous (buf_t *p)
 	next = p->next;
 	/* Reallocate the first chunk, to make it big enough. */
 	header_size = (p->payload - (unsigned char*) p);
-	p = mem_realloc (p, p->tot_len + header_size);
+	p = (buf_t *)mem_realloc (p, p->tot_len + header_size);
 	if (! p) {
 		/* Free all other chunks to the end of the first chunk. */
 		for (q = next; q; q = next) {

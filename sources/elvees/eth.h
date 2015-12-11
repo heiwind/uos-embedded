@@ -22,6 +22,12 @@
 #include <net/netif.h>
 #include <buf/buf-queue.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 #ifndef ETH_STACKSZ
 #   define ETH_STACKSZ		1000
 #endif
@@ -39,8 +45,6 @@
 #endif
 
 struct _mem_pool_t;
-struct _stream_t *stream;
-
 typedef struct _eth_t {
 	netif_t netif;			/* common network interface part */
 	mutex_t tx_lock;		/* get tx interrupts here */
@@ -136,5 +140,11 @@ void eth_set_promisc (eth_t *u, int station, int group);
 //	u		указатель на структуру, описывающую интерфейс
 //
 void eth_poll (eth_t *u);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __NVCOM_ETH_H */

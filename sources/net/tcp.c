@@ -194,7 +194,7 @@ tcp_alloc (ip_t *ip)
 	tcp_socket_t *s;
 	unsigned long iss;
 
-	s = mem_alloc (ip->pool, sizeof(tcp_socket_t));
+	s = (tcp_socket_t *)mem_alloc (ip->pool, sizeof(tcp_socket_t));
 	if (s == 0) {
 		return 0;
 	}

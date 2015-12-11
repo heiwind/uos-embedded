@@ -10,7 +10,7 @@ unsigned char *mem_strndup (mem_pool_t *m, const unsigned char *str,
 		return 0;
 
 	len = strnlen (str, len);
-	p = mem_alloc_dirty (m, len + 1);
+	p = (unsigned char *)mem_alloc_dirty (m, len + 1);
 	if (! p)
 		return 0;
 

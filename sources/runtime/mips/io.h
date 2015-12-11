@@ -157,6 +157,7 @@
 /*
  * Set value of stack pointer register.
  */
+CODE_ISR 
 static void inline __attribute__ ((always_inline))
 mips_set_stack_pointer (void *x)
 {
@@ -168,6 +169,7 @@ mips_set_stack_pointer (void *x)
 /*
  * Get value of stack pointer register.
  */
+CODE_ISR 
 static inline __attribute__ ((always_inline))
 void *mips_get_stack_pointer ()
 {

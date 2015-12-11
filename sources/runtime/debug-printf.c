@@ -1,3 +1,4 @@
+#include <uos-conf.h>
 #include <runtime/lib.h>
 #include <stream/stream.h>
 
@@ -28,13 +29,19 @@ debug_printf (const char *fmt, ...)
 int
 debug_vprintf (const char *fmt, va_list args)
 {
+#ifndef NDEBUG
 	int err;
 
 	err = vprintf (&debug, fmt, args);
 	return err;
+#else
+    return 0;
+#endif
 }
 
 void debug_putc (char c)
 {
+#ifndef NDEBUG
 	debug_putchar (0, c);
+#endif
 }

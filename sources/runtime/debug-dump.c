@@ -13,7 +13,7 @@ void debug_dump (const char *caption, void* data, unsigned len)
 			lot = 16;
 
 		debug_printf ("[+%04X]:", offset);
-		h = data; h += offset; t = h; offset += lot;
+		h = (uint8_t*)data; h += offset; t = h; offset += lot;
 
 		i = 17 * 3;
 		do {

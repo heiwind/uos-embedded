@@ -171,7 +171,7 @@ static int m25pxx_erase_sectors(flashif_t *flash, unsigned sector_num,
     unsigned nb_sectors)
 {
     int res;
-    int i;
+    unsigned i;
     mutex_lock(&flash->lock);
     for (i = 0; i < nb_sectors; ++i) {
         res = erase_sector(flash, sector_num + i);
@@ -254,7 +254,7 @@ static int cyclic_func(flashif_t *flash, unsigned address,
 {
     int res;
     unsigned cur_size = size;
-    uint8_t *cur_data = data;
+    uint8_t *cur_data = (uint8_t *)data;
     
     mutex_lock(&flash->lock);
     

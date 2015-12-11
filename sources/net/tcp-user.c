@@ -200,7 +200,7 @@ tcp_read_poll (tcp_socket_t *s, void *arg, unsigned short len, int nonblock)
 	mutex_unlock (&s->ip->lock);
 
 	/* Copy all chunks. */
-	buf = arg;
+	buf = (char *)arg;
 	n = 0;
 	for (q=p; q!=0 && n<len; q=q->next) {
 		int bytes;
@@ -241,7 +241,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	if (! ipaddr) {
 		ipaddr = (unsigned char*) "\0\0\0\0";
 	}
-	s = mem_alloc (ip->pool, sizeof (tcp_socket_t));
+	s = (tcp_socket_t *)mem_alloc (ip->pool, sizeof (tcp_socket_t));
 	if (s == 0) {
 		return 0;
 	}

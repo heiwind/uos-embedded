@@ -287,7 +287,7 @@ stream_t *telnet_init (tcp_socket_t *sock)
 {
 	telnet_t *u;
 
-	u = mem_alloc (sock->ip->pool, sizeof (*u));
+	u = (telnet_t *)mem_alloc (sock->ip->pool, sizeof (*u));
 	if (! u)
 		return 0;
 	u->stream.interface = &telnet_interface;

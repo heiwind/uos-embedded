@@ -277,10 +277,10 @@ double      y0 (double);
 double      y1 (double);
 double      yn (int, double);
 
-#if I386
+#ifdef I386
 #include <runtime/i386/mathinline.h>
 #endif
-#if MIPS32
+#ifdef MIPS32
 #include <runtime/mips/mathinline.h>
 #endif
 

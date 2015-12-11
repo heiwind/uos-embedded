@@ -16,6 +16,10 @@
 
 extern volatile uint32_t __timer_ticks_uos;
 
+#ifndef CODE_ISR
+#define CODE_ISR
+#endif
+
 #if I386
 #   include <runtime/i386/i8253.h>
 #   define TIMER_IRQ        0   /* IRQ0 */
@@ -159,22 +163,38 @@ extern volatile uint32_t __timer_ticks_uos;
  * Проверка, прошло ли указанное количество миллисекунд `msec'.
  * Параметр `interval' содержит интервал времени, возможно, переходящий границу суток.
  */
-small_int_t
+CODE_ISR 
+bool_t 
 interval_greater_or_equal (long interval, long msec)
 {
+#ifndef TIMER_NO_DAYS
     if (interval < 0)
         interval += TIMER_MSEC_PER_DAY;
-    else if (interval >= TIMER_MSEC_PER_DAY)
+    else if (interval >= (long)TIMER_MSEC_PER_DAY)
         interval -= TIMER_MSEC_PER_DAY;
     return (interval >= msec);
+#else
+    if (interval < 0)
+        interval = -interval;
+    return (interval >= msec);
+#endif
 }
+
+
 
 /*
  * Timer update function.
  */
 #ifndef SW_TIMER
-static inline
+
+CODE_ISR 
+inline void timer_mutex_note(mutex_t* t, unsigned long message){
+    mutex_awake (t, (void*) message);
+}
 #endif
+
+CODE_ISR 
+static inline
 void timer_update (timer_t *t)
 {
 	__timer_ticks_uos++;
@@ -214,60 +234,79 @@ void timer_update (timer_t *t)
 #   endif
 #endif
 
+#ifdef USEC_TIMER
+    const unsigned long interval = t->usec_per_tick;
+#else
+    const unsigned long interval = t->msec_per_tick;
+#endif
+    unsigned long msec = t->milliseconds;
+#ifndef TIMER_NO_DECISEC
+    unsigned long nextdec = t->next_decisec;
+#else
+    unsigned long nextdec = msec;
+#endif
+
     /* Increment current time. */
 #ifdef USEC_TIMER
-    t->usec_in_msec += t->usec_per_tick;
-    while (t->usec_in_msec > TIMER_USEC_PER_MSEC) {
-        t->milliseconds++;
-        t->usec_in_msec -= TIMER_USEC_PER_MSEC;
+    unsigned long usec = t->usec_in_msec;
+    usec += interval;
+    while (usec > t->usec_per_tick_msprec){
+        usec -= t->usec_per_tick_msprec;
+        msec += t->msec_per_tick;
     }
+    while (usec > TIMER_USEC_PER_MSEC) {
+        msec++;
+        usec -= TIMER_USEC_PER_MSEC;
+    }
+    t->usec_in_msec = usec;
 #else
-    t->milliseconds += t->msec_per_tick;
+    msec += interval;
 #endif
 
-    if (t->milliseconds >= TIMER_MSEC_PER_DAY) {
-        ++t->days;
-        t->milliseconds -= TIMER_MSEC_PER_DAY;
-        t->next_decisec -= TIMER_MSEC_PER_DAY;
+#ifndef TIMER_NO_DAYS
+    if (msec >= TIMER_MSEC_PER_DAY) {
+        t->days++;
+        msec -= TIMER_MSEC_PER_DAY;
+        nextdec -= TIMER_MSEC_PER_DAY;
     }
+#endif
 
+    t->milliseconds = msec;
+
+#ifndef TIMER_NO_DECISEC
     /* Send signal every 100 msec. */
 #ifdef USEC_TIMER
-    if (t->usec_per_tick / 1000 <= 100 &&
+    if ((interval >= (TIMER_DECISEC_MS*1000ul)) ||
 #else
-    if (t->msec_per_tick <= 100 &&
+    if ((interval >= TIMER_DECISEC_MS) ||
 #endif
-        t->milliseconds >= t->next_decisec) {
-        t->next_decisec += 100;
+        (msec >= nextdec)) 
+    {
+        nextdec += TIMER_DECISEC_MS;
 /*debug_printf ("<ms=%lu,nxt=%lu> ", t->milliseconds, t->next_decisec);*/
-        if (! list_is_empty (&t->decisec.waiters) ||
-            ! list_is_empty (&t->decisec.groups)) {
-            mutex_activate (&t->decisec,
-                (void*) (size_t) t->milliseconds);
-        }
+        timer_mutex_note(&t->decisec, msec);
     }
+    t->next_decisec = nextdec;
+#endif
 
 #ifdef USER_TIMERS
     if (! list_is_empty (&t->user_timers)) {
         user_timer_t *ut;
         list_iterate (ut, &t->user_timers) {
+            long now = ut->cur_time;
+            if (now <= 0) continue;
+            now  -= interval;
+            if (now <= 0) {
 #ifdef USEC_TIMER
-            ut->cur_time -= t->usec_per_tick;
+                    now += ut->usec_per_tick;
 #else
-            ut->cur_time -= t->msec_per_tick;
+                    now += ut->msec_per_tick;
 #endif
-            if (ut->cur_time <= 0) {
-                if (! list_is_empty (&ut->lock.waiters) ||
-                        ! list_is_empty (&t->decisec.groups)) {
-                    mutex_activate (&ut->lock,
-                        (void*) (size_t) t->milliseconds);
-#ifdef USEC_TIMER
-                    ut->cur_time += ut->usec_per_tick;
-#else
-                    ut->cur_time += ut->msec_per_tick;
-#endif
-                }
+                ut->cur_time = now;
+                timer_mutex_note(&ut->lock, msec);
             }
+            else
+            ut->cur_time = now;
         }
     }
 #endif
@@ -276,7 +315,8 @@ void timer_update (timer_t *t)
 /*
  * Timer interrupt handler.
  */
-bool_t
+CODE_ISR 
+bool_t 
 timer_handler (timer_t *t)
 {
     timer_update (t);
@@ -290,40 +330,31 @@ timer_handler (timer_t *t)
 }
 
 /**\~english
- * Return the (real) time in milliseconds since uOS start.
- *
- * \~russian
- * Запрос времени в миллисекундах.
- */
-unsigned long
-timer_milliseconds (timer_t *t)
-{
-    unsigned long val;
-
-    mutex_lock (&t->lock);
-    val = t->milliseconds;
-    mutex_unlock (&t->lock);
-    return val;
-}
-
-/**\~english
  * Return the (real) time in days and milliseconds since uOS start.
  *
  * \~russian
  * Запрос времени в сутках и миллисекундах.
  */
+#ifndef TIMER_NO_DAYS
 unsigned int
 timer_days (timer_t *t, unsigned long *milliseconds)
 {
     unsigned short val;
 
-    mutex_lock (&t->lock);
-    if (milliseconds)
+    if (!milliseconds){
+        val = t->days;
+    }
+    else{
         *milliseconds = t->milliseconds;
-    val = t->days;
-    mutex_unlock (&t->lock);
+        val = t->days;
+        while (*milliseconds != t->milliseconds){
+            *milliseconds = t->milliseconds;
+            val = t->days;
+        } 
+    }
     return val;
 }
+#endif
 
 /**\~english
  * Delay the current task by the given time in milliseconds.
@@ -336,12 +367,21 @@ timer_delay (timer_t *t, unsigned long msec)
 {
     unsigned long t0;
 
-    mutex_lock (&t->lock);
     t0 = t->milliseconds;
     while (! interval_greater_or_equal (t->milliseconds - t0, msec)) {
         mutex_wait (&t->lock);
     }
-    mutex_unlock (&t->lock);
+}
+
+void
+timer_delay_ticks (timer_t *t, clock_time_t ticks)
+{
+    unsigned long t0;
+
+    t0 = t->tick;
+    while ((t->tick - t0) < ticks) {
+        mutex_wait (&t->lock);
+    }
 }
 
 /**\~english
@@ -353,16 +393,23 @@ timer_delay (timer_t *t, unsigned long msec)
 bool_t
 timer_passed (timer_t *t, unsigned long t0, unsigned int msec)
 {
-    unsigned long now;
-
-    mutex_lock (&t->lock);
-    now = t->milliseconds;
-    mutex_unlock (&t->lock);
-
+    unsigned long now = timer_milliseconds(t);
     return interval_greater_or_equal (now - t0, msec);
 }
 
 #ifdef USEC_TIMER
+
+static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
+    //res = khz*usec_per_tick /1000
+    unsigned long long res = khz>>3;
+    res = res * usec_per_tick;
+    const long Nmod = 128*128; 
+    //res = res*(Nmod/125);
+    //return res/Nmod;
+    res = res / 125;
+    return res;
+} 
+
 /**\~english
  * Nanosecond Timer initialization.
  *
@@ -373,6 +420,12 @@ void
 timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 {
     t->usec_per_tick = usec_per_tick;
+    unsigned tick_ms = usec_per_tick/1000;
+    t->msec_per_tick = tick_ms;
+    if (tick_ms > 0)
+        t->usec_per_tick_msprec = tick_ms*1000;
+    else
+        t->usec_per_tick_msprec = ~0;
     t->khz = khz;
 
 #ifndef SW_TIMER
@@ -383,13 +436,13 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 #if ARM_1986BE9
     ARM_SYSTICK->CTRL = 0;
     ARM_SYSTICK->VAL = 0;
-    ARM_SYSTICK->LOAD = t->khz / 1000 * t->usec_per_tick - 1;
+    ARM_SYSTICK->LOAD = timer_period_byus(khz, usec_per_tick) - 1;
     ARM_SYSTICK->CTRL = ARM_SYSTICK_CTRL_ENABLE |
                 ARM_SYSTICK_CTRL_TICKINT |
                 ARM_SYSTICK_CTRL_HCLK;
-#endif // ARM_1986BE9
+//#endif // ARM_1986BE9
 
-#if ARM_1986BE1
+#elif ARM_1986BE1
     ARM_RSTCLK->PER_CLOCK |= PER_CLOCK_EN;
 #if (ARM_SYS_TIMER==4)
     ARM_RSTCLK->UART_CLOCK |= TIM_CLK_EN;
@@ -398,9 +451,21 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 #endif
     SYS_TIMER->TIM_CNT = 0;
     SYS_TIMER->TIM_PSG = 0;
-    SYS_TIMER->TIM_ARR = t->khz / 1000 * t->usec_per_tick - 1;
+    SYS_TIMER->TIM_ARR = timer_period_byus(khz, usec_per_tick) - 1;
     SYS_TIMER->TIM_IE = ARM_TIM_CNT_ARR_EVENT_IE;
     SYS_TIMER->TIM_CNTRL = ARM_TIM_CNT_EN;
+//#endif
+
+#elif defined (ELVEES)
+    /* Use interval timer with prescale 1:1. */
+    MC_ITCSR = 0;
+    MC_ITSCALE = 0;
+    MC_ITPERIOD = timer_period_byus(khz, usec_per_tick) - 1;
+    MC_ITCSR = MC_ITCSR_EN;
+//#endif
+
+#else
+#   error "TIMER cant initialise unsupported chip\n"
 #endif
 
 
@@ -410,7 +475,8 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
     list_init (&t->user_timers);
 #endif
 }
-#else
+
+#else //USEC_TIMER
 
 /**\~english
  * Create timer task.
@@ -418,7 +484,7 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
  * \~russian
  * Инициализация таймера.
  */
-void
+void CODE_ISR
 timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick)
 {
     t->msec_per_tick = msec_per_tick;
@@ -572,6 +638,75 @@ void user_timer_init_us (user_timer_t *ut, unsigned long usec_per_tick)
     ut->cur_time = usec_per_tick;
     list_init (&ut->item);
 }
+
+/**\~russian
+ * запускает периодический таймер с текущего момента.
+ * xsec_interval - период событий таймера
+ * вызов   user_timer_set(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_set_us  (user_timer_t *ut, usertimer_time_t usec_interval)
+{
+    arch_state_t x;
+    arch_intr_disable (&x);
+    ut->usec_per_tick = usec_interval;
+    ut->cur_time = usec_interval;
+    arch_intr_restore (x);
+}
+
+/**\~russian
+ * запускает одноразовый таймер с текущего момента.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_arm_us  (user_timer_t *ut, usertimer_time_t usec_time)
+{
+    arch_state_t x;
+    arch_intr_disable (&x);
+    ut->usec_per_tick = 0;
+    ut->cur_time = usec_time;
+    arch_intr_restore (x);
+}
+
+/**\~russian
+ * запускает одноразовый таймер с момента предыдущего события.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * !!! если вновь выставленное событие уже просрочено - возвращается true
+ * return false - если запущеное событие еще ожидается  
+ * */
+bool_t user_timer_rearm_us  (user_timer_t *ut, usertimer_time_t usec_time){
+    arch_state_t x;
+    bool_t res;
+    arch_intr_disable (&x);
+    ut->usec_per_tick = 0;
+    ut->cur_time += usec_time;
+    res = ut->cur_time <=0;
+    arch_intr_restore (x);
+    return res;
+}
+
+//void user_timer_reset   (user_timer_t *ut);
+
+/**\~russian
+ * перезапускает периодический таймер с момента предыдущего события.
+ * xsec_interval - новый период событий таймера
+ * вызов   user_timer_restart_interval(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_restart_interval_us (user_timer_t *ut, usertimer_time_t usec_interval){
+    arch_state_t x;
+    arch_intr_disable (&x);
+    if (ut->cur_time > 0){
+        long delta = ut->usec_per_tick - usec_interval;
+        ut->usec_per_tick += delta;
+        ut->cur_time += delta;
+    }
+    else{
+        ut->cur_time += usec_interval;
+        ut->usec_per_tick = usec_interval;
+    }
+    arch_intr_restore (x);
+}
+
 #else
 void user_timer_init (user_timer_t *ut, small_uint_t msec_per_tick)
 {
@@ -579,7 +714,76 @@ void user_timer_init (user_timer_t *ut, small_uint_t msec_per_tick)
     ut->cur_time = msec_per_tick;
     list_init (&ut->item);
 }
-#endif // USEC_TIMER
+
+/**\~russian
+ * запускает периодический таймер с текущего момента.
+ * xsec_interval - период событий таймера
+ * вызов   user_timer_set(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_set  (user_timer_t *ut, usertimer_time_t msec_interval)
+{
+    arch_state_t x;
+    arch_intr_disable (&x);
+    ut->msec_per_tick = msec_interval;
+    ut->cur_time = msec_interval;
+    arch_intr_restore (x);
+}
+
+
+/**\~russian
+ * запускает одноразовый таймер с текущего момента.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_arm  (user_timer_t *ut, usertimer_time_t msec_time)
+{
+    arch_state_t x;
+    arch_intr_disable (&x);
+    ut->msec_per_tick = 0;
+    ut->cur_time = msec_time;
+    arch_intr_restore (x);
+}
+
+/**\~russian
+ * запускает одноразовый таймер с момента предыдущего события.
+ * xsec_time - время задержки события таймера
+ * вызов   user_timer_arm(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * !!! если вновь выставленное событие уже просрочено - возвращается true
+ * return false - если запущеное событие еще ожидается  
+ * */
+bool_t user_timer_rearm  (user_timer_t *ut, usertimer_time_t msec_time){
+    arch_state_t x;
+    bool_t res;
+    arch_intr_disable (&x);
+    ut->msec_per_tick = 0;
+    ut->cur_time += msec_time;
+    res = ut->cur_time <=0;
+    arch_intr_restore (x);
+    return res;
+}
+
+//void user_timer_reset   (user_timer_t *ut);
+
+/**\~russian
+ * перезапускает периодический таймер с момента предыдущего события.
+ * xsec_interval - новый период событий таймера
+ * вызов   user_timer_restart_interval(, 0) - останавливает таймер, аналогичен user_timer_stop
+ * */
+void user_timer_restart_interval (user_timer_t *ut, usertimer_time_t msec_interval){
+    arch_state_t x;
+    arch_intr_disable (&x);
+    if (ut->cur_time > 0){
+        long delta = ut->msec_per_tick - msec_interval;
+        ut->msec_per_tick += delta;
+        ut->cur_time += delta;
+    }
+    else{
+        ut->cur_time += msec_interval;
+        ut->msec_per_tick = msec_interval;
+    }
+    arch_intr_restore (x);
+}
+#endif // no USEC_TIMER
 
 void user_timer_add (timer_t *t, user_timer_t *ut)
 {
@@ -588,9 +792,38 @@ void user_timer_add (timer_t *t, user_timer_t *ut)
     mutex_unlock (&t->lock);
 }
 
+void user_timer_remove (timer_t *t, user_timer_t *ut){
+    mutex_lock (&t->lock);
+    list_unlink (&ut->item);
+    mutex_unlock (&t->lock);
+}
+
 void user_timer_wait (user_timer_t *ut)
 {
     mutex_wait (&ut->lock);
 }
+
+/**\~russian
+ * останавливает активность таймера.
+ * при этом теряются его параметры - точка старта, период  
+ * */
+void user_timer_stop (user_timer_t *ut){
+    while (ut->cur_time != 0)
+        ut->cur_time = 0;
+}
+
+/**\~russian
+ * перезапускает периодический таймер с текущего момента.
+ * */
+void user_timer_restart (user_timer_t *ut){
+#ifdef USEC_TIMER
+    while (ut->cur_time != (long)ut->usec_per_tick)
+        ut->cur_time = ut->usec_per_tick;
+#else
+    while (ut->cur_time != ut->msec_per_tick)
+        ut->cur_time = ut->msec_per_tick;
+#endif
+}
+
 #endif // USER_TIMERS
 

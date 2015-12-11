@@ -4,6 +4,10 @@
 #include <kernel/uos.h>
 #include <timer/timer.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct timeval {
 	long tv_sec;		/* seconds */
 	long tv_usec;		/* microseconds */
@@ -13,6 +17,13 @@ struct timespec {
 	long tv_sec;		/* seconds */
 	long tv_nsec;		/* nanoseconds */
 };
+
+struct itimerspec {
+  struct timespec  it_interval;  /* Timer period */
+  struct timespec  it_value;     /* Timer expiration */
+};
+
+#define __time_t_defined
 
 struct timezone {
 	int tz_minuteswest;	/* Greenwitch offset */
@@ -36,5 +47,9 @@ static inline int gettimeofday (struct timeval *tv, struct timezone *tz)
 	}
 	return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

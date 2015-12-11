@@ -4,31 +4,10 @@
 extern "C" {
 #endif
 
-/*
- * Reading a byte from flash memory.
- * By default - handle it like a simple pointer.
- */
-#define FETCH_BYTE(p)	(*(unsigned char*)(p))
-#define FETCH_WORD(p)	(*(unsigned short*)(p))
-#define FETCH_LONG(p)	(*(unsigned long*)(p))
-#define FETCH_PTR(p)	({ void *x = (void*)(p); *(void**)x; })
+#include <runtime/sys/uosc.h>
 
-#define ARRAY_LENGTH(array)	(sizeof (array) / sizeof ((array)[0]))
-#define ARRAY_END(array)	((array) + ARRAY_LENGTH (array))
-
-/*
- * Define an external name with a given value.
- */
-#define ASSIGN_VIRTUAL_ADDRESS(name, val)		\
-		asm volatile (				\
-		".globl " #name "\n\t"			\
-		".set " #name ", %0"			\
-		:: "n" (val))
-
-#include <runtime/byteorder.h>
-#define __LITTLE_ENDIAN 1234
-#define __BIG_ENDIAN    4321
 #include <runtime/arch.h>
+#include <runtime/byteorder.h>
 #include <runtime/assert.h>
 #include <runtime/list.h>
 
@@ -37,9 +16,6 @@ void qsort (void *a, size_t n, size_t es,
 	int (*cmp)(const void*, const void*));
 void *bsearch (const void *key, const void *base, size_t nmemb, size_t size,
 	int (*compar) (const void *, const void *));
-unsigned char *strstr (const char *haystack, const unsigned char *needle);
-int strspn (const unsigned char *s, const unsigned char *accept);
-int strcspn (const unsigned char *s, const unsigned char *reject);
 #endif /* __LINUX__ */
 
 #ifdef __GNUC__
@@ -58,12 +34,37 @@ void debug_putchar (void *arg, short c);
 void debug_putc (char c);
 unsigned short debug_getchar (void);
 int debug_peekchar (void);
+
+#ifndef NDEBUG
+
 void debug_puts (const char *str);
 int debug_printf (const char *fmt, ...);
 int debug_vprintf (const char *fmt, va_list args);
 void debug_dump (const char *caption, void* data, unsigned len);
 void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee);
 void debug_redirect (void (*func) (void*, short), void *arg);
+
+#else
+
+INLINE
+void debug_puts (const char *str){};
+
+INLINE
+int debug_printf (const char *fmt, ...){return 0;};
+
+INLINE
+int debug_vprintf (const char *fmt, va_list args){return 0;};
+
+INLINE
+void debug_dump (const char *caption, void* data, unsigned len){};
+
+INLINE
+void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee){};
+
+INLINE
+void debug_redirect (void (*func) (void*, short), void *arg){};
+
+#endif
 
 /*
  * Call global C++ constructors.
@@ -94,32 +95,32 @@ bool_t uos_valid_memory_address (void*);
 void uos_halt (int);
 
 #ifndef __AVR__
-static inline unsigned
+INLINE unsigned
 strlen_flash (const char *str)
 {
 	return (unsigned) strlen ((const unsigned char*) str);
 }
 
-static inline void
+INLINE void
 memcpy_flash (void *dest, const char *src, unsigned char len)
 {
 	memcpy (dest, src, len);
 }
 
-static inline void
+INLINE void
 strcpy_flash (unsigned char *dest, const char *str)
 {
 	strcpy (dest, (const unsigned char*) str);
 }
 
-static inline void
+INLINE void
 strncpy_flash (unsigned char *dest, const char *str, unsigned char maxlen)
 {
 	strncpy (dest, (const unsigned char*) str, maxlen);
 }
 #endif /* __AVR__ */
 
-static inline unsigned char
+INLINE unsigned char
 flash_fetch (const unsigned char *p)
 {
 	return FETCH_BYTE (p);

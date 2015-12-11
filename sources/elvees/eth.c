@@ -659,7 +659,7 @@ eth_poll (eth_t *u)
 static void
 eth_receiver (void *arg)
 {
-	eth_t *u = arg;
+	eth_t *u = (eth_t *)arg;
 
 	/* Register receive interrupt. */
 	mutex_lock_irq (&u->netif.lock, ETH_IRQ_RECEIVE, 0, 0);
@@ -678,7 +678,7 @@ eth_receiver (void *arg)
 static void
 eth_transmitter (void *arg)
 {
-	eth_t *u = arg;
+	eth_t *u = (eth_t *)arg;
 
 	/* Register transmit interrupt. */
 	mutex_lock_irq (&u->tx_lock, ETH_IRQ_TRANSMIT, 0, 0);

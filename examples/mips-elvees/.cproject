@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<macros>
+					<stringMacro name="UOS_PROJ" type="VALUE_TEXT" value="uos"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="${workspace_loc:${UOS_PROJ}}"/>
+					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/MCStudio4/ToolsMGCC"/>
+					<stringMacro name="CHIP" type="VALUE_TEXT" value="ELVEES_NVCOM02T"/>
+					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}"/>
+				</macros>
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactExtension="elf" artifactName="${ProjName}" buildProperties="" description="" id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996.1100715779" name="/" resourcePath="">
+						<toolChain id="org.elvees.mcs4.projmanager.ToolsMGCC.1068679699" name="org.elvees.mcs4.projmanager.ToolsMGCC" superClass="org.elvees.mcs4.projmanager.ToolsMGCC">
+							<option id="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu.865741737" name="Processor" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsMGCC.target.endian.1266501065" name="Endianness" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.target.endian"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsMGCC.target.float.740902427" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.target.float"/>
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsMGCC.targetPlatform.219522156" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.targetPlatform"/>
+							<builder buildPath="${workspace_loc:/mips-elvees/Default}" id="org.elvees.mcs4.projmanager.ToolsMGCC.builder.165393618" keepEnvironmentInBuildfile="false" name="MultiCore Builder" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.builder"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.2086039403" name="MultiCore Linker - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostart.1611837940" name="Do not use standard start files (-nostartfiles)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostart" value="true" valueType="boolean"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nodeflibs.743397311" name="Do not use default libraries (-nodefaultlibs)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nodeflibs" value="true" valueType="boolean"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostdlibs.476934725" name="No startup or default libs (-nostdlib)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostdlibs" value="true" valueType="boolean"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.paths.1367884024" name="Library search path (-L)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.paths" valueType="libPaths">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}\ldscripts&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:${UOS_PROJ}}\\${ConfigName}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:${UOS_PROJ}}\MultiCore_Configuration_Debug&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.ldflags.1391039803" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-T code-cram-data-cram-i-d-cache.ld"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.other.1410031542" name="Other options (-Xlinker [option])" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-Map=${BuildArtifactFileName}.map"/>
+									<listOptionValue builtIn="false" value="--cref"/>
+									<listOptionValue builtIn="false" value="-gc-sections"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.libs.1351518759" name="Libraries (-l)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="gcc"/>
+									<listOptionValue builtIn="false" value="uos"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.inputType.733080836" name="MultiCore Linker Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.inputType">
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP0)"/>
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP1)"/>
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP2)"/>
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP3)"/>
+								</inputType>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm.1721078947" name="RISC Assembler - mipsel-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm.general.paths.155583550" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.inputType.asm.1085118759" name="RISC Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.inputType.asm"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.objcopy.895382570" name="DSP0 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.objcopy.676687217" name="DSP2 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.671585755" name="RISC C Compiler S - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.includes.paths.544874246" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+									<listOptionValue builtIn="false" value="${CROSS_TOOL}/mipsel-elf32/include"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.symbols.def.2131188381" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="${CHIP}"/>
+									<listOptionValue builtIn="false" value="MIPS32"/>
+									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
+									<listOptionValue builtIn="false" value="KHZ=60000"/>
+									<listOptionValue builtIn="false" value="MPORT_KHZ=60000"/>
+									<listOptionValue builtIn="false" value="ELVEES_CLKIN=10000"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
+									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.optimization.level.1560721717" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.optimization.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.optimization.level.optimize" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.level.2064461088" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.level.default" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.misc.other.1003981589" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.misc.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch  -Xassembler --mc24r2"/>
+									<listOptionValue builtIn="false" value="-ffunction-sections"/>
+									<listOptionValue builtIn="false" value="-fdata-sections"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.other.910549460" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gdwarf-2"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.inputType.638520146" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.1782137117" name="DSP3 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.general.paths.1436509940" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.inputType.386673853" name="DSP3 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.objcopy.569660985" name="DSP3 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.174759334" name="DSP0 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.general.paths.252802437" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.inputType.64480093" name="DSP0 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.objcopy.1429879170" name="DSP1 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker.724549133" name="DSP2 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker.other.ldflags.963199672" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T ../ldscripts/DSP2.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.1956970332" name="DSP2 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.general.paths.1907510792" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.inputType.107757584" name="DSP2 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker.189806223" name="DSP0 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker.other.ldflags.1294270523" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T  ../ldscripts/DSP0.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.1679683216" name="DSP1 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.general.paths.1929908727" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.inputType.921363744" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.1147264163" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.other.ldflags.851305332" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T ../ldscripts/DSP3.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.1411574630" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.includes.paths.1430467730" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${CROSS_TOOL}/mipsel-elf32/include&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.symbols.def.1092648645" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="${CHIP}"/>
+									<listOptionValue builtIn="false" value="MIPS32"/>
+									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
+									<listOptionValue builtIn="false" value="KHZ=60000"/>
+									<listOptionValue builtIn="false" value="MPORT_KHZ=60000"/>
+									<listOptionValue builtIn="false" value="ELVEES_CLKIN=10000"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
+									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.optimization.level.107483107" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.optimization.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.optimization.level.optimize" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level.2077644344" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level.default" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.misc.other.356708581" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.misc.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch  -Xassembler --mc24r2"/>
+									<listOptionValue builtIn="false" value="-fno-builtin"/>
+									<listOptionValue builtIn="false" value="-ffunction-sections"/>
+									<listOptionValue builtIn="false" value="-fdata-sections"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.other.225217953" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gdwarf-2"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.inputType.1408102469" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker.1923321412" name="DSP1 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker.other.ldflags.1115547673" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T  ../ldscripts/DSP1.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry excluding="test-udp-serv.c|uOS|test-telnetd.c|uOS/runtime/strrchr.c|uOS/runtime/strncpy.c|uOS/runtime/strncmp.c|uOS/runtime/strncat.c|uOS/runtime/strlen.c|uOS/runtime/strcpy.c|uOS/runtime/strcmp.c|uOS/runtime/strchr.c|uOS/runtime/strcat.c|uOS/runtime/memset.c|uOS/runtime/memmove.c|uOS/runtime/memcpy.c|uOS/runtime/memcmp.c|uOS/runtime/memchr.c|uOS/nvram|uOS/stream/good-print.c|uOS/runtime/debug-dump-stack.c|uOS/crc/test16-inet.c|uOS/runtime/math/jn.c|uOS/runtime/math/j1.c|uOS/runtime/math/j0.c|uOS/cs8900|uOS/enc28j60|uOS/dozor|uOS/gpanel|uOS/lcd2|uOS/lcd|uOS/microchip|uOS/kernel/msp430|uOS/kernel/linux386|uOS/kernel/i386|uOS/kernel/cortex-m|uOS/kernel/avr|uOS/kernel/arm|uOS/milandr|uOS/net/udp-example.c|uOS/net/tcp-example.c|uOS/nvram/nvram-avr.c|uOS/runtime/mips/startup-nobev.S|uOS/runtime/mips/startup-pic32.S|uOS/runtime/mips/startup-malta.S|uOS/runtime/mips/startup.S|uOS/runtime/mips/init-pic32.c|uOS/runtime/mips/init-malta.c|uOS/regexp/try.c|uOS/tap|uOS/uart/uart-msp430.c|uOS/uart/uart-linux.c|uOS/runtime/msp430|uOS/runtime/linux386|uOS/runtime/i386|uOS/runtime/cortex-m|uOS/runtime/avr|uOS/runtime/arm|uOS/tcl|uOS/smc91c111|uOS/s3c4530|uOS/regexp9|uOS/pic32|uOS/pci|uOS/i8042|uOS/vesa|whetstone.c|test-usbdev.c|test-udp-client.c|test-uda1380.c|test-uart.c|test-tswitch.c|test-tlv320aic32.c|test-timer.c|test-tcp-serv.c|test-tcp-client.c|test-tcl.c|test-spw.c|test-sdhc-fast.c|test-ram.c|test-mcb-eth.c|test-mac.c|test-latency.c|test-i2c-ad7416.c|test-i2c.c|test-hid.c|test-fpu.c|test-flash.c|test-fat32-fw.c|test-eth-mdb.c|test-eth.c|test-debug.c|test-dcache.c|print-fat32.c|philosophers.c|livermore.c|linpack.c|eth-to-swic.c|dhrystone.c|coremark.c|out" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996.1796781191">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996.1796781191" moduleId="org.eclipse.cdt.core.settings" name="debug_direct_uos">
+				<macros>
+					<stringMacro name="UOS_PROJ" type="VALUE_TEXT" value="uos"/>
+					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/MCStudio4/ToolsMGCC"/>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="${ProjDirPath}\uOS"/>
+					<stringMacro name="CHIP" type="VALUE_TEXT" value="ELVEES_NVCOM02T"/>
+					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}"/>
+				</macros>
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactExtension="elf" artifactName="${ProjName}" buildProperties="" description="сорсы уос включаю прямо в проект" id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996.1796781191" name="debug_direct_uos" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.elvees.mcs4.projmanager.ToolsMGCC.1198956996.1796781191." name="/" resourcePath="">
+						<toolChain id="org.elvees.mcs4.projmanager.ToolsMGCC.1613488075" name="org.elvees.mcs4.projmanager.ToolsMGCC" superClass="org.elvees.mcs4.projmanager.ToolsMGCC">
+							<option id="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu.1336492238" name="Processor" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsMGCC.target.endian.411086991" name="Endianness" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.target.endian"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsMGCC.target.float.580104514" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.target.float"/>
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsMGCC.targetPlatform.1391276815" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.targetPlatform"/>
+							<builder buildPath="${workspace_loc:/mips-elvees/Default}" id="org.elvees.mcs4.projmanager.ToolsMGCC.builder.328022670" keepEnvironmentInBuildfile="false" name="MultiCore Builder" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.builder"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.2086591506" name="MultiCore Linker - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostart.1076664335" name="Do not use standard start files (-nostartfiles)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostart" value="true" valueType="boolean"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nodeflibs.1353762902" name="Do not use default libraries (-nodefaultlibs)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nodeflibs" value="true" valueType="boolean"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostdlibs.1190214658" name="No startup or default libs (-nostdlib)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.general.nostdlibs" value="true" valueType="boolean"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.paths.861933022" name="Library search path (-L)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.paths" valueType="libPaths">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}\ldscripts&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:${UOS_PROJ}}\\${ConfigName}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:${UOS_PROJ}}\MultiCore_Configuration_Debug&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.ldflags.1860363677" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-T code-cram-data-cram-i-d-cache.ld"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.other.202889646" name="Other options (-Xlinker [option])" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.other.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-Map=${BuildArtifactFileName}.map"/>
+									<listOptionValue builtIn="false" value="--cref"/>
+									<listOptionValue builtIn="false" value="-gc-sections"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.libs.396181864" name="Libraries (-l)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.libs.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="gcc"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.linker.inputType.1614529449" name="MultiCore Linker Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.linker.inputType">
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP0)"/>
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP1)"/>
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP2)"/>
+									<additionalInput kind="additionalinputdependency" paths="$(OBJS_DSP3)"/>
+								</inputType>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm.758435090" name="RISC Assembler - mipsel-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm.general.paths.118985383" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.inputType.asm.2088231833" name="RISC Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.inputType.asm"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.objcopy.1805931856" name="DSP0 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.objcopy.1083391784" name="DSP2 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.1531746799" name="RISC C Compiler S - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.includes.paths.2080119905" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+									<listOptionValue builtIn="false" value="${CROSS_TOOL}/mipsel-elf32/include"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.symbols.def.261059236" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="${CHIP}"/>
+									<listOptionValue builtIn="false" value="MIPS32"/>
+									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
+									<listOptionValue builtIn="false" value="KHZ=60000"/>
+									<listOptionValue builtIn="false" value="MPORT_KHZ=60000"/>
+									<listOptionValue builtIn="false" value="ELVEES_CLKIN=10000"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
+									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.optimization.level.841282772" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.optimization.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.optimization.level.optimize" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.level.1368926427" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.level.default" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.misc.other.489859729" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.misc.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch  -Xassembler --mc24r2"/>
+									<listOptionValue builtIn="false" value="-ffunction-sections"/>
+									<listOptionValue builtIn="false" value="-fdata-sections"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.other.870601953" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gdwarf-2"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.inputType.1353102909" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.S.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.1369903130" name="DSP3 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.general.paths.529315944" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.inputType.1672064527" name="DSP3 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.objcopy.1375954627" name="DSP3 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.527422230" name="DSP0 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.general.paths.467673910" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.inputType.351795526" name="DSP0 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.objcopy.765625237" name="DSP1 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker.1918248472" name="DSP2 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker.other.ldflags.1001846659" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T ../ldscripts/DSP2.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.1235532156" name="DSP2 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.general.paths.1266844863" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.inputType.1639983878" name="DSP2 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp2.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker.5183407" name="DSP0 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker.other.ldflags.2007557028" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp0.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T  ../ldscripts/DSP0.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.139867545" name="DSP1 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.general.paths.494608096" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.inputType.1267024088" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.1427038600" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.other.ldflags.1482857042" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp3.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T ../ldscripts/DSP3.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.1424951976" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.includes.paths.1153573252" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${CROSS_TOOL}/mipsel-elf32/include&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.symbols.def.1251424826" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="${CHIP}"/>
+									<listOptionValue builtIn="false" value="MIPS32"/>
+									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
+									<listOptionValue builtIn="false" value="KHZ=60000"/>
+									<listOptionValue builtIn="false" value="MPORT_KHZ=60000"/>
+									<listOptionValue builtIn="false" value="ELVEES_CLKIN=10000"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
+									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.optimization.level.100994643" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.optimization.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.optimization.level.optimize" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level.294402271" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level" value="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.level.default" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.misc.other.777156572" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.misc.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch  -Xassembler --mc24r2"/>
+									<listOptionValue builtIn="false" value="-fno-builtin"/>
+									<listOptionValue builtIn="false" value="-ffunction-sections"/>
+									<listOptionValue builtIn="false" value="-fdata-sections"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.other.648140017" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gdwarf-2"/>
+								</option>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.inputType.1862872842" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.risc.compiler.c.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker.1549432311" name="DSP1 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker">
+								<option id="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker.other.ldflags.1661506493" name="Linker flags" superClass="org.elvees.mcs4.projmanager.ToolsMGCC.dsp1.linker.other.ldflags" valueType="stringList">
+									<listOptionValue builtIn="false" value="-L&quot;${workspace_loc:/${ProjName}}&quot;/ldscripts"/>
+									<listOptionValue builtIn="false" value="-e 0 -t -N  --no-warn-mismatch -T  ../ldscripts/DSP1.xl ../ldscripts/__DSPX__.xx"/>
+								</option>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry excluding="test-udp-serv.c|test-telnetd.c|uOS/runtime/strrchr.c|uOS/runtime/strncpy.c|uOS/runtime/strncmp.c|uOS/runtime/strncat.c|uOS/runtime/strlen.c|uOS/runtime/strcpy.c|uOS/runtime/strcmp.c|uOS/runtime/strchr.c|uOS/runtime/strcat.c|uOS/runtime/memset.c|uOS/runtime/memmove.c|uOS/runtime/memcpy.c|uOS/runtime/memcmp.c|uOS/runtime/memchr.c|uOS/nvram|uOS/stream/good-print.c|uOS/runtime/debug-dump-stack.c|uOS/crc/test16-inet.c|uOS/runtime/math/jn.c|uOS/runtime/math/j1.c|uOS/runtime/math/j0.c|uOS/cs8900|uOS/enc28j60|uOS/dozor|uOS/gpanel|uOS/lcd2|uOS/lcd|uOS/microchip|uOS/kernel/msp430|uOS/kernel/linux386|uOS/kernel/i386|uOS/kernel/cortex-m|uOS/kernel/avr|uOS/kernel/arm|uOS/milandr|uOS/net/udp-example.c|uOS/net/tcp-example.c|uOS/nvram/nvram-avr.c|uOS/runtime/mips/startup-nobev.S|uOS/runtime/mips/startup-pic32.S|uOS/runtime/mips/startup-malta.S|uOS/runtime/mips/startup.S|uOS/runtime/mips/init-pic32.c|uOS/runtime/mips/init-malta.c|uOS/regexp/try.c|uOS/tap|uOS/uart/uart-msp430.c|uOS/uart/uart-linux.c|uOS/runtime/msp430|uOS/runtime/linux386|uOS/runtime/i386|uOS/runtime/cortex-m|uOS/runtime/avr|uOS/runtime/arm|uOS/tcl|uOS/smc91c111|uOS/s3c4530|uOS/regexp9|uOS/pic32|uOS/pci|uOS/i8042|uOS/vesa|whetstone.c|test-usbdev.c|test-udp-client.c|test-uda1380.c|test-uart.c|test-tswitch.c|test-tlv320aic32.c|test-timer.c|test-tcp-serv.c|test-tcp-client.c|test-tcl.c|test-spw.c|test-sdhc-fast.c|test-ram.c|test-mcb-eth.c|test-mac.c|test-latency.c|test-i2c-ad7416.c|test-i2c.c|test-hid.c|test-fpu.c|test-flash.c|test-fat32-fw.c|test-eth-mdb.c|test-eth.c|test-debug.c|test-dcache.c|print-fat32.c|philosophers.c|livermore.c|linpack.c|eth-to-swic.c|dhrystone.c|coremark.c|out" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="mips-elvees.null.382582014" name="mips-elvees"/>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+	</storageModule>
+	<storageModule moduleId="refreshScope" versionNumber="1">
+		<resource resourceType="PROJECT" workspacePath="/mips-elvees"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
+		<buildTargets>
+			<target name="test-udp-serv.elf" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments>-f${ProjDirPath}/makefile</buildArguments>
+				<buildTarget>test-udp-serv.elf</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+			<target name="test-udp-serv" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>make</buildCommand>
+				<buildArguments/>
+				<buildTarget>test-udp-serv</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>true</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+		</buildTargets>
+	</storageModule>
+</cproject>

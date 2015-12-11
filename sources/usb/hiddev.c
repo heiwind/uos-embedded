@@ -155,15 +155,15 @@ void hiddev_set_report_desc (hiddev_t *h, unsigned rpt_id, uint8_t *rpt_desc, un
     h->out_rpt_sz[rpt_id] = out_rpt_size;
     h->feature_rpt_sz[rpt_id] = feature_rpt_size;
     if (in_rpt_size) {
-        h->in_rpt[rpt_id] = mem_alloc (h->pool, in_rpt_size);
+        h->in_rpt[rpt_id] = (uint8_t*)mem_alloc (h->pool, in_rpt_size);
         assert (h->in_rpt[rpt_id]);
     }
     if (out_rpt_size) {
-        h->out_rpt[rpt_id] = mem_alloc (h->pool, out_rpt_size);
+        h->out_rpt[rpt_id] = (uint8_t*)mem_alloc (h->pool, out_rpt_size);
         assert (h->out_rpt[rpt_id]);
     }
     if (feature_rpt_size) {
-        h->feature_rpt[rpt_id] = mem_alloc (h->pool, feature_rpt_size);
+        h->feature_rpt[rpt_id] = (uint8_t*)mem_alloc (h->pool, feature_rpt_size);
         assert (h->feature_rpt[rpt_id]);
     }
 }

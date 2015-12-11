@@ -1,6 +1,13 @@
 #ifndef __UOS_LIB_ARCH_H_
 #define __UOS_LIB_ARCH_H_
 
+#include <runtime/sys/uosc.h>
+
+
+
+#define __LITTLE_ENDIAN 1234
+#define __BIG_ENDIAN    4321
+
 #if defined (__AVR__)
 #	include <stdarg.h>
 #	include <runtime/avr/types.h>
@@ -24,14 +31,14 @@
 #	define __BYTE_ORDER __LITTLE_ENDIAN
 #	define __FLOAT_WORD_ORDER __BIG_ENDIAN
 #elif defined (MIPS32)
+#   define __BYTE_ORDER __LITTLE_ENDIAN
+#   define __FLOAT_WORD_ORDER __LITTLE_ENDIAN
 #	include <stdarg.h>
 #	include <runtime/mips/types.h>
-#	include <runtime/mips/string.h>
+#	include <runtime/string.h>
 #	include <runtime/mips/stdlib.h>
 #	include <runtime/mips/io.h>
 #	include <runtime/ctype.h>
-#	define __BYTE_ORDER __LITTLE_ENDIAN
-#	define __FLOAT_WORD_ORDER __LITTLE_ENDIAN
 #elif defined (MSP430)
 #	include <stdarg.h>
 #	include <runtime/msp430/types.h>
@@ -59,5 +66,7 @@
 #	include <runtime/ctype.h>
 #	define __BYTE_ORDER __LITTLE_ENDIAN
 #endif
+
+
 
 #endif /* __UOS_LIB_ARCH_H_ */

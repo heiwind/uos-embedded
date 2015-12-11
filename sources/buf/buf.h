@@ -1,6 +1,12 @@
 #ifndef __BUF_H_
 #define	__BUF_H_ 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 struct _mem_pool_t;
 
 typedef struct _buf_t buf_t;
@@ -95,5 +101,11 @@ unsigned short buf_chksum (buf_t *p, unsigned short sum);
  * Compute the 32-bit checksum (baset on VAK's rot13) of the buffer data.
  */
 unsigned long buf_chksum32 (buf_t *p, unsigned long sum);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__BUF_H_ */

@@ -17,12 +17,31 @@
 #ifndef __KERNEL_UOS_H_
 #define	__KERNEL_UOS_H_ 1
 
+#include <uos-conf.h>
+#include <runtime/list.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**\~russian
+ * RECURSIVE_LOCKS задает стиль мутекса
+ *  = 0 - ближайший unlock освобождает мутекс
+ *  = 1 - мутекс отслеживает количество блокировок в текущей задаче и 
+ *          на каждый вызов lock должен быть произведен unlock  
+ * */
 #ifndef RECURSIVE_LOCKS
 #   define RECURSIVE_LOCKS	1
+#endif
+
+/**\~russian
+ * FASTER_LOCKS добавляет код ускоряющий захват уже захваченого мутекса
+ *  = 0 - всякий захват требует выхода в защищенный от шедулера режим 
+ *  = 1 - если текущая задача уже захватила мутекс, все выполняется бустрее.
+ *      но чуть разбухает размер кода
+ * */
+#ifndef FASTER_LOCKS
+#   define FASTER_LOCKS  1
 #endif
 
 /* System data structures. */
@@ -41,7 +60,7 @@ typedef bool_t (*handler_t) (void*);
 /* Task management. */
 task_t *task_create (void (*func)(void*), void *arg, const char *name, int priority,
 	array_t *stack, unsigned stacksz);
-void task_exit (void *status);
+void task_exit (void *status) __attribute__ ((__noreturn__));
 void task_delete (task_t *task, void *status);
 void *task_wait (task_t *task);
 int task_stack_avail (task_t *task);
@@ -60,15 +79,53 @@ void task_print (struct _stream_t *stream, task_t *t);
 #endif
 unsigned int task_fpu_control (task_t *t, unsigned int mode, unsigned int mask);
 
+//****************************************************************************
 /* Lock management. */
 void mutex_lock (mutex_t *lock);
 void mutex_unlock (mutex_t *lock);
+
+/**\~english
+ * Try to get the lock. Return 1 on success, 0 on failure.
+ * The calling task does not block.
+ * In the case the lock has associated IRQ number,
+ * after acquiring the lock the IRQ will be disabled.
+ */
 bool_t mutex_trylock (mutex_t *lock);
+
+/*! this is function that called from schdeler-switcher context, it should not use
+ *   os routines that can cause task block 
+ * 
+ */
+typedef bool_t (*scheduless_condition)(void* arg);
+
+/** this lock is blocks until <waitfor> return true, or mutex locked.
+ * \return true - mutex succesfuly locked
+ * \return false - if mutex not locked due to <waitfor> signalled
+ * */
+bool_t mutex_lock_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
+
 void mutex_signal (mutex_t *lock, void *message);
 void *mutex_wait (mutex_t *lock);
+/*
+ * \return true - if signaled and therefore valid task_current->message
+ *          false - if timeout
+ * */
+bool_t mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
 
 /* Interrupt management. */
 void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);
+/**\~english
+ *  this allows instead IRQ_EVT use desired isr-fast-handler routine for signaling
+       to ordinar mutexes, and so realize Software Interrupt similar to system 
+       Hardware Interrupts. 
+   Fast handler of swi (mutex_irq_t.handler(arg)) executes in context of 
+       signaling thread, and cause task scheduling only if handler gives !=0 message
+   \~rusian
+   вместо железного события, здесь используется обработчик софтверного прерывания
+       при этом быстрый обработчик выполняется в контексте сигналящей нитки,
+       и сигнал к мутексу проникнет если он возвратит сообщение != 0 
+ */
+void mutex_lock_swi (mutex_t*, mutex_irq_t* swi, handler_t func, void *arg);
 void mutex_unlock_irq (mutex_t*);
 void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg);
 
@@ -78,6 +135,12 @@ bool_t mutex_group_add (mutex_group_t*, mutex_t*);
 void mutex_group_listen (mutex_group_t*);
 void mutex_group_unlisten (mutex_group_t*);
 void mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
+/**\~russian
+ * этот лок ожидает захвата мутекса или сигнала от группы
+ * \return true - захвачен lock
+ * \return false - получен сигнал от группы, или мутекс был закрыт извне
+ * */
+bool_t mutex_group_lockwaiting (mutex_t *lock, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
 
 /* User-supplied startup routine. */
 extern void uos_init (void);
@@ -106,6 +169,14 @@ struct _mutex_t {
 #endif
 };
 
+struct _mutex_irq_t {
+    mutex_t *   lock;       /* lock, associated with this irq */
+    handler_t   handler;    /* fast interrupt handler */
+    void *      arg;        /* argument for fast handler */
+    small_int_t irq;        /* irq number */
+    bool_t      pending;    /* interrupt is pending */
+};
+
 /*
  * Slot: a group element.
  */
@@ -121,7 +192,7 @@ struct _mutex_slot_t {
  * Group: an array of slots.
  */
 struct _mutex_group_t {
-	mutex_t		lock;		/* lock to group_wait() on it */
+//	mutex_t		lock;		/* lock to group_wait() on it */
 	task_t *	waiter;		/* the waiting task pointer */
 	small_uint_t	size;		/* size of slot[] array */
 	small_uint_t	num;		/* number of elements in slot[] */

@@ -39,8 +39,8 @@ struct _regexp_instr_t {
  */
 struct _regexp_t {
 	regexp_instr_t	*startinst;	/* start pc */
-	regexp_class_t	class [NCLASS];	/* .data */
-	regexp_instr_t	firstinst [5];	/* .text */
+	regexp_class_t	reg_class[NCLASS];	/* .data */
+	regexp_instr_t	firstinst[5];	/* .text */
 };
 
 #define NSUBEXP 32

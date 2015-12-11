@@ -47,5 +47,8 @@ task_create (void (*func)(void*), void *arg, const char *name, int prio,
 	arch_intr_disable (&x);
 	task_activate (t);
 	arch_intr_restore (x);
+#ifdef UOS_ON_NEW_TASK
+	UOS_ON_NEW_TASK(t);
+#endif
 	return t;
 }

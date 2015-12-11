@@ -18,9 +18,23 @@
  */
 #include <runtime/lib.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void _etext();
 extern unsigned __data_start, _edata, _end, _estack[];
 extern int main ();
+
+void _init_ (void);
+void _irq_handler_ ();
+void _exception_handler_ (unsigned int context[]);
+void _pagefault_handler_ (unsigned int context[]);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * Initialize the system configuration, cache, intermal SRAM,
@@ -29,7 +43,12 @@ extern int main ();
  * Attribute "naked" skips function prologue.
  */
 
-void __attribute ((noreturn))_init_ (void)
+void __attribute ((noreturn))
+#ifdef ELVEES_INIT_SDRAM
+//!!! этот код должен лежать в памяти доступной по вектору сброса=прерываня, ибо положить в СДРАМ до ее настрйки не представляется нормальным
+CODE_ISR
+#endif
+_init_ (void)
 {
 	unsigned *dest, *limit;
 	unsigned int divisor;
@@ -443,6 +462,7 @@ uos_valid_memory_address (void *ptr)
 }
 
 void __attribute__ ((weak))
+CODE_ISR
 _irq_handler_ ()
 {
 	/* This is needed when no kernel is present. */

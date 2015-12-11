@@ -340,7 +340,7 @@ slip_out_next (slip_t *u)
 static void
 slip_receiver (void *arg)
 {
-	slip_t *u = arg;
+	slip_t *u = (slip_t *)arg;
 	unsigned short len;
 
 	/* Start receiver. */

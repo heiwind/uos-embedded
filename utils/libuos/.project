@@ -18,6 +18,10 @@
 					<value>true</value>
 				</dictionary>
 				<dictionary>
+					<key>org.eclipse.cdt.make.core.autoBuildTarget</key>
+					<value></value>
+				</dictionary>
+				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildArguments</key>
 					<value></value>
 				</dictionary>
@@ -28,6 +32,10 @@
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
 					<value>${workspace_loc:/libuos/MultiCore_Configuration_Debug}</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.cleanBuildTarget</key>
+					<value>clean</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.contents</key>
@@ -44,6 +52,10 @@
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.enableFullBuild</key>
 					<value>true</value>
+				</dictionary>
+				<dictionary>
+					<key>org.eclipse.cdt.make.core.fullBuildTarget</key>
+					<value>all </value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.stopOnError</key>
@@ -121,6 +133,11 @@
 			<locationURI>uOS_SRC/net</locationURI>
 		</link>
 		<link>
+			<name>posix</name>
+			<type>2</type>
+			<locationURI>uOS_ROOT/contrib/posix</locationURI>
+		</link>
+		<link>
 			<name>random</name>
 			<type>2</type>
 			<locationURI>uOS_SRC/random</locationURI>
@@ -179,7 +196,7 @@
 	<variableList>
 		<variable>
 			<name>uOS_ROOT</name>
-			<value>file:/C:/Projects/uOS.hg</value>
+			<value>file:/c:/Projects/uOS.hg</value>
 		</variable>
 		<variable>
 			<name>uOS_SRC</name>

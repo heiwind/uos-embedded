@@ -38,7 +38,7 @@ static	unsigned short yyrune;		/* last lex'd rune */
 static	regexp_class_t *yyclassp;		/* last lex'd class */
 
 /* predeclared crap */
-static	void	operator(int);
+static	void	reg_operator(int);
 static	void	pushand(regexp_instr_t*, regexp_instr_t*);
 static	void	pushator(int);
 static	void	evaluntil(int);
@@ -47,7 +47,7 @@ static	int	bldcclass(void);
 static jmp_buf regkaboom;
 
 static	void
-rcerror(char *s)
+rcerror(const char *s)
 {
 	errors++;
 	regexp_error(s);
@@ -69,7 +69,7 @@ operand(int t)
 	regexp_instr_t *i;
 
 	if(lastwasand)
-		operator(CAT);	/* catenate is implicit */
+		reg_operator(CAT);	/* catenate is implicit */
 	i = newinst(t);
 
 	if(t == CCLASS || t == NCCLASS)
@@ -82,7 +82,7 @@ operand(int t)
 }
 
 static	void
-operator(int t)
+reg_operator(int t)
 {
 	if(t==RBRA && --nbra<0)
 		rcerror("unmatched right paren");
@@ -91,7 +91,7 @@ operator(int t)
 			rcerror ("too many subexpressions");
 		nbra++;
 		if(lastwasand)
-			operator(CAT);
+			reg_operator(CAT);
 	} else
 		evaluntil(t);
 	if(t != RBRA)
@@ -102,7 +102,7 @@ operator(int t)
 }
 
 static	void
-regerr2(char *s, int c)
+regerr2(const char *s, int c)
 {
 	char buf[100];
 	char *cp = buf;
@@ -114,7 +114,7 @@ regerr2(char *s, int c)
 }
 
 static	void
-cant(char *s)
+cant(const char *s)
 {
 	char buf[100];
 	strcpy(buf, "can't happen: ");
@@ -253,7 +253,7 @@ optimize(regexp_t *pp)
 	 *  and then relocate the code.
 	 */
 	size = sizeof(regexp_t) + (freep - pp->firstinst)*sizeof(regexp_instr_t);
-	npp = realloc(pp, size);
+	npp = (regexp_t *)realloc(pp, size);
 	if(npp==0 || npp==pp)
 		return pp;
 	diff = (char *)npp - (char *)pp;
@@ -264,18 +264,18 @@ optimize(regexp_t *pp)
 		case STAR:
 		case PLUS:
 		case QUEST:
-			inst->u1.right = (void*)((char*)inst->u1.right + diff);
+			inst->u1.right = (regexp_instr_t*)((char*)inst->u1.right + diff);
 			break;
 		case CCLASS:
 		case NCCLASS:
-			inst->u1.right = (void*)((char*)inst->u1.right + diff);
+			inst->u1.right = (regexp_instr_t*)((char*)inst->u1.right + diff);
 			cl = inst->u1.cp;
-			cl->end = (void*)((char*)cl->end + diff);
+			cl->end = (unsigned short*)((char*)cl->end + diff);
 			break;
 		}
-		inst->u2.left = (void*)((char*)inst->u2.left + diff);
+		inst->u2.left = (regexp_instr_t *)((char*)inst->u2.left + diff);
 	}
-	npp->startinst = (void*)((char*)npp->startinst + diff);
+	npp->startinst = (regexp_instr_t*)((char*)npp->startinst + diff);
 	return npp;
 }
 
@@ -494,14 +494,14 @@ regcomp1(const char *source, const unsigned short *rune_source, int literal, int
 	regexp_t *volatile pp;
 
 	/* get memory for the program */
-	pp = malloc (sizeof(regexp_t) + 6 * sizeof(regexp_instr_t) *
+	pp = (regexp_t *)malloc (sizeof(regexp_t) + 6 * sizeof(regexp_instr_t) *
 		(rune_source ? runelen (rune_source) : strlen (source)));
 	if(pp == 0){
 		regexp_error("out of memory");
 		return 0;
 	}
 	freep = pp->firstinst;
-	classp = pp->class;
+	classp = pp->reg_class;
 	errors = 0;
 
 	if(setjmp(regkaboom))
@@ -523,7 +523,7 @@ regcomp1(const char *source, const unsigned short *rune_source, int literal, int
 	pushator(START-1);
 	while((token = lex(literal, dot_type)) != END){
 		if((token&0300) == OPERATOR)
-			operator(token);
+			reg_operator(token);
 		else
 			operand(token);
 	}

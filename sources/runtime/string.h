@@ -1,3 +1,6 @@
+#ifndef UOS_STRINGS_H
+#define UOS_STRINGS_H
+
 /*
  * String inline routines for MIPS architecture.
  * Do not include this file directly, use runtime/lib.h instead.
@@ -17,6 +20,13 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
+
+// need types.h
+#include "arch.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Copy N bytes of SRC to DEST.  */
 extern void *
@@ -84,3 +94,23 @@ strrchr (const unsigned char *src, unsigned char c);
    If no '\0' terminator is found in that many characters, return MAXLEN.  */
 extern size_t
 strnlen (const unsigned char *string, size_t maxlen);
+
+unsigned char *strstr (const unsigned char *haystack, const unsigned char *needle);
+small_int_t strspn (const unsigned char *s, const unsigned char *accept);
+small_int_t strcspn (const unsigned char *s, const unsigned char *reject);
+
+extern const unsigned char *strmatch (const unsigned char* string, const unsigned char *pattern);
+small_int_t strcasecmp (const unsigned char*, const unsigned char*);
+small_int_t strncasecmp (const unsigned char*, const unsigned char*, size_t n);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+#include <runtime/c++/string.hpp>
+#endif
+
+#endif  // UOS_STRINGS_H
+
