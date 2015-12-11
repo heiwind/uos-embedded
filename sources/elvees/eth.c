@@ -397,6 +397,13 @@ chip_transmit_packet (eth_t *u, buf_t *p)
 	 * one buf at a time. The size of the data in each
 	 * buf is kept in the ->len variable. */
 	buf_t *q;
+    if (1)
+    {
+debug_printf ("eth_send_data: length %d bytes %#12.6D %#2D\n"
+                , p->tot_len
+                , p->payload, p->payload+12
+                );
+    }
 	unsigned char *buf = (unsigned char*) u->txbuf;
 	for (q=p; q; q=q->next) {
 		/* Copy the packet into the transmit buffer. */
@@ -522,7 +529,11 @@ debug_printf ("eth_receive_data: failed, frame_status=%#08x\n", frame_status);
 	}
 	/* Extract data from RX FIFO. */
 	unsigned len = RX_FRAME_STATUS_LEN (frame_status);
-	chip_read_rxfifo (u->rxbuf_physaddr, len);
+#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
+	chip_read_rxfifo (u->rxbuf_physaddr+2, len);
+#else
+    chip_read_rxfifo (u->rxbuf_physaddr, len);
+#endif
 
 	if (len < 4 || len > ETH_MTU) {
 		/* Skip this frame */
@@ -532,15 +543,16 @@ debug_printf ("eth_receive_data: bad length %d bytes, frame_status=%#08x\n", len
 	}
 	++u->netif.in_packets;
 	u->netif.in_bytes += len;
-/*debug_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);*/
-/*debug_printf ("eth_receive_data: %02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x\n",
-((unsigned char*)u->rxbuf)[0], ((unsigned char*)u->rxbuf)[1],
-((unsigned char*)u->rxbuf)[2], ((unsigned char*)u->rxbuf)[3],
-((unsigned char*)u->rxbuf)[4], ((unsigned char*)u->rxbuf)[5],
-((unsigned char*)u->rxbuf)[6], ((unsigned char*)u->rxbuf)[7],
-((unsigned char*)u->rxbuf)[8], ((unsigned char*)u->rxbuf)[9],
-((unsigned char*)u->rxbuf)[10], ((unsigned char*)u->rxbuf)[11],
-((unsigned char*)u->rxbuf)[12], ((unsigned char*)u->rxbuf)[13]);*/
+	if (0)
+	{
+#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
+	    unsigned char* buf = u->rxbuf+2;
+#else
+        unsigned char* buf = u->rxbuf;
+#endif
+debug_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
+debug_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
+	}
 
 	if (buf_queue_is_full (&u->inq)) {
 /*debug_printf ("eth_receive_data: input overflow\n");*/
@@ -558,8 +570,12 @@ debug_printf ("eth_receive_data: ignore packet - out of memory\n");
 	}
 
 	/* Copy the packet data. */
-/*debug_printf ("receive %08x <- %08x, %d bytes\n", p->payload, u->rxbuf, len);*/
-	memcpy (p->payload, u->rxbuf, len);
+//debug_printf ("receive %08x <- %08x, %d bytes\n", p->payload, u->rxbuf, len);
+#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
+	memcpy ((p->payload)-2, u->rxbuf, len+2);
+#else
+    memcpy (p->payload, u->rxbuf, len);
+#endif
 	buf_queue_put (&u->inq, p);
 /*debug_printf ("[%d]", p->tot_len); buf_print_ethernet (p);*/
 }

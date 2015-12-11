@@ -45,7 +45,7 @@ extern "C" {
 #endif
 
 struct _mem_pool_t;
-typedef struct _eth_t {
+typedef struct __attribute__ ((aligned(8))) _eth_t {
 	netif_t netif;			/* common network interface part */
 	mutex_t tx_lock;		/* get tx interrupts here */
 	struct _mem_pool_t *pool;	/* memory pool for allocating packets */
@@ -58,8 +58,8 @@ typedef struct _eth_t {
 
 	unsigned phy;			/* address of external PHY */
 	unsigned long intr;		/* interrupt counter */
-	unsigned char rxbuf_data [ETH_MTU + 8];
-	unsigned char txbuf_data [ETH_MTU + 8];
+	unsigned char rxbuf_data [ETH_MTU + 8] __attribute__ ((aligned(8)));
+	unsigned char txbuf_data [ETH_MTU + 8] __attribute__ ((aligned(8)));
 	unsigned char *rxbuf;		/* aligned rxbuf[] */
 	unsigned char *txbuf;		/* aligned txbuf[] */
 	unsigned rxbuf_physaddr;	/* phys address of rxbuf[] */
