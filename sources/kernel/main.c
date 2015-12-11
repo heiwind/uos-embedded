@@ -21,6 +21,7 @@
 list_t task_active;			/* list of tasks ready to run */
 task_t *task_current;			/* current running task */
 task_t *task_idle;			/* background system task */
+task_t *task_yelds;         //points to 1st yelded task in active tasks list
 mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 
 #ifndef IDLE_TASK_STACKSZ
@@ -31,7 +32,9 @@ mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 #define ALIGNED_IDLE_TASK_STACKSZ ((IDLE_TASK_STACKSZ + UOS_STACK_ALIGN - 1) & ~(UOS_STACK_ALIGN - 1))
 
 static ARRAY (task_idle_data, sizeof(task_t) + ALIGNED_IDLE_TASK_STACKSZ - UOS_STACK_ALIGN);
-bool_t task_need_schedule;
+
+//если надо пропустить (yeld) текущую задачу - то этот параметр = task_current
+unsigned task_need_schedule;
 
 /*
  * Switch to most priority task if needed.
@@ -41,8 +44,31 @@ void task_schedule ()
 {
 	task_t *new_task;
 
-	task_need_schedule = 0;
+	if (task_need_schedule != (unsigned)task_current){
+	    task_need_schedule  = 0;
+	    task_yelds          = 0;
+	}
+	else {
+	    //текущая задача в конец списка
+	    /* Enqueue always puts element at the tail of the list. */
+        list_append(&task_active, &task_current->item);
+	    if (task_yelds == 0)
+	        task_yelds = task_current;
+	    if (task_yelds != (task_t*)list_first(&task_active)){
+	        //отключу временно пропускаемые задачи чтобы task_policy их обошел мимо
+            __list_connect_together(task_yelds->item.prev, &task_active);
+	    }
+	    else{
+            task_yelds = 0;
+	    }
+	}
 	new_task = task_policy ();
+	if (task_yelds != 0){
+        //восстановлю пропускаемые задачи обратно в активные
+        __list_connect_together(task_yelds->item.prev, &task_yelds->item);
+        __list_connect_together(&task_current->item, &task_active);
+	}
+
 	if (new_task != task_current) {
 		new_task->ticks++;
 #ifndef NDEBUG

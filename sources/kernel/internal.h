@@ -96,7 +96,7 @@ extern mutex_irq_t mutex_irq [];
 extern task_t *task_current;
 
 /* Global flag set to 1 when update task_active */
-extern bool_t task_need_schedule;
+extern unsigned task_need_schedule;
 
 /* Special `idle' task. */
 extern task_t *task_idle;
@@ -264,6 +264,9 @@ task_t *task_policy (void)
 	}
 	return r;
 }
+
+// this tasks yelds, so try to avoid them
+extern task_t *task_yelds;
 
 #define STACK_MAGIC		0xaau
 
