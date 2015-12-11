@@ -11,6 +11,12 @@
 #include <net/tcp.h>
 #include <net/arp.h>
 
+#ifdef DEBUG_NET_IP
+#define IP_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define IP_printf(...)
+#endif
+
 /*
  * Forward an IP packet. It finds an appropriate route for the packet,
  * decrements the TTL value of the packet, adjusts the checksum and outputs
@@ -69,8 +75,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	/* Identify the IP header */
 	if ((iphdr->version & 0xf0) != 0x40) {
 		/* Bad version number. */
-		/*debug_printf ("ip_input: bad version number %d\n",
-			iphdr->version >> 4);*/
+	    IP_printf ("ip_input: bad version number %d\n", iphdr->version >> 4);
 		buf_free (p);
 		++ip->in_hdr_errors;
 		return;
@@ -79,8 +84,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	hlen = (iphdr->version & 0x0f) * 4;
 	if (hlen > p->len) {
 		/* Too short packet. */
-		/*debug_printf ("ip_input: too short packet (hlen=%d bytes)\n",
-			hlen);*/
+	    IP_printf ("ip_input: too short packet (hlen=%d bytes)\n", hlen);
 		buf_free (p);
 		++ip->in_hdr_errors;
 		return;
@@ -89,7 +93,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	/* Verify checksum */
 	if (crc16_inet (0, p->payload, hlen) != CRC16_INET_GOOD) {
 		/* Failing checksum. */
-		/*debug_printf ("ip_input: bad checksum\n", hlen);*/
+	    IP_printf ("ip_input: bad checksum\n", hlen);
 		buf_free (p);
 		++ip->in_hdr_errors;
 		return;
@@ -99,6 +103,11 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	 * but we'll do it anyway just to be sure that its done. */
 	buf_truncate (p, iphdr->len_h << 8 | iphdr->len_l);
 
+	IP_printf("ip:have packet : %@.4D ->%@.4D len %d proto %x\n"
+	            ,iphdr->src.ucs, iphdr->dest.ucs, p->len
+	            , iphdr->proto
+	          );
+	
 	/* Is this packet for us? */
 	broadcast = ipadr_is_broadcast(iphdr->dest);
 	if (! broadcast) {
@@ -272,8 +281,10 @@ ip_output_netif (ip_t *ip, buf_t *p
 	iphdr->chksum_h = chksum;
 	iphdr->chksum_l = chksum >> 8;
 #endif
-	/*debug_printf ("ip: netif %S output %d bytes\n",
-		netif->name, p->tot_len);*/
+	IP_printf ("ip: netif %s output %d bytes to %@.4D\n"
+	        ,netif->name, p->tot_len
+	        , dest
+	        );
 	/*buf_print_ip (p);*/
 
 	if (! gateway)

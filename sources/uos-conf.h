@@ -149,6 +149,8 @@
 //#define ARP_TRACE
 //#define DEBUG_NET_ARPTABLE
 //#define DEBUG_NET_ROUTE
+//#define DEBUG_NET_IP
+//#define DEBUG_NET_ICMP
 
  /**************************************************************************
  *                              Task Hooks

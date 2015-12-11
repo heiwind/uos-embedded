@@ -6,6 +6,12 @@
 #include <mem/mem.h>
 #include <crc/crc16-inet.h>
 
+#ifdef DEBUG_NET_ICMP
+#define ICMP_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define ICMP_printf(...)
+#endif
+
 void
 icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 {
@@ -20,7 +26,8 @@ icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 	}
 	if (buf_chksum (p, 0) != 0) {
 		/* Checksum failed for received ICMP echo. */
-		/*debug_printf ("icmp_echo_request: bad checksum\n");*/
+	    ICMP_printf("icmp_echo_request: bad checksum\n");
+	    ICMP_printf("%*D\n",p->len, p->payload);
 		++ip->icmp_in_errors;
 		buf_free (p);
 		return;
@@ -39,7 +46,7 @@ icmp_echo_request (ip_t *ip, buf_t *p, netif_t *inp)
 	}
 	/*if (buf_chksum (p, 0) != 0) debug_printf ("icmp_echo_request: bad reply checksum\n");*/
 
-/*	debug_printf ("icmp_echo_request: send reply\n");*/
+	ICMP_printf("icmp_echo_request: send reply\n");
 	netif_output (inp, p, h->ip.dest.ucs, h->ip.src.ucs);
 	++ip->icmp_out_msgs;
         ++ip->icmp_out_echo_reps;
