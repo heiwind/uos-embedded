@@ -616,7 +616,7 @@ find_active_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 
 		if (s->local_port != h->dest || s->remote_port != h->src ||
 		    !ipadr_is_same(s->remote_ip, iph->src) ||
-		    !ipadr_is_same_ucs(s->local_ip, iph->dest.ucs)
+		    !ipadr_is_same(s->local_ip, iph->dest)
 		   )
 			continue;
 
@@ -644,7 +644,7 @@ find_closing_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 		assert (s->state == TIME_WAIT);
 		if (s->local_port != h->dest || s->remote_port != h->src ||
             !ipadr_is_same(s->remote_ip, iph->src) ||
-            !ipadr_is_same_ucs(s->local_ip, iph->dest.ucs)
+            !ipadr_is_same(s->local_ip, iph->dest)
            )
 			continue;
 
@@ -666,7 +666,7 @@ find_listen_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 	for (ls=ip->tcp_listen_sockets; ls; prev=ls, ls=ls->next) {
 		if (ls->local_port != h->dest)
 			continue;
-		if ( !ipadr_is_same_ucs(ls->local_ip, iph->dest.ucs) )
+		if ( !ipadr_is_same(ls->local_ip, iph->dest) )
 			continue;
 
 		/* Move this PCB to the front of the list so

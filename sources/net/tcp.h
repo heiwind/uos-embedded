@@ -145,7 +145,7 @@ struct _tcp_socket_t {//: base_socket_t
 	struct _ip_t *ip;
 	struct _tcp_socket_t *next;	/* for the linked list */
 
-	unsigned char local_ip [4];
+	ip_addr local_ip;
 	unsigned short local_port;
 	//remote_ip for ordinary sockets only, LISTEN socket not demand it
     ip_addr remote_ip;

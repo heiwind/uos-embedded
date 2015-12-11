@@ -237,10 +237,15 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	unsigned short port)
 {
 	tcp_socket_t *s, *cs;
+	ip_addr targetip;
+	
 
-	if (! ipaddr) {
-		ipaddr = (unsigned char*) "\0\0\0\0";
+	if (ipaddr) {
+	    targetip = ipadr_4ucs(ipaddr);
 	}
+	else
+	    targetip.val = 0;
+
 	s = (tcp_socket_t *)mem_alloc (ip->pool, sizeof (tcp_socket_t));
 	if (s == 0) {
 		return 0;
@@ -257,7 +262,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	/* Check if the address already is in use. */
 	for (cs = ip->tcp_listen_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if ( ipadr_is_same_ucs(cs->local_ip, ipaddr) ) {
+			if ( ipadr_is_same(targetip, cs->local_ip) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -266,7 +271,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	}
 	for (cs = ip->tcp_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if (ipadr_is_same_ucs(cs->local_ip, ipaddr) ) {
+			if (ipadr_is_same(targetip, cs->local_ip) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -274,8 +279,8 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 		}
 	}
 
-	if ( ipadr_not0_ucs(ipaddr) ) {
-		ipadr_assign_ucs(s->local_ip, ipaddr);
+	if ( ipadr_not0(targetip) ) {
+		s->local_ip = targetip;
 	}
 	s->local_port = port;
 	s->state = LISTEN;
@@ -326,7 +331,7 @@ again:
 	iph = ((ip_hdr_t*) p->payload) - 1;
 
 	/* Set up the new PCB. */
-	ipadr_assignl_ucs(ns->local_ip, iph->dest.val);
+	ns->local_ip = iph->dest;
 	ns->local_port = s->local_port;
 	ns->remote_ip  = iph->src;
 	ns->remote_port = h->src;
@@ -427,8 +432,6 @@ tcp_abort (tcp_socket_t *s)
 	ip_t *ip = s->ip;
 	unsigned long seqno, ackno;
 	unsigned short remote_port, local_port;
-	ip_addr remote_ip;
-	ip_addr local_ip;
 
 	mutex_lock (&s->lock);
 
@@ -444,8 +447,6 @@ tcp_abort (tcp_socket_t *s)
 	}
 	seqno = s->snd_nxt;
 	ackno = s->rcv_nxt;
-	local_ip = ipadr_4ucs(s->local_ip);
-	remote_ip = s->remote_ip;
 	local_port = s->local_port;
 	remote_port = s->remote_port;
 	tcp_queue_free (s);
@@ -461,7 +462,7 @@ tcp_abort (tcp_socket_t *s)
 	}
 
 	tcp_debug ("tcp_abort: sending RST\n");
-	tcp_rst (ip, seqno, ackno, local_ip.ucs, remote_ip.ucs,
+	tcp_rst (ip, seqno, ackno, s->local_ip.ucs, s->remote_ip.ucs,
 		local_port, remote_port);
 	mutex_unlock (&ip->lock);
 }

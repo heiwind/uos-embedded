@@ -223,12 +223,12 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 
 	/* If we don't have a local IP address, we get one by
 	 * calling ip_route(). */
-	if ( !ipadr_not0_ucs(s->local_ip) ) {
+	if ( !ipadr_not0(s->local_ip) ) {
 	    const unsigned char *local_ip;
 		netif = route_lookup (s->ip, s->remote_ip.ucs, 0, &local_ip);
 		if (! netif)
 			return;
-		ipadr_assign_ucs(s->local_ip, local_ip);
+		s->local_ip = ipadr_4ucs(local_ip);
 	}
 
 	s->rtime = 0;
@@ -253,7 +253,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 	p->payload = (unsigned char*) seg->tcphdr;
 
 	seg->tcphdr->chksum = 0;
-	n = buf_chksum (p, crc16_inet_header (s->local_ip, s->remote_ip.ucs,
+	n = buf_chksum (p, crc16_inet_header (s->local_ip.ucs, s->remote_ip.ucs,
 		IP_PROTO_TCP, p->tot_len));
 	if (p->tot_len & 1) {
 		/* Invert checksum bytes. */
@@ -267,7 +267,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 /*	buf_print_tcp (p);*/
 
 	++s->ip->tcp_out_datagrams;
-	ip_output (s->ip, p, s->remote_ip.ucs, s->local_ip, IP_PROTO_TCP);
+	ip_output (s->ip, p, s->remote_ip.ucs, s->local_ip.ucs, IP_PROTO_TCP);
 }
 
 /*
@@ -322,10 +322,10 @@ tcp_output (tcp_socket_t *s)
 
 		tcphdr->chksum = 0;
 		tcphdr->chksum = buf_chksum (p,
-			crc16_inet_header (s->local_ip,	s->remote_ip.ucs,
+			crc16_inet_header (s->local_ip.ucs,	s->remote_ip.ucs,
 			IP_PROTO_TCP, p->tot_len));
 
-		ip_output (s->ip, p, s->remote_ip.ucs, s->local_ip, IP_PROTO_TCP);
+		ip_output (s->ip, p, s->remote_ip.ucs, s->local_ip.ucs, IP_PROTO_TCP);
 		return 1;
 	}
 	if (seg == 0) {
