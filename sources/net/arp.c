@@ -100,17 +100,13 @@ arp_add_entry (netif_t *netif, ip_addr_const ipaddr, const unsigned char *_ethad
 		/* IP address match? */
 		if (ipadr_is_same(e->ipaddr.var, ipaddr)) {
 			/* An old entry found, update this and return. */
-			if (macadr_is_same(&e->ethaddr, &ethaddr) ||
-			    e->netif != netif) {
-				/* debug_printf ("arp: entry %d.%d.%d.%d changed from %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
-					ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
-					e->ethaddr[0], e->ethaddr[1], e->ethaddr[2],
-					e->ethaddr[3], e->ethaddr[4], e->ethaddr[5],
-					e->netif->name); */
-				/* debug_printf ("     to %02x-%02x-%02x-%02x-%02x-%02x netif %s\n",
-					ethaddr[0], ethaddr[1], ethaddr[2],
-					ethaddr[3], ethaddr[4], ethaddr[5],
-					netif->name); */
+			if (!macadr_is_same(&e->ethaddr, &ethaddr) ||
+			    (e->netif != netif)) 
+			{
+			    ARPTRACE_printf ("arp: entry %@.4D changed from %#6D netif %s\n",
+					ipaddr, e->ethaddr, e->netif->name);
+			    ARPTRACE_printf("     to %#6D netif %s\n",
+					ethaddr, netif->name);
 				macadr_assign(&e->ethaddr, &ethaddr);
 				e->netif = netif;
 			}
@@ -175,7 +171,7 @@ arp_input (netif_t *netif, buf_t *p)
 		/* For unicasts, update an ARP entry, independent of
 		 * the source IP address. */
 		if (h->eth.dest[0] != 255) {
-		    ARPTRACE_printf ("arp: add entry %@.4D %#6D\n", h->ip_src.ucs, h->eth.src);
+		    //ARPTRACE_printf ("arp: check entry %@.4D %#6D\n", h->ip_src.ucs, h->eth.src);
 			arp_add_entry (netif, h->ip_src.var, h->eth.src);
 		}
 
