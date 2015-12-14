@@ -179,6 +179,10 @@ static inline
 #endif
 void timer_update (timer_t *t)
 {
+#ifdef SW_TIMER
+	mutex_activate (&t->lock,
+		(void*) (size_t) t->milliseconds);
+#endif
 
 #if defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 	__timer_ticks_uos++;
@@ -186,38 +190,6 @@ void timer_update (timer_t *t)
 	if (__timer_ticks_uos==0)
 		__timer_ticks_uos++;
 
-#endif
-
-/*debug_printf ("<ms=%ld> ", t->milliseconds);*/
-#if defined (ELVEES)
-    /* Clear interrupt. */
-    MC_ITCSR &= ~MC_ITCSR_INT;
-#endif
-#if ARM_AT91SAM
-    /* Clear interrupt. */
-    *AT91C_PITC_PIVR;
-#endif
-#if ARM_OMAP44XX
-    /* Clear interrupt. */
-    ARM_PRT_INT_STATUS = ARM_PRT_EVENT;
-#endif
-#if ARM_1986BE1
-    SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ARR_EVENT;
-#endif
-#if PIC32MX
-    /* Increment COMPARE register. */
-    unsigned compare = mips_read_c0_register (C0_COMPARE);
-    do {
-        compare += t->compare_step;
-        mips_write_c0_register (C0_COMPARE, compare);
-    } while ((int) (compare - mips_read_c0_register (C0_COUNT)) < 0);
-#endif
-#if defined (RTC_TIMER)
-#   if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
-        RTC->ISR &= ~RTC_WUTF;
-        PWR->CR |= PWR_CWUF;
-        EXTI->PR = EXTI_RTC_WKUP;
-#   endif
 #endif
 
     /* Increment current time. */
@@ -285,6 +257,38 @@ void timer_update (timer_t *t)
 bool_t
 timer_handler (timer_t *t)
 {
+/*debug_printf ("<ms=%ld> ", t->milliseconds);*/
+#if defined (ELVEES)
+    /* Clear interrupt. */
+    MC_ITCSR &= ~MC_ITCSR_INT;
+#endif
+#if ARM_AT91SAM
+    /* Clear interrupt. */
+    *AT91C_PITC_PIVR;
+#endif
+#if ARM_OMAP44XX
+    /* Clear interrupt. */
+    ARM_PRT_INT_STATUS = ARM_PRT_EVENT;
+#endif
+#if ARM_1986BE1
+    SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ARR_EVENT;
+#endif
+#if PIC32MX
+    /* Increment COMPARE register. */
+    unsigned compare = mips_read_c0_register (C0_COMPARE);
+    do {
+        compare += t->compare_step;
+        mips_write_c0_register (C0_COMPARE, compare);
+    } while ((int) (compare - mips_read_c0_register (C0_COUNT)) < 0);
+#endif
+#if defined (RTC_TIMER)
+#   if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
+        RTC->ISR &= ~RTC_WUTF;
+        PWR->CR |= PWR_CWUF;
+        EXTI->PR = EXTI_RTC_WKUP;
+#   endif
+#endif
+
     timer_update (t);
 
     arch_intr_allow (TIMER_IRQ);

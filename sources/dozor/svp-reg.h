@@ -155,8 +155,8 @@
                                    проигнорирован из-за того, что в данном
                                    узле для соответствующего слота
                                    процессором был установлен признак DARQ */
-#define SVP_C0      (1 << 14)   /* Признак С0 */
-#define SVP_C1      (1 << 15)   /* Признак С1 */
+#define SVP_CEM(x)  ((1 << (x)) << 12)   /* В сети отсутствуют все узлы, указанные в CVECx */
+#define SVP_CNE(x)  ((1 << (x)) << 14)   /* В сети отсутствует хотя бы один узел, указанный в CVECx */
 
 /*
  * CMR – current mode register, 16 R
@@ -201,7 +201,7 @@
 /*
  * DAR - data access register, 32 R/W
  */
-#define SVP_DAR     SVP_REG_ARDR (0x98)
+#define SVP_DAR     SVP_REG_ADDR (0x98)
 
 #define SVP_DAR_ASLT(x) ((x) & 0xFFF)   /* Номер слота для синхронизации */
 #define SVP_DAR_DARQ    (1 << 12)       /* Бит запроса/разрешения доступа к слоту */
@@ -211,14 +211,14 @@
 /*
  * AKR - access key register, 32 R/W
  */
-#define SVP_AKR     SVP_REG_ARDR (0x94)
+#define SVP_AKR     SVP_REG_ADDR (0x94)
 
 #define SVP_ACCESS_KEY  0x2012A2B3
 
 /*
  * DB1_BASE - double buffer 1 base address, 16 R/W
  */
-#define SVP_DB1_BASE    SVP_REG_ARDR (0x90)
+#define SVP_DB1_BASE    SVP_REG_ADDR (0x90)
 
 
 /*----------------------------------------------
