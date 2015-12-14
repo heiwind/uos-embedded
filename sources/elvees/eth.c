@@ -42,6 +42,8 @@
 #define ETHFAIL_printf(...)
 #endif
 
+#define MC_EMAC_TX          1
+#define MC_EMAC_RX          0
 
 #define ETH_IRQ_RECEIVE		12	/* receive interrupt */
 #define ETH_IRQ_TRANSMIT	13	/* transmit interrupt */
@@ -528,17 +530,17 @@ chip_read_rxfifo (unsigned physaddr, unsigned nbytes)
 #else
 		MC_DMA_CSR_WCX (((nbytes + 7) >> 3) - 1);
 #endif
-	MC_CSR_EMAC(0) = csr;
-	MC_IR_EMAC(0) = physaddr;
-	MC_CP_EMAC(0) = 0;
+	MC_CSR_EMAC(MC_EMAC_RX) = csr;
+	MC_IR_EMAC(MC_EMAC_RX) = physaddr;
+	MC_CP_EMAC(MC_EMAC_RX) = 0;
 /*debug_printf ("(r%d) ", nbytes);*/
 
 	/* Run the DMA. */
-	MC_CSR_EMAC(0) = csr | MC_DMA_CSR_RUN;
+	MC_CSR_EMAC(MC_EMAC_RX) = csr | MC_DMA_CSR_RUN;
 
 	unsigned count;
 	for (count=100000; count>0; count--) {
-		csr = MC_CSR_EMAC(0);
+		csr = MC_CSR_EMAC(MC_EMAC_RX);
 		if (! (csr & MC_DMA_CSR_RUN))
 			break;
 	}
@@ -547,7 +549,7 @@ chip_read_rxfifo (unsigned physaddr, unsigned nbytes)
 #endif
 	if (count == 0) {
 		debug_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
-		MC_CSR_EMAC(0) = 0;
+		MC_CSR_EMAC(MC_EMAC_RX) = 0;
 	}
 }
 
@@ -563,13 +565,13 @@ chip_start_rxfifo (eth_t* u, unsigned nbytes)
     unsigned csr = MC_DMA_CSR_WN(15)
                  | MC_DMA_CSR_WCX (nbytes - 1)
                  ;
-    MC_CSR_EMAC(0) = csr;
-    MC_IR_EMAC(0) = physaddr;
-    MC_CP_EMAC(0) = 0;
+    MC_CSR_EMAC(MC_EMAC_RX) = csr;
+    MC_IR_EMAC(MC_EMAC_RX) = physaddr;
+    MC_CP_EMAC(MC_EMAC_RX) = 0;
     EDMA_printf ("(r%d) ", nbytes);
 
     /* Run the DMA. */
-    MC_CSR_EMAC(0) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
+    MC_CSR_EMAC(MC_EMAC_RX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
 }
 
 static bool_t
@@ -578,12 +580,12 @@ chip_wait_rxfifo (eth_t* u)
     bool_t done = 0;
     unsigned csr;
 
-    csr = MC_CSR_EMAC(0);
+    csr = MC_CSR_EMAC(MC_EMAC_RX);
     done = (csr & MC_DMA_CSR_RUN) == 0;
 
     if (!done) {
         mutex_wait(&u->dma_rx.lock);
-        csr = MC_CSR_EMAC(0);
+        csr = MC_CSR_EMAC(MC_EMAC_RX);
         EDMA_printf (" ->s(%x)\n",csr);
         done = (csr & MC_DMA_CSR_RUN) == 0;
     }
@@ -593,7 +595,7 @@ chip_wait_rxfifo (eth_t* u)
 #endif
     if (!done) {
         debug_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
-        MC_CSR_EMAC(0) = 0;
+        MC_CSR_EMAC(MC_EMAC_RX) = 0;
     }
     return done;
 }
@@ -602,7 +604,7 @@ static void
 chip_poll_rxfifo (eth_t* u){
     unsigned csr;
     mutex_lock (&u->dma_rx.lock);
-    csr = MC_CSR_EMAC(0);
+    csr = MC_CSR_EMAC(MC_EMAC_RX);
     bool_t done = (csr & MC_DMA_CSR_RUN) == 0;
     if ((u->dma_rx.byf_phys != 0) & done)
         mutex_signal(&u->dma_rx.lock, u);
