@@ -221,14 +221,17 @@ INLINE bool_t mutex_check_pended_irq (mutex_t *m)
         if (irq->pending) {
             irq->pending = 0;
 
-            /* Unblock all tasks, waiting for irq. */
-            if ((irq->handler) (irq->arg) == 0){
-                mutex_activate (m, (void*)(irq->irq));
-                return 1;
+            if (irq->handler != 0) {
+                if ((irq->handler) (irq->arg) == 0){
+                    /* Unblock all tasks, waiting for irq. */
+                    mutex_activate (m, (void*)(irq->irq));
+                    return 1;
+                }
             }
-        }
-        else if (irq->irq >= 0)
-            arch_intr_allow (irq->irq);
+            //всеже разрешаем прерывания без обработчика только при их ожидании mutex_wait 
+            //else if (irq->irq >= 0)
+            //        arch_intr_allow (irq->irq);
+        }//if (irq->pending)
     }
     return 0;
 }

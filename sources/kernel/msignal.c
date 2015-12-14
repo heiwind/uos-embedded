@@ -128,6 +128,12 @@ bool_t mutex_wait_until (mutex_t *m
         arch_intr_restore (x);
         return 1;
     }
+    if (m->irq){
+        //для ожидания на прерывании, форсирую разрешение прерывания
+        mutex_irq_t *   irq = m->irq;
+        if (irq->irq >= 0)
+            arch_intr_allow (irq->irq);
+    }
 
     task_current->wait = m;
     list_append (&m->waiters, &task_current->item);
