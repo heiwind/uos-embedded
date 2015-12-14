@@ -531,7 +531,8 @@ static int mil_start(mil1553if_t *_mil)
     if (_mil->is_started(_mil))
         return MIL_ERR_OK;
         
-    unsigned control = MIL_STD_CONTROL_DIV((KHZ/4)/1000); // на блок подается MAIN_CLK/4 (128/4=32)
+    //unsigned control = MIL_STD_CONTROL_DIV((KHZ/4)/1000); // на блок подается MAIN_CLK/4 (128/4=32)
+    unsigned control = MIL_STD_CONTROL_DIV((KHZ/2)/1000); // на блок подается MAIN_CLK/2 (128/2=64)
         
     if ((mil->mode == MIL_MODE_BC_MAIN) || (mil->mode == MIL_MODE_BC_RSRV)) {
         control |= MIL_STD_CONTROL_MODE(MIL_STD_MODE_BC);
@@ -565,6 +566,8 @@ static int mil_start(mil1553if_t *_mil)
     } else if (mil->mode == MIL_MODE_RT) {
         control |= MIL_STD_CONTROL_MODE(MIL_STD_MODE_RT);
         control |= MIL_STD_CONTROL_ADDR(mil->addr_self) | MIL_STD_CONTROL_TRA | MIL_STD_CONTROL_TRB;
+        //control |= 1<<21; // выключаем автоподстройку
+        //control |= 1UL<<20; // включаем фильтрацию
         mil->reg->StatusWord1 = MIL_STD_STATUS_ADDR_OU(mil->addr_self);
         mil->reg->INTEN = MIL_STD_INTEN_RFLAGNIE | MIL_STD_INTEN_VALMESSIE | MIL_STD_INTEN_ERRIE;
         mil->reg->CONTROL = control;
@@ -728,7 +731,8 @@ void milandr_mil1553_init(milandr_mil1553_t *_mil, int port, mem_pool_t *pool, u
     }
 
     // Разрешение тактовой частоты на контроллер ГОСТ Р52070-2003
-    ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(2) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 4
+    //ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(2) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 4
+    ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(1) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 2
 
     mil->pool = pool;
     if (nb_rxq_msg) {
