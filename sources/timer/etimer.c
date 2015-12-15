@@ -36,7 +36,7 @@
 
 etimer_device system_etimer = {NULL};
 
-#define DEBUG_ETIMER 1
+//#define DEBUG_ETIMER 1
 
 #if DEBUG_ETIMER
 #include <runtime/lib.h>
