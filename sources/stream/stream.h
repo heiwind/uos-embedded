@@ -30,7 +30,7 @@ typedef struct _stream_interface_t {
 	struct _mutex_t *(*receiver) (stream_t *u);
 } stream_interface_t;
 
-#define to_stream(x)   ((stream_t*)&(x)->interface)
+#define to_stream(x)   ((stream_t*)&((x)->interface))
 
 void drain_input (stream_t *u); /* LY: чистит забуферизированный в потоке ввод. */
 int stream_puts (stream_t *u, const char *str);
