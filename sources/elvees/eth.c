@@ -561,36 +561,48 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
 	}
 #endif
 
-    eth_tx_lock(u);
-
-#ifdef ETH_TX_USE_DMA_IRQ
-    arch_intr_allow (ETH_IRQ_DMA_TX);
-
-    /* Run the DMA. */
-    MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
-#else
-    /* Run the DMA. */
-    MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_RUN;
-#endif
-
     //trace_pin1_on();
-
 #ifdef ETH_TX_USE_DMA_IRQ
+
+#ifdef ETH_DMA_WAITPOLL_TH
+    if (nbytes < ETH_DMA_WAITPOLL_TH)
+    {
+        /* Run the DMA. */
+        MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_RUN;
+        unsigned count;
+        for (count=10000; count>0; count--) {
+            csr = MC_CSR_EMAC(MC_EMAC_TX);
+            if (! (csr & MC_DMA_CSR_RUN))
+                break;
+            //eth_yield();
+            //debug_printf ("~");
+        }
+    }
+    else
+#endif
+    {
+        eth_tx_lock(u);
+        arch_intr_allow (ETH_IRQ_DMA_TX);
+        /* Run the DMA. */
+        MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
         mutex_wait(&u->dma_tx.lock);
         //debug_putchar(0,'_');
-#else
-    unsigned count;
-    for (count=10000; count>0; count--) {
-        csr = MC_CSR_EMAC(MC_EMAC_TX);
-        if (! (csr & MC_DMA_CSR_RUN))
-            break;
-        //eth_yield();
-        //debug_printf ("~");
+        eth_tx_unlock(u);
     }
-	if (count == 0) {
-	    ETHFAIL_printf ("eth: TX DMA failed, CSR=%08x\n", csr);
-		MC_CSR_EMAC(MC_EMAC_TX) = 0;
-	}
+
+#else //ETH_TX_USE_DMA_IRQ
+    {
+        /* Run the DMA. */
+        MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_RUN;
+        unsigned count;
+        for (count=10000; count>0; count--) {
+            csr = MC_CSR_EMAC(MC_EMAC_TX);
+            if (! (csr & MC_DMA_CSR_RUN))
+                break;
+            //eth_yield();
+            //debug_printf ("~");
+        }
+    }
 #endif
     //trace_pin1_off();
 
@@ -604,7 +616,6 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
         EDMA_printf ("eth: TX DMA failed, CSR=%08x\n", csr);
         MC_CSR_EMAC(MC_EMAC_TX) = 0;
     }
-    eth_tx_unlock(u);
 }
 
 
@@ -689,6 +700,21 @@ chip_wait_rxfifo (eth_t* u)
 {
     bool_t done = 0;
     unsigned csr;
+
+#ifdef ETH_DMA_WAITPOLL_TH
+    csr = MC_CSR_EMAC(MC_EMAC_RX);
+    const unsigned lenmask = MC_DMA_CSR_WCX (~0);
+    const unsigned th      = MC_DMA_CSR_WCX (ETH_DMA_WAITPOLL_TH);
+    if ( (csr & lenmask) < th) {
+        //для маленьких объемов данных не стану тратить время на переключения контекста в mutex_wait
+        unsigned count;
+        for (count=100000; count>0; count--) {
+            csr = MC_CSR_EMAC(MC_EMAC_RX);
+            if (! (csr & MC_DMA_CSR_RUN))
+                break;
+        }
+    }
+#endif
 
     csr = MC_CSR_EMAC(MC_EMAC_RX);
     done = (csr & MC_DMA_CSR_RUN) == 0;
