@@ -47,6 +47,41 @@ extern "C" {
 #   define ETH_MTU		1518	/* maximum ethernet frame length */
 #endif
 
+#if ETH_OPTIMISE_SPEED > 0
+#include <stdint.h>
+// структура - блок параметров DMA
+/*******************************
+ 63____________________________0
+ {IR132,                       };
+ { CSR32,           CP32       }.
+ ********************************/
+//Параметры для самоинициализации DMA портов
+typedef struct __attribute__((packed,aligned(8))) _EMAC_PortCh_Settings
+{
+    uint32_t none;
+    uint32_t ir; //данные для регистра индекса (адрес памяти) (IR);
+    struct _EMAC_PortCh_Settings* cp; //адрес следующего блока параметров DMA передачи
+    uint32_t csr; //данные для регистра управления и состояния CSR
+} EMAC_PortCh_Settings;
+
+#if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
+
+#ifndef ETH_TX_CHUNKS
+//!!! TODO не тестирован код с ETH_TX_CHUNKS> 0
+#define ETH_TX_CHUNKS   0
+#endif
+
+// на ELVEES_NVCOM02T не удается получить это прерывание, если оно есть, то облегчаем жизнь
+//      за счет устранения циклов ожидания
+//#define ETH_TX_USE_DMA_IRQ
+
+#endif // defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
+#endif // #if ETH_OPTIMISE_SPEED > 0
+
+//* это отпределение вводит task_yield в циклы ожидания, разгружает процессор, но может
+//  сильные лаги внести
+#define ETH_USE_YELDING_WAIT
+
 struct _mem_pool_t;
 typedef struct __attribute__ ((aligned(8))) _eth_t {
 	netif_t netif;			/* common network interface part */
@@ -77,12 +112,23 @@ typedef struct __attribute__ ((aligned(8))) _eth_t {
 
 #if ETH_OPTIMISE_SPEED > 0 
     mutex_t rx_lock;        /* get rx interrupts here */
-	struct {
+    struct {
         mutex_t  lock;        /* get rx interrupts here */
-	    unsigned status;
-	    buf_t*   buf;
-	    unsigned byf_phys;
-	} dma_rx;
+        buf_t*   buf;
+        unsigned byf_phys;
+    } dma_rx;
+
+	struct {
+        //buf_t*   buf;
+        unsigned byf_phys;
+#ifdef ETH_TX_USE_DMA_IRQ        
+        mutex_t  lock;        /* get tx dma interrupts here */
+#endif
+#if ETH_TX_CHUNKS > 0
+	    unsigned             task_physaddr;    /* phys address of txbuf[] */
+        EMAC_PortCh_Settings emac_task[ETH_TX_CHUNKS];
+#endif
+	} dma_tx;
 #endif
 
 	ARRAY (stack, ETH_STACKSZ);	/* stack for receive task */

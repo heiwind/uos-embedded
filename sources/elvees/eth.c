@@ -71,6 +71,15 @@ virt_to_phys (unsigned virtaddr)
 	}
 }
 
+#ifdef ETH_USE_YELDING_WAIT
+#define eth_yield() task_yield()
+#define eth_yield_scale 1
+#else
+#define eth_yield()
+#define eth_yield_scale 100
+#endif
+
+
 #ifndef ETH_MDIO_KHZ
 #define ETH_MDIO_KHZ 2500ul
 #endif
@@ -89,6 +98,7 @@ unsigned eth_phy_wait_poll(eth_t *u)   {
         status = MC_MAC_MD_STATUS;
         if (! (status & MD_STATUS_BUSY))
             break;
+        task_yield();
         now = mips_read_c0_register (C0_COUNT);
     } while ((now-start) < MDIO_CPUTO);
     return status;
@@ -338,6 +348,9 @@ chip_init (eth_t *u)
 
 	phy_status_ask(u);
 
+	MC_CSR_EMAC(MC_EMAC_RX) = MC_DMA_CSR_IPD;
+    MC_CSR_EMAC(MC_EMAC_TX) = MC_DMA_CSR_IPD;
+	
 	/* Reset TX and RX blocks and pointers */
 	MC_MAC_CONTROL = MAC_CONTROL_CP_TX | MAC_CONTROL_RST_TX |
 			 MAC_CONTROL_CP_RX | MAC_CONTROL_RST_RX;
@@ -492,42 +505,131 @@ void eth_set_promisc (eth_t *u, int station, int group)
 /*
  * Put data to transmit FIFO from dma buffer.
  */
+#if ETH_TX_CHUNKS > 0
+//1 - если добавлена цепь 
+bool_t eth_txfifo_chainset(eth_t* u, unsigned csr_tpl){
+    EMAC_PortCh_Settings* task = u->dma_tx.emac_task;
+    if (task[0].ir == 0){
+        MC_CP_EMAC(MC_EMAC_TX) = 0;
+        return 0;
+    }
+
+    csr_tpl |= MC_DMA_CSR_CHEN;
+
+    unsigned i;
+    for (i = 0; i < ETH_TX_CHUNKS-1; i++, task++){
+        if (task[0].ir == 0){
+            task[-1].csr &= ~MC_DMA_CSR_CHEN;
+            break;
+        }
+        u->dma_tx.emac_task[0].csr |= csr_tpl;
+    }
+    MC_CP_EMAC(MC_EMAC_TX) = u->dma_tx.task_physaddr;
+    return 1;
+}
+#endif
+
+#if defined(ETH_TX_USE_DMA_IRQ)
+#define eth_tx_lock(u)      mutex_lock(&((u)->dma_tx.lock))
+#define eth_tx_unlock(u)    mutex_unlock(&((u)->dma_tx.lock))
+#else
+#define eth_tx_lock(u)
+#define eth_tx_unlock(u)
+#endif
+
 static void
-chip_write_txfifo (unsigned physaddr, unsigned nbytes)
+chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
 {
 /*debug_printf ("write_txfifo %08x, %d bytes\n", physaddr, nbytes);*/
 	/* Set the address and length for DMA. */
 	unsigned csr = MC_DMA_CSR_WN(15) |
+//            | MC_DMA_CSR_IPD |
 #if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
 		MC_DMA_CSR_WCX (nbytes - 1);
 #else
 		MC_DMA_CSR_WCX (((nbytes + 7) >> 3) - 1);
 #endif
-	MC_IR_EMAC(1) = physaddr;
-	MC_CP_EMAC(1) = 0;
-	MC_CSR_EMAC(1) = csr;
+	MC_IR_EMAC(MC_EMAC_TX) = physaddr;
+	MC_CP_EMAC(MC_EMAC_TX) = 0;
+	MC_CSR_EMAC(MC_EMAC_TX) = csr;
+    u->dma_tx.byf_phys = physaddr;
 /*debug_printf ("<t%d> ", nbytes);*/
 
-	/* Run the DMA. */
-	MC_CSR_EMAC(1) = csr | MC_DMA_CSR_RUN;
+#if ETH_TX_CHUNKS > 0
+	if (eth_txfifo_chainset(u, csr | MC_DMA_CSR_RUN)){
+	    csr |= MC_DMA_CSR_CHEN;
+	}
+#endif
 
-	unsigned count;
-	for (count=100000; count>0; count--) {
-		csr = MC_CSR_EMAC(1);
-		if (! (csr & MC_DMA_CSR_RUN))
-			break;
-/*debug_printf ("~");*/
-	}
+    eth_tx_lock(u);
+
+#ifdef ETH_TX_USE_DMA_IRQ
+    arch_intr_allow (ETH_IRQ_DMA_TX);
+
+    /* Run the DMA. */
+    MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
+#else
+    /* Run the DMA. */
+    MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_RUN;
+#endif
+
+    //trace_pin1_on();
+
+#ifdef ETH_TX_USE_DMA_IRQ
+        mutex_wait(&u->dma_tx.lock);
+        //debug_putchar(0,'_');
+#else
+    unsigned count;
+    for (count=10000; count>0; count--) {
+        csr = MC_CSR_EMAC(MC_EMAC_TX);
+        if (! (csr & MC_DMA_CSR_RUN))
+            break;
+        //eth_yield();
+        //debug_printf ("~");
+    }
 	if (count == 0) {
-		debug_printf ("eth: TX DMA failed, CSR=%08x\n", csr);
-		MC_CSR_EMAC(1) = 0;
+	    ETHFAIL_printf ("eth: TX DMA failed, CSR=%08x\n", csr);
+		MC_CSR_EMAC(MC_EMAC_TX) = 0;
 	}
+#endif
+    //trace_pin1_off();
+
+    csr = MC_CSR_EMAC(MC_EMAC_TX);
+    //bool_t done = (csr & (MC_DMA_CSR_END|MC_DMA_CSR_DONE)) != 0;
+    bool_t done = (csr & (MC_DMA_CSR_RUN)) == 0;
+    if (done){
+        u->dma_tx.byf_phys = 0;
+    } 
+    else{
+        EDMA_printf ("eth: TX DMA failed, CSR=%08x\n", csr);
+        MC_CSR_EMAC(MC_EMAC_TX) = 0;
+    }
+    eth_tx_unlock(u);
 }
+
+
+#ifdef ETH_TX_USE_DMA_IRQ
+CODE_ISR
+bool_t eth_tx_on_emac(void* data){
+    eth_t* u = (eth_t*)data;
+
+    unsigned csr = MC_CSR_EMAC(MC_EMAC_TX);
+    //debug_putchar(0,'!');
+    bool_t done = (csr & MC_DMA_CSR_RUN) == 0;
+    if (done){
+        MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
+        u->dma_tx.byf_phys = 0;
+    }
+    //arch_intr_allow (ETH_IRQ_DMA_TX);
+    return 0;
+}
+#endif
 
 /*
  * Fetch data from receive FIFO to dma buffer.
  */
-static void __attribute__((unused)) 
+static void
+__attribute__((unused)) 
 chip_read_rxfifo (unsigned physaddr, unsigned nbytes)
 {
 	/* Set the address and length for DMA. */
@@ -555,7 +657,7 @@ chip_read_rxfifo (unsigned physaddr, unsigned nbytes)
     MC_CSR |= MC_CSR_FLUSH_D;
 #endif
 	if (count == 0) {
-		debug_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
+	    EDMA_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
 		MC_CSR_EMAC(MC_EMAC_RX) = 0;
 	}
 }
@@ -570,6 +672,7 @@ chip_start_rxfifo (eth_t* u, unsigned nbytes)
     unsigned physaddr = u->dma_rx.byf_phys;
 
     unsigned csr = MC_DMA_CSR_WN(15)
+                 | MC_DMA_CSR_IPD
                  | MC_DMA_CSR_WCX (nbytes - 1)
                  ;
     MC_CSR_EMAC(MC_EMAC_RX) = csr;
@@ -601,7 +704,7 @@ chip_wait_rxfifo (eth_t* u)
     MC_CSR |= MC_CSR_FLUSH_D;
 #endif
     if (!done) {
-        debug_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
+        ETHFAIL_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
         MC_CSR_EMAC(MC_EMAC_RX) = 0;
     }
     return done;
@@ -641,29 +744,83 @@ chip_transmit_packet (eth_t *u, buf_t *p)
     //  по окончании отсылки фрейма вероятно поимеем актуальный статус 
     phy_status_ask(u);
 
-	unsigned char *buf = (unsigned char*) u->txbuf;
-	for (q=p; q; q=q->next) {
-		/* Copy the packet into the transmit buffer. */
-		assert (q->len > 0);
-/*debug_printf ("txcpy %08x <- %08x, %d bytes\n", buf, q->payload, q->len);*/
-		memcpy (buf, q->payload, q->len);
-		buf += q->len;
-	}
-	
-	unsigned len = p->tot_len;
-	if (len < 60) {
-		len = 60;
-/*debug_printf ("txzero %08x, %d bytes\n", u->txbuf + p->tot_len, len - p->tot_len);*/
-		memset (u->txbuf + p->tot_len, 0, len - p->tot_len);
-	}
-	MC_MAC_TX_FRAME_CONTROL = TX_FRAME_CONTROL_DISENCAPFR |
-		TX_FRAME_CONTROL_DISPAD |
-		TX_FRAME_CONTROL_LENGTH (len);
-	chip_write_txfifo (u->txbuf_physaddr, len);
-	MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
+    unsigned phys_buf = 0;
+    unsigned len = 0;
+#if (ETH_OPTIMISE_SPEED > 0) && (defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02))
+    if (p->tot_len >= 60) {
+        //в режиме TX_FRAME_CONTROL_DISENCAPFR, МАК не умеет добавлять PADы к короткому пакету
+        if ((ETH_TX_CHUNKS > 0) || (p->next == 0)) {
+            phys_buf = virt_to_phys((unsigned)(p->payload));
+            len = p->len;
+        }
+    #if ETH_TX_CHUNKS > 0
+        if ((p->next != 0) && (ETH_TX_CHUNKS > 0) ) {
+            q = p->next;
+            unsigned i;
+            for (i = 0; i < ETH_TX_CHUNKS && (q != 0); i++, q=q->next) {
+                /* Copy the packet into the transmit buffer. */
+                assert (q->len > 0);
+        /*debug_printf ("txcpy %08x <- %08x, %d bytes\n", buf, q->payload, q->len);*/
+                EMAC_PortCh_Settings* task = &(u->dma_tx.emac_task[i]);
+                task->ir = virt_to_phys((unsigned)(q->payload));
+                task->csr = MC_DMA_CSR_WCX (q->len - 1);
+            }
+            if (q->next != 0){
+                //много чанков, потому придется их сложить вручную
+                u->dma_tx.emac_task[0].ir = 0;
+                phys_buf = 0;
+            }
+        }
+    #endif //ETH_TX_CHUNKS > 0
+    }
+#endif //#if ETH_OPTIMISE_SPEED > 0
 
-	++u->netif.out_packets;
-	u->netif.out_bytes += len;
+    if (phys_buf == 0) {
+    unsigned char *buf = (unsigned char*) u->txbuf;
+    phys_buf = u->txbuf_physaddr;
+    for (q=p; q; q=q->next) {
+        /* Copy the packet into the transmit buffer. */
+        assert (q->len > 0);
+/*debug_printf ("txcpy %08x <- %08x, %d bytes\n", buf, q->payload, q->len);*/
+        memcpy (buf, q->payload, q->len);
+        buf += q->len;
+    }
+    
+    len = p->tot_len;
+    if (len < 60) {
+        len = 60;
+/*debug_printf ("txzero %08x, %d bytes\n", u->txbuf + p->tot_len, len - p->tot_len);*/
+        memset (u->txbuf + p->tot_len, 0, len - p->tot_len);
+    }
+    }//if (buf != 0)
+
+    MC_MAC_TX_FRAME_CONTROL = TX_FRAME_CONTROL_DISENCAPFR |
+        TX_FRAME_CONTROL_DISPAD |
+        TX_FRAME_CONTROL_LENGTH (len);
+
+#if ETH_OPTIMISE_SPEED > 0
+        chip_write_txfifo (u, phys_buf, len);
+#    if !defined(ETH_TX_USE_DMA_IRQ)
+        //если используем обработчик прерывания ЕМАК, то старт передачи находится в нем.
+        MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
+#    endif
+
+        if (u->dma_tx.byf_phys == 0){
+            ++u->netif.out_packets;
+            u->netif.out_bytes += len;
+        }
+        else {
+            debug_putchar(0,'/');
+            //по какойто причине буфер не загрузили в ФИФО трансмитера
+            u->netif.out_errors++;
+            u->netif.out_discards++;
+        }
+#else //ETH_OPTIMISE_SPEED > 0
+        chip_write_txfifo (u, phys_buf, len);
+        MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
+        ++u->netif.out_packets;
+        u->netif.out_bytes += len;
+#endif
 
 /*debug_printf ("tx%d", len); buf_print_data (u->txbuf, p->tot_len);*/
 }
@@ -998,13 +1155,14 @@ eth_receiver (void *arg)
 	eth_t *u = (eth_t *)arg;
 #if ETH_OPTIMISE_SPEED > 0
     mutex_t* const rx_lock = &u->rx_lock;
-    mutex_lock_irq (&u->dma_rx.lock, ETH_IRQ_DMA_RX, 0, 0);
+    mutex_lock_irq (&u->dma_rx.lock, ETH_IRQ_DMA_RX, 0, u);
 #else
     const mutex_t* rx_lock = &u->netif.lock;
 #endif
 
 	/* Register receive interrupt. */
     mutex_lock_irq (rx_lock, ETH_IRQ_RECEIVE, 0, 0);
+
 
 	for (;;) {
 		/* Wait for the receive interrupt. */
@@ -1024,6 +1182,11 @@ eth_transmitter (void *arg)
 
 	/* Register transmit interrupt. */
 	mutex_lock_irq (&u->tx_lock, ETH_IRQ_TRANSMIT, 0, 0);
+#ifdef ETH_TX_USE_DMA_IRQ        
+    mutex_attach_irq (&u->dma_tx.lock, ETH_IRQ_DMA_TX, &(eth_tx_on_emac), u);
+    //arch_intr_allow (ETH_IRQ_DMA_TX);
+    //mutex_unlock(&u->dma_tx.lock);
+#endif
 
 	for (;;) {
 		/* Wait for the transmit interrupt. */
@@ -1062,7 +1225,16 @@ eth_init (eth_t *u, const char *name, int prio, mem_pool_t *pool,
 	u->txbuf_physaddr = virt_to_phys ((unsigned) u->txbuf);
 	buf_queue_init (&u->inq, u->inqdata, sizeof (u->inqdata));
 	buf_queue_init (&u->outq, u->outqdata, sizeof (u->outqdata));
-
+#if ETH_TX_CHUNKS > 0
+	//создаю ДМА-цепь 
+	u->dma_tx.task_physaddr = virt_to_phys((unsigned)(u->dma_tx.emac_task));
+	unsigned i;
+	EMAC_PortCh_Settings* task = u->dma_tx.emac_task;
+	for (i = 0; i < ETH_TX_CHUNKS-1; i ++, task++){
+	    task[0].cp = (EMAC_PortCh_Settings*)virt_to_phys( (unsigned)(task+1) );
+	}
+	u->dma_tx.emac_task[ETH_TX_CHUNKS-1].cp = (EMAC_PortCh_Settings*)0;
+#endif
 	/* Initialize hardware. */
 	chip_init (u);
 
