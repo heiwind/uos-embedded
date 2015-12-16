@@ -543,7 +543,7 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
 /*debug_printf ("write_txfifo %08x, %d bytes\n", physaddr, nbytes);*/
 	/* Set the address and length for DMA. */
 	unsigned csr = MC_DMA_CSR_WN(15) |
-//            | MC_DMA_CSR_IPD |
+            MC_DMA_CSR_IPD |
 #if defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
 		MC_DMA_CSR_WCX (nbytes - 1);
 #else
@@ -577,17 +577,20 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
             //eth_yield();
             //debug_printf ("~");
         }
+        if ((csr & (MC_DMA_CSR_RUN)) == 0)
+            //при использовании прерывания ДМА позаботиться о старте передачи надо тут
+            MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
     }
     else
 #endif
     {
-        eth_tx_lock(u);
-        arch_intr_allow (ETH_IRQ_DMA_TX);
-        /* Run the DMA. */
         MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
+        arch_intr_allow (ETH_IRQ_DMA_TX);
+        //eth_tx_lock(u);
+        /* Run the DMA. */
         mutex_wait(&u->dma_tx.lock);
         //debug_putchar(0,'_');
-        eth_tx_unlock(u);
+        //eth_tx_unlock(u);
     }
 
 #else //ETH_TX_USE_DMA_IRQ

@@ -77,9 +77,10 @@ typedef struct __attribute__((packed,aligned(8))) _EMAC_PortCh_Settings
 #define ETH_TX_CHUNKS   0
 #endif
 
-// на ELVEES_NVCOM02T не удается получить это прерывание, если оно есть, то облегчаем жизнь
-//      за счет устранения циклов ожидания
-//#define ETH_TX_USE_DMA_IRQ
+// облегчаем жизнь просессору за счет устранения циклов ожидания, позволяет отдать 
+//  до 10мкс на пакетах более 512 байт
+//  но чуть ухудшает скорость запуска передатчика за счет вхождения в прерывание 
+#define ETH_TX_USE_DMA_IRQ
 
 #endif // defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
 #endif // #if ETH_OPTIMISE_SPEED > 0
