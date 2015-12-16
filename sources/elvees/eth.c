@@ -42,6 +42,12 @@
 #define ETHFAIL_printf(...)
 #endif
 
+#ifdef DEBUG_NET_PHY
+#define PHY_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define PHY_printf(...)
+#endif
+
 #define MC_EMAC_TX          1
 #define MC_EMAC_RX          0
 
@@ -196,7 +202,8 @@ unsigned eth_phy_io(eth_t *u, unsigned address, unsigned cmd_data){
 void
 eth_phy_write (eth_t *u, unsigned address, unsigned data)
 {
-    eth_phy_io(u, address, MD_CONTROL_DATA (data) | MD_CONTROL_OP_WRITE);
+    unsigned res = eth_phy_io(u, address, MD_CONTROL_DATA (data) | MD_CONTROL_OP_WRITE);
+    PHY_printf("PHY:now %x\n", res);
 }
 
 /*
@@ -205,7 +212,7 @@ eth_phy_write (eth_t *u, unsigned address, unsigned data)
 unsigned
 eth_phy_read (eth_t *u, unsigned address)
 {
-    return eth_phy_io(u, address, MD_CONTROL_OP_READ);
+    return MD_CONTROL_DATA(eth_phy_io(u, address, MD_CONTROL_OP_READ));
 }
 
 static inline 
