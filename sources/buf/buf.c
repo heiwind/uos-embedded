@@ -79,6 +79,23 @@ buf_add_header (buf_t *p, short header_size)
 }
 
 /*
+ * reset p->payload pointer to header_size offset from allocated mem buffer
+ * */
+bool_t buf_reset_header (buf_t *p, short header_size){
+    int preserve = p->payload - (unsigned char*) p - sizeof (buf_t);
+    if (header_size < (p->len+preserve))
+    {
+        unsigned h = preserve - header_size;
+        p->payload -= h;
+        p->len += h;
+        p->tot_len += h;
+        return 1;
+    }
+    else
+        return 0;
+}
+
+/*
  * Deallocate the buffer. If the buf is a chain all bufs in the
  * chain are deallocated. Return the number of deallocated segments.
  */

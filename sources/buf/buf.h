@@ -56,6 +56,11 @@ void buf_truncate (buf_t *p, unsigned short size);
 bool_t buf_add_header (buf_t *p, short header_size);
 
 /*
+ * reset p->payload pointer to header_size offset from allocated mem buffer
+ * */
+bool_t buf_reset_header (buf_t *p, short header_size);
+
+/*
  * Chain buf t on the end of buf h. Pbuf h will have it's tot_len
  * field adjusted accordingly. Pbuf t should no be used any more after
  * a call to this function, since buf t is now a part of buf h.
