@@ -250,7 +250,7 @@ ip_output_netif (ip_t *ip, buf_t *p
 		/* Not enough room for IP header. */
 		/*debug_printf ("ip_output_netif: no space for header\n");*/
 		++ip->out_discards;
-		buf_free (p);
+		netif_free_buf (netif, p);
 		return 0;
 	}
 
@@ -318,7 +318,7 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 			dest[0], dest[1], dest[2], dest[3]);*/
 		++ip->out_requests;
 		++ip->out_no_routes;
-		buf_free (p);
+		netif_free_buf (0, p);
 		return 0;
 	}
 	return ip_output_netif (ip, p, dest, src, proto

@@ -3,6 +3,7 @@
 
 
 #include <net/arp.h>
+#include <buf/buf.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -102,7 +103,57 @@ bool_t netif_output_prio (netif_t *netif, struct _buf_t *p,
 struct _buf_t *netif_input (netif_t *netif);
 void netif_set_address (netif_t *netif, unsigned char *ethaddr);
 
+/** netif_io_overlap - структура оверлап-запроса - кладется в начале буфера, 
+ * позволяет передать опции, колбэк, сигнал с запросом. которые отрабатываются 
+ * по окончании отправки/загрузки буфера.
+ * 
+ * если в оверлапе задан сигнал или обработчик, то буфер не дестроится после передачи,
+ *  он отдается на откуп обработчику.
+ *  !!! следите за памятью.
+ * */
+enum netif_io_overlap_option{
+      nioo_ActionNone  = 0
+    , nioo_ActionMutex = 0x40
+    , nioo_ActionCB    = 0x80
+    , nioo_ActionTask  = 0xc0
+    , nioo_ActionMASK  = 0xc0
+} ;
 
+typedef void (*netif_callback)(buf_t *p, unsigned arg);
+#define NETIF_OVERLAP_MARK 0x5a
+
+typedef struct _netif_io_overlap{
+    union {
+        mutex_t* signal;
+        task_t*  task;
+        netif_callback callback;
+    } action;
+    unsigned arg;
+    char options;
+    //контрольный маркер, чтобы убедиться что в буфере лежит именно оверлап
+    char mark;
+} netif_io_overlap;
+
+#define NETIO_OVERLAP_HLEN  sizeof(netif_io_overlap)
+
+INLINE
+netif_io_overlap* netif_is_overlaped(buf_t *p){
+    netif_io_overlap* over = (netif_io_overlap*)((char*)p + sizeof(buf_t));
+    if( (p->payload - sizeof(netif_io_overlap)) < (unsigned char*)over )
+        return 0;
+    if (over->mark == NETIF_OVERLAP_MARK)
+        return over;
+    else
+        return 0;
+}
+
+void netif_overlap_assign_mutex(buf_t *p, unsigned options
+                                , mutex_t* signal, void* msg);
+void netif_overlap_assign_cb(buf_t *p, unsigned options
+                                , netif_callback cb, void* msg);
+
+//используется интерфейсами для освобождения буфера
+void netif_free_buf(netif_t *u, buf_t *p);
 
 #ifdef __cplusplus
 }

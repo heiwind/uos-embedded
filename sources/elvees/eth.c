@@ -875,7 +875,7 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		++u->netif.out_errors;
 		mutex_unlock (&u->tx_lock);
 		ETHFAIL_printf("eth_output: transmit %d bytes, link failed\n", p->tot_len);
-		buf_free (p);
+		netif_free_buf (&u->netif, p);
 		return 0;
 	}
 	if (! (MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) && buf_queueh_is_empty (&u->outq)) {
@@ -883,7 +883,7 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		/* Смело отсылаем. */
 		chip_transmit_packet (u, p);
 		mutex_unlock (&u->tx_lock);
-		buf_free (p);
+		netif_free_buf (&u->netif, p);
 		return 1;
 	}
 	/* Занято, ставим в очередь. */
@@ -1152,7 +1152,7 @@ handle_transmit_interrupt (eth_t *u)
 	/* Передаём следующий пакет. */
 /*debug_printf ("eth tx irq: send next packet, STATUS_TX = %08x\n", status_tx);*/
 	chip_transmit_packet (u, p);
-	buf_free (p);
+	netif_free_buf (&u->netif, p);
 }
 
 /*

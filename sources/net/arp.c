@@ -261,7 +261,7 @@ arp_request (netif_t *netif, buf_t *p
 
 	if (p->tot_len < sizeof (struct arp_hdr)) {
 		/* Not enough space for ARP packet. */
-		buf_free (p);
+		netif_free_buf (netif, p);
 		return 0;
 	}
 	buf_truncate (p, sizeof (struct arp_hdr));
@@ -305,7 +305,6 @@ arp_add_header (netif_t *netif, buf_t *p
 	/* Make room for Ethernet header. */
 	if (! buf_add_header (p, sizeof (struct eth_hdr) )) {
 		/* No space for header, deallocate packet. */
-		buf_free (p);
 		ARPTRACE_printf ("arp_output: no space for header %d\n",
 		        ( (p->payload - (unsigned char*) p) - sizeof (buf_t) )
 		        );

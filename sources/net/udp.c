@@ -58,7 +58,7 @@ udp_queue_free (udp_socket_t *q)
 		assert (q->head->buf != 0);
 
 		/* Remove packet from queue. */
-		buf_free (q->head->buf);
+		netif_free_buf (0, q->head->buf);
 
 		/* Advance head pointer. */
 		++q->head;
@@ -274,7 +274,7 @@ udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 	/* Find the outgoing network interface. */
 	netif = route_lookup (s->ip, ipref_4ucs(dest), &gateway, &local_ip);
 	if (! netif) {
-		buf_free (p);
+	    netif_free_buf(0, p);
 		return 0;
 	}
 	/* debug_printf ("udp_sendto: %d bytes to %d.%d.%d.%d port %d netif %s\n",

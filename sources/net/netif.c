@@ -25,7 +25,8 @@ netif_output_prio (netif_t *netif, buf_t *p
 			}
 		}
 		if (! arp_add_header (netif, p, ipref_as_ucs(ipdest), ethdest)) {
-discard:		/* Count this packet as discarded. */
+            netif_free_buf (netif, p);
+discard:    /* Count this packet as discarded. */
 			++netif->out_discards;
 			return 0;
 		}
@@ -57,4 +58,59 @@ netif_set_address (netif_t *netif, unsigned char *ethaddr)
 {
 	if (netif->interface->set_address)
 		netif->interface->set_address (netif, ethaddr);
+}
+
+
+
+void netif_free_buf(netif_t *u, buf_t *p){
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over == (void*)0){
+        buf_free (p);
+        return;
+    }
+    unsigned action = over->options&nioo_ActionMASK;
+    if (action == nioo_ActionNone){
+        buf_free (p);
+        return;
+    }
+    else if (action == nioo_ActionMutex){
+        mutex_signal(over->action.signal, (void*)(over->arg));
+    }
+    if (action == nioo_ActionCB){
+       over->action.callback(p, over->arg);
+    }
+}
+
+INLINE 
+netif_io_overlap* netif_overlap_mark(buf_t *p){
+    netif_io_overlap* over = (netif_io_overlap*)((char*)p + sizeof(buf_t));
+    assert( (p->payload - sizeof(netif_io_overlap)) >= (unsigned char*)over );
+    over->mark = NETIF_OVERLAP_MARK;
+    return over;
+}
+
+void netif_overlap_assign_mutex(buf_t *p, unsigned options
+                                , mutex_t* signal, void* msg)
+{
+    netif_io_overlap* over = netif_overlap_mark(p);
+    if (signal != 0){
+        over->action.signal = signal;
+        over->arg = (unsigned)msg;
+        over->options = options | nioo_ActionMutex;
+    }
+    else
+        over->options = options;
+}
+
+void netif_overlap_assign_cb(buf_t *p, unsigned options
+                                , netif_callback cb, void* msg)
+{
+    netif_io_overlap* over = netif_overlap_mark(p);
+    if (cb != 0){
+        over->action.callback = cb;
+        over->arg = (unsigned)msg;
+        over->options = options | nioo_ActionCB;
+    }
+    else
+        over->options = options;
 }
