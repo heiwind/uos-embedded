@@ -12,7 +12,8 @@ extern "C" {
 
 /* UDP header length */
 #define UDP_HLEN    8
-#define UDP_HRESERVE     IP_ALIGNED(UDP_HLEN + IP_HLEN + MAC_HLEN)
+#define UDP_CAPLEN       (UDP_HLEN + IP_HLEN + MAC_HLEN)
+#define UDP_HRESERVE     IP_ALIGNED(UDP_CAPLEN)
 
 
 #define UDP_SOCKET_QUEUE_SIZE	8
