@@ -1,9 +1,9 @@
 #include <runtime/lib.h>
 #include <buf/buf.h>
-#include <buf/buf-queue.h>
+#include <buf/buf-queue-header.h>
 
 buf_t *
-buf_queue_get (buf_queue_t *q)
+buf_queueh_get (buf_queue_header_t *q)
 {
 	buf_t *p;
 
@@ -12,15 +12,17 @@ buf_queue_get (buf_queue_t *q)
         return 0;
     }
 
-    assert (q->tail >= q->queue);
-	assert (q->tail < q->queue + q->size);
+    buf_t **queue = buf_queueh_base(q);
+
+	assert (q->tail >= queue);
+	assert (q->tail < queue + q->size);
 	assert (*q->tail != 0);
 
 	/* Get the first packet from queue. */
 	p = *q->tail;
 
 	/* Advance head pointer. */
-	if (--q->tail < q->queue)
+	if (--q->tail < queue)
 		q->tail += q->size;
 	--q->count;
 
@@ -29,7 +31,7 @@ buf_queue_get (buf_queue_t *q)
 }
 
 void
-buf_queue_put (buf_queue_t *q, buf_t *p)
+buf_queueh_put (buf_queue_header_t *q, buf_t *p)
 {
 	buf_t **head;
 
@@ -38,9 +40,11 @@ buf_queue_put (buf_queue_t *q, buf_t *p)
 	/* Must be called ONLY when queue is not full. */
 	assert (q->count < q->size);
 
+    buf_t **queue = buf_queueh_base(q);
+
 	/* Compute the last place in the queue. */
 	head = q->tail - q->count;
-	if (head < q->queue)
+	if (head < queue)
 		head += q->size;
 
 	/* Put the packet in. */
@@ -51,21 +55,21 @@ buf_queue_put (buf_queue_t *q, buf_t *p)
 }
 
 void
-buf_queue_clean (buf_queue_t *q)
+buf_queueh_clean (buf_queue_header_t *q)
 {
+    buf_t **queue = buf_queueh_base(q);
 	for (; q->count > 0; --q->count) {
 		buf_free (*q->tail);
 
-		if (--q->tail < q->queue)
+		if (--q->tail < queue)
 			q->tail += q->size;
 	}
 }
 
 void
-buf_queue_init (buf_queue_t *q, buf_t **buf, int bytes)
+buf_queueh_init (buf_queue_header_t *q, int bytes)
 {
-	q->tail = buf;
-	q->queue = buf;
+	q->tail = buf_queueh_base(q);
 	q->size = bytes / sizeof (buf_t*);
 	q->count = 0;
 }

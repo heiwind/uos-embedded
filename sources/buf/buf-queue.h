@@ -13,8 +13,8 @@ typedef struct _buf_queue_t buf_queue_t;
 
 struct _buf_queue_t {
 	struct _buf_t **tail;
-	small_uint_t count;
 	struct _buf_t **queue;
+    small_uint_t count;
 	small_uint_t size;
 };
 
