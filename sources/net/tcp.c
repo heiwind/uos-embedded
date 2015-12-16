@@ -216,6 +216,7 @@ tcp_alloc (ip_t *ip)
 	s->lastack = iss;
 	s->snd_lbb = iss;
 	s->tmr = ip->tcp_ticks;
+	buf_queueh_init(&s->inq, sizeof(s->queue));
 	return s;
 }
 
@@ -275,22 +276,12 @@ tcp_queue_get (tcp_socket_t *q)
 {
 	buf_t *p;
 
-	if (q->count == 0) {
+	if (q->inq.count == 0) {
 		/*tcp_debug ("tcp_queue_get: returned 0\n");*/
 		return 0;
 	}
-	assert (q->head >= q->queue);
-	assert (q->head < q->queue + TCP_SOCKET_QUEUE_SIZE);
-	assert (*q->head != 0);
-
-	/* Get the first packet from queue. */
-	p = *q->head;
-
-	/* Advance head pointer. */
-	++q->head;
-	--q->count;
-	if (q->head >= q->queue + TCP_SOCKET_QUEUE_SIZE)
-		q->head = q->queue;
+	
+	p = buf_queueh_get(&q->inq);
 
 	/* Advertise a larger window when the data has been processed. */
 	q->rcv_wnd += p->tot_len;
@@ -304,44 +295,13 @@ tcp_queue_get (tcp_socket_t *q)
 void
 tcp_queue_put (tcp_socket_t *q, buf_t *p)
 {
-	buf_t **tail;
-
-	/*tcp_debug ("tcp_queue_put: p = 0x%04x, count = %d, head = 0x%04x\n", p, q->count, q->head);*/
-
-	/* Must be called ONLY when queue is not full. */
-	assert (q->count < TCP_SOCKET_QUEUE_SIZE);
-
-	if (q->head == 0)
-		q->head = q->queue;
-
-	/* Compute the last place in the queue. */
-	tail = q->head + q->count;
-	if (tail >= q->queue + TCP_SOCKET_QUEUE_SIZE)
-		tail -= TCP_SOCKET_QUEUE_SIZE;
-
-	/* Put the packet in. */
-	*tail = p;
-	++q->count;
-	/*tcp_debug ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/
+    buf_queueh_put(&q->inq, p);
 }
 
 void
 tcp_queue_free (tcp_socket_t *q)
 {
-	while (q->count > 0) {
-		assert (q->head >= q->queue);
-		assert (q->head < q->queue + TCP_SOCKET_QUEUE_SIZE);
-		assert (*q->head != 0);
-
-		/* Remove packet from queue. */
-		buf_free (*q->head);
-
-		/* Advance head pointer. */
-		++q->head;
-		--q->count;
-		if (q->head >= q->queue + TCP_SOCKET_QUEUE_SIZE)
-			q->head = q->queue;
-	}
+    buf_queueh_clean(&q->inq);
 }
 
 #ifdef TCP_DEBUG

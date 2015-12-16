@@ -23,7 +23,7 @@
 
 #include <uos-conf-net.h>
 #include <net/netif.h>
-#include <buf/buf-queue.h>
+#include <buf/buf-queue-header.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,10 +95,10 @@ typedef struct __attribute__ ((aligned(8))) _eth_t {
 	mutex_t tx_lock;		/* get tx interrupts here */
 	struct _mem_pool_t *pool;	/* memory pool for allocating packets */
 
-	buf_queue_t inq;		/* queue of received packets */
+	buf_queue_header_t inq;		/* queue of received packets */
 	struct _buf_t *inqdata[ETH_INQ_SIZE];
 
-	buf_queue_t outq;		/* queue of packets to transmit */
+	buf_queue_header_t outq;		/* queue of packets to transmit */
 	struct _buf_t *outqdata[ETH_OUTQ_SIZE];
 
     struct {

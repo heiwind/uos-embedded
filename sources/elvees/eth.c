@@ -133,6 +133,7 @@ void phy_unlock(eth_t *u) {
 }
 
 static 
+__attribute__((unused))
 unsigned phy_wait(eth_t *u)    {
         return (unsigned)mutex_wait(&u->phy.lock);
 }
@@ -877,7 +878,7 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		buf_free (p);
 		return 0;
 	}
-	if (! (MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) && buf_queue_is_empty (&u->outq)) {
+	if (! (MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) && buf_queueh_is_empty (&u->outq)) {
 	    ETH_printf ("eth_output: tx %d bytes\n", p->tot_len);
 		/* Смело отсылаем. */
 		chip_transmit_packet (u, p);
@@ -897,12 +898,12 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 	}
 	#else
     ETH_printf ("eth_output: tx que %d bytes\n", p->tot_len);
-	while (buf_queue_is_full (&u->outq)) {
+	while (buf_queueh_is_full (&u->outq)) {
 	    mutex_wait (&u->tx_lock);
 	}
 	#endif
 	
-	buf_queue_put (&u->outq, p);
+	buf_queueh_put (&u->outq, p);
 	mutex_unlock (&u->tx_lock);
 	return 1;
 }
@@ -921,7 +922,7 @@ eth_input (eth_t *u)
 #endif
 
 	mutex_lock (rx_lock);
-	p = buf_queue_get (&u->inq);
+	p = buf_queueh_get (&u->inq);
 	mutex_unlock (rx_lock);
 	return p;
 }
@@ -973,7 +974,7 @@ eth_receive_frame (eth_t *u)
 	    ETHFAIL_printf("eth_receive_data: bad length %d bytes, frame_status=%#08x\n", len, frame_status);
         ++u->netif.in_errors;
     }
-	else if (buf_queue_is_full (&u->inq)) {
+	else if (buf_queueh_is_full (&u->inq)) {
 	        ETHFAIL_printf ("eth_receive_data: input overflow\n");
 	        ++u->netif.in_discards;
 	}
@@ -1009,7 +1010,7 @@ eth_receive_frame (eth_t *u)
 
     if (p != 0){
 #       if ETH_OPTIMISE_SPEED > 0
-        buf_queue_put (&u->inq, p);
+        buf_queueh_put (&u->inq, p);
         mutex_signal(&u->netif.lock, u);
 #       else
         buf_queue_put (&u->inq, p);
@@ -1141,7 +1142,7 @@ handle_transmit_interrupt (eth_t *u)
 	}
 
 	/* Извлекаем следующий пакет из очереди. */
-	buf_t *p = buf_queue_get (&u->outq);
+	buf_t *p = buf_queueh_get (&u->outq);
 	if (! p) {
 /*debug_printf ("eth tx irq: done, STATUS_TX = %08x\n", status_tx);*/
 /*debug_printf ("#");*/
@@ -1252,8 +1253,8 @@ eth_init (eth_t *u, const char *name, int prio, mem_pool_t *pool,
 	u->txbuf = (unsigned char*) (((unsigned) u->txbuf_data + 7) & ~7);
 	u->rxbuf_physaddr = virt_to_phys ((unsigned) u->rxbuf);
 	u->txbuf_physaddr = virt_to_phys ((unsigned) u->txbuf);
-	buf_queue_init (&u->inq, u->inqdata, sizeof (u->inqdata));
-	buf_queue_init (&u->outq, u->outqdata, sizeof (u->outqdata));
+	buf_queueh_init (&u->inq, sizeof (u->inqdata));
+	buf_queueh_init (&u->outq, sizeof (u->outqdata));
 #if ETH_TX_CHUNKS > 0
 	//создаю ДМА-цепь 
 	u->dma_tx.task_physaddr = virt_to_phys((unsigned)(u->dma_tx.emac_task));

@@ -2,6 +2,7 @@
 #define __TCP_H_ 1
 
 #include <net/ip.h>
+#include <buf/buf-queue-header.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -155,9 +156,8 @@ struct _tcp_socket_t {//: base_socket_t
 
 	/* queue of received packets */
 #define TCP_SOCKET_QUEUE_SIZE	16
-    unsigned char count;
+	buf_queue_header_t inq;
 	struct _buf_t *queue [TCP_SOCKET_QUEUE_SIZE];
-	struct _buf_t **head;
 
 	/*
 	 * Only above data are valid for sockets in LISTEN state.
@@ -322,14 +322,14 @@ static inline int
 tcp_queue_is_full (tcp_socket_t *q)
 {
 	/*debug_printf ("tcp_queue_is_full: returned %d\n", (q->count == TCP_SOCKET_QUEUE_SIZE));*/
-	return (q->count == TCP_SOCKET_QUEUE_SIZE);
+	return (q->inq.count == TCP_SOCKET_QUEUE_SIZE);
 }
 
 static inline int
 tcp_queue_is_empty (tcp_socket_t *q)
 {
 	/*debug_printf ("tcp_queue_is_full: returned %d\n", (q->count == TCP_SOCKET_QUEUE_SIZE));*/
-	return (q->count == 0);
+	return (q->inq.count == 0);
 }
 
 
