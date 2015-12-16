@@ -19,7 +19,7 @@ extern "C" {
 
 typedef struct _udp_socket_queue_t {
 	struct _buf_t	*buf;
-	unsigned char	addr [4];
+	ip_addr         addr;
 	unsigned short	port;
 } udp_socket_queue_t;
 

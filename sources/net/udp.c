@@ -17,7 +17,7 @@ typedef struct _udp_hdr_t {
 
 
 static buf_t *
-udp_queue_get (udp_socket_t *q, unsigned char *paddr,
+udp_queue_get (udp_socket_t *q, ip_addr_ref* paddr,
 	unsigned short *pport)
 {
 	buf_t *p;
@@ -35,7 +35,7 @@ udp_queue_get (udp_socket_t *q, unsigned char *paddr,
 	head = q->head;
 	p = head->buf;
 	if (paddr)
-	    ipadr_assign_ucs(paddr, head->addr);
+	    *paddr = head->addr.var;
 	if (pport)
 		*pport = head->port;
 
@@ -84,7 +84,7 @@ udp_queue_is_empty (udp_socket_t *q)
 
 static void
 udp_queue_put (udp_socket_t *q, buf_t *p,
-	unsigned char *addr, unsigned short port)
+        ip_addr_const addr, unsigned short port)
 {
 	udp_socket_queue_t *tail;
 
@@ -104,7 +104,7 @@ udp_queue_put (udp_socket_t *q, buf_t *p,
 	/* Put the packet in. */
 	tail->buf = p;
 	tail->port = port;
-	ipadr_assign_ucs(tail->addr, addr);
+	ipadr_assignref(&tail->addr , addr);
 	++q->count;
 	/*debug_printf ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/
 }
@@ -176,7 +176,7 @@ drop:
 			/*debug_printf ("udp_input: socket overflow\n");*/
 			goto drop;
 		}
-		udp_queue_put (s, p, iph->src.ucs, src);
+		udp_queue_put (s, p, iph->src.var, src);
 		mutex_signal (&s->lock, p);
 		mutex_unlock (&s->lock);
 		/*debug_printf ("udp_input: signaling socket on port %d\n",
@@ -399,7 +399,7 @@ udp_peekfrom (udp_socket_t *s, unsigned char *from_addr,
 
 	mutex_lock (&s->lock);
 
-	p = udp_queue_get (s, from_addr, from_port);
+	p = udp_queue_get (s, (ip_addr_ref*)(from_addr), from_port);
 
 	mutex_unlock (&s->lock);
 	return p;
@@ -421,7 +421,7 @@ udp_recvfrom (udp_socket_t *s, unsigned char *from_addr,
 	while (udp_queue_is_empty (s))
 		mutex_wait (&s->lock);
 
-	p = udp_queue_get (s, from_addr, from_port);
+	p = udp_queue_get (s, (ip_addr_ref*)(from_addr), from_port);
 
 	mutex_unlock (&s->lock);
 	return p;
