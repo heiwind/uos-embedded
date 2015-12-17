@@ -28,7 +28,7 @@
  * If not, and EXPRESSION is zero, print an error message and abort.
  */
 #ifdef NDEBUG
-#   define assert(expr)	do {} while (0)
+#   define assert(expr)
 #else
 #   define assert(expr)	assert_always(expr)
 #endif

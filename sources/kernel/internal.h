@@ -160,7 +160,9 @@ INLINE void mutex_do_lock(mutex_t *m)
 }
 
 //just lock mutex if it is free. not MT-safe, must call in sheduler-locked context
-INLINE bool_t mutex_trylock_in (mutex_t *m){
+INLINE 
+__attribute__ ((always_inline))
+bool_t mutex_trylock_in (mutex_t *m){
     if (! m->master)
         mutex_do_lock(m);
     if (m->master == task_current){
@@ -199,7 +201,9 @@ INLINE bool_t mutex_lock_yiedling_until(mutex_t *m
     return mutex_trylock_in(m);
 }
 
-static inline bool_t mutex_recurcived_lock(mutex_t *m)
+INLINE 
+__attribute__ ((always_inline))
+bool_t mutex_recurcived_lock(mutex_t *m)
 {
 #if FASTER_LOCKS > 0
     if (m->master == task_current){
