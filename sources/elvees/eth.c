@@ -585,13 +585,13 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
     else
 #endif
     {
-        MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
+        eth_tx_lock(u);
         arch_intr_allow (ETH_IRQ_DMA_TX);
-        //eth_tx_lock(u);
+        MC_CSR_EMAC(MC_EMAC_TX) = csr | MC_DMA_CSR_IM | MC_DMA_CSR_RUN;
         /* Run the DMA. */
         mutex_wait(&u->dma_tx.lock);
         //debug_putchar(0,'_');
-        //eth_tx_unlock(u);
+        eth_tx_unlock(u);
     }
 
 #else //ETH_TX_USE_DMA_IRQ
@@ -840,7 +840,7 @@ chip_transmit_packet (eth_t *u, buf_t *p)
             u->netif.out_bytes += len;
         }
         else {
-            debug_putchar(0,'/');
+            //debug_putchar(0,'/');
             //по какойто причине буфер не загрузили в ФИФО трансмитера
             u->netif.out_errors++;
             u->netif.out_discards++;
