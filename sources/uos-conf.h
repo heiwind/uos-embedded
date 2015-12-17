@@ -139,9 +139,18 @@
  *                              debug console
  ************************************************************************** */
 /** \~russian
- * NDEBUG отключает дебажный вывод функций debug_printf, assert
+ * NDEBUG отключает дебажный вывод функций assert
  */
-//#define NDEBUG
+#define NDEBUG
+
+/** \~russian
+ * NO_DEBUG_PRINT отключает дебажный вывод функций debug_XXX
+ */
+//#define NO_DEBUG_PRINT
+
+/** \~russian
+ * DEBUG_SIMULATE заглушает дебажный ввод/вывод функций debug_getchar
+ */
 //#define DEBUG_SIMULATE
 
 //#define MEM_DEBUG 1

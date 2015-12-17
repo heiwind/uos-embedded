@@ -30,13 +30,13 @@ extern void longjmp (jmp_buf, int);
  */
 extern struct _stream_t debug;
 extern bool_t debug_onlcr;
-void debug_putchar (void *arg, short c);
-void debug_putc (char c);
 unsigned short debug_getchar (void);
 int debug_peekchar (void);
 
-#ifndef NDEBUG
+#ifndef NO_DEBUG_PRINT
 
+void debug_putchar (void *arg, short c);
+void debug_putc (char c);
 void debug_puts (const char *str);
 int debug_printf (const char *fmt, ...);
 int debug_vprintf (const char *fmt, va_list args);
@@ -45,6 +45,12 @@ void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee)
 void debug_redirect (void (*func) (void*, short), void *arg);
 
 #else
+
+INLINE
+void debug_putchar (void *arg, short c){};
+
+INLINE
+void debug_putc (char c){};
 
 INLINE
 void debug_puts (const char *str){};

@@ -1,6 +1,8 @@
 #include <runtime/lib.h>
 #include <stream/stream.h>
 
+#ifndef NO_DEBUG_PRINT
+
 /*
  * Print stack backtrace.
  * Usage:
@@ -83,3 +85,6 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 		}
 	}
 }
+
+#endif //NO_DEBUG_PRINT
+

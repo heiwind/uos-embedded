@@ -18,6 +18,7 @@
  */
 #include <runtime/lib.h>
 
+
 bool_t debug_onlcr = 1;
 
 static int debug_char = -1;
@@ -26,6 +27,7 @@ static int debug_char = -1;
 /*
  * Send a byte to the UART transmitter, with interrupts disabled.
  */
+#ifndef NO_DEBUG_PRINT
 void
 debug_putchar (void *arg, short c)
 {
@@ -57,12 +59,15 @@ again:
 #endif// ! DEBUG_SIMULATE
 }
 
+#endif // NO_DEBUG_PRINT
+
 /*
  * Wait for the byte to be received and return it.
  */
 unsigned short
 debug_getchar (void)
 {
+#ifndef DEBUG_SIMULATE 
 	unsigned char c;
 	int x;
 
@@ -87,6 +92,9 @@ debug_getchar (void)
 	}
 	mips_intr_restore (x);
 	return c;
+#else
+	return 0;
+#endif// ! DEBUG_SIMULATE
 }
 
 /*
@@ -95,6 +103,7 @@ debug_getchar (void)
 int
 debug_peekchar (void)
 {
+#ifndef DEBUG_SIMULATE 
 	unsigned char c;
 	int x;
 
@@ -114,6 +123,9 @@ debug_peekchar (void)
 	mips_intr_restore (x);
 	debug_char = c;
 	return c;
+#else
+    return 0;
+#endif// ! DEBUG_SIMULATE
 }
 #endif /* ELVEES */
 
@@ -128,6 +140,8 @@ debug_peekchar (void)
 #	define UxRXREG	U1RXREG
 #	define UxSTA	U1STA
 #endif
+
+#ifndef NO_DEBUG_PRINT
 /*
  * Send a byte to the UART transmitter, with interrupts disabled.
  */
@@ -161,6 +175,7 @@ again:
 	if (! in_exception)
 		mips_intr_restore (x);
 }
+#endif //NO_DEBUG_PRINT
 
 /*
  * Wait for the byte to be received and return it.
@@ -220,6 +235,8 @@ debug_peekchar (void)
 
 
 #if defined (MALTA)
+
+#ifndef NO_DEBUG_PRINT
 /*
  * Send a byte to the UART transmitter, with interrupts disabled.
  */
@@ -252,6 +269,8 @@ again:
 	if (! in_exception)
 		mips_intr_restore (x);
 }
+
+#endif //NO_DEBUG_PRINT
 
 /*
  * Wait for the byte to be received and return it.
@@ -313,9 +332,13 @@ debug_peekchar (void)
 }
 #endif /* MALTA */
 
+#ifndef NO_DEBUG_PRINT
+
 void
 debug_puts (const char *p)
 {
 	for (; *p; ++p)
 		debug_putchar (0, *p);
 }
+
+#endif //NO_DEBUG_PRINT

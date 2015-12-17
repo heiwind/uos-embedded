@@ -1,6 +1,8 @@
 #include <runtime/lib.h>
 #include <stream/stream.h>
 
+#ifndef NO_DEBUG_PRINT
+
 void debug_dump (const char *caption, void* data, unsigned len)
 {
 	uint8_t *t, *h, i;
@@ -45,3 +47,5 @@ void debug_dump (const char *caption, void* data, unsigned len)
 		debug_putc ('\n');
 	}
 }
+
+#endif //NO_DEBUG_PRINT
