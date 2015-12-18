@@ -74,13 +74,14 @@ typedef struct __attribute__((packed,aligned(8))) _EMAC_PortCh_Settings
 
 #ifndef ETH_TX_CHUNKS
 //!!! TODO не тестирован код с ETH_TX_CHUNKS> 0
+//!!!   кажется EMACdma вообще не умеет работать с цепями
 #define ETH_TX_CHUNKS   0
 #endif
 
 // облегчаем жизнь просессору за счет устранения циклов ожидания, позволяет отдать 
 //  до 10мкс на пакетах более 512 байт
 //  но чуть ухудшает скорость запуска передатчика за счет вхождения в прерывание 
-#define ETH_TX_USE_DMA_IRQ
+//#define ETH_TX_USE_DMA_IRQ
 
 #endif // defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
 #endif // #if ETH_OPTIMISE_SPEED > 0
@@ -133,7 +134,7 @@ typedef struct __attribute__ ((aligned(8))) _eth_t {
 #endif
 #if ETH_TX_CHUNKS > 0
 	    unsigned             task_physaddr;    /* phys address of txbuf[] */
-        EMAC_PortCh_Settings emac_task[ETH_TX_CHUNKS];
+        EMAC_PortCh_Settings emac_task[ETH_TX_CHUNKS] __attribute__ ((aligned(8)));
 #endif
 	} dma_tx;
 #endif
