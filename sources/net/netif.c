@@ -24,7 +24,7 @@ netif_output_prio (netif_t *netif, buf_t *p
 				goto discard;
 			}
 		}
-		if (! arp_add_header (netif, p, ipref_as_ucs(ipdest), ethdest)) {
+		if (! arp_add_header (netif, p, ipdest, ethdest)) {
             netif_free_buf (netif, p);
 discard:    /* Count this packet as discarded. */
 			++netif->out_discards;

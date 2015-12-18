@@ -297,7 +297,7 @@ arp_request (netif_t *netif, buf_t *p
  */
 bool_t
 arp_add_header (netif_t *netif, buf_t *p
-        , const unsigned char *ipdest
+        , ip_addr_const ipdest
         , const unsigned char *ethdest)
 {
 	struct eth_hdr *h;
@@ -316,18 +316,18 @@ arp_add_header (netif_t *netif, buf_t *p
 	 * MAC address to use as a destination address. Broadcasts and
 	 * multicasts are special, all other addresses are looked up in the
 	 * ARP table. */
-	if (! ipdest) {
+	if (! ipadr_not0(ipdest)) {
 		/* Broadcast. */
 	    macadr_assign_ucs(h->dest, BROADCAST);
 
-	} else if ((ipdest[0] & 0xf0) == 0xe0) {
+	} else if ((ipref_as_ucs(ipdest)[0] & 0xf0) == 0xe0) {
 		/* Hash IP multicast address to MAC address. */
 		h->dest[0] = 0x01;
 		h->dest[1] = 0;
 		h->dest[2] = 0x5e;
-		h->dest[3] = ipdest[1] & 0x7f;
-		h->dest[4] = ipdest[2];
-		h->dest[5] = ipdest[3];
+		h->dest[3] = ipref_as_ucs(ipdest)[1] & 0x7f;
+		h->dest[4] = ipref_as_ucs(ipdest)[2];
+		h->dest[5] = ipref_as_ucs(ipdest)[3];
 
 	} else {
 		macadr_assign_ucs(h->dest, ethdest);

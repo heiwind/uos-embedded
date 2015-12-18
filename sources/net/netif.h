@@ -21,7 +21,10 @@ struct _buf_t;
  */
 typedef struct _netif_t {
 	mutex_t lock;
+    //* TODO в этот лок сыпятся все события интерфейса. возможно имеет смысл разделить
+	//* события приемника и передатчика
 	struct _netif_interface_t *interface;
+	
 
 	const char *name;
 	struct _arp_t *arp;

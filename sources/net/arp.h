@@ -254,7 +254,7 @@ struct _buf_t *arp_input (struct _netif_t *netif, struct _buf_t *p);
 bool_t arp_request (struct _netif_t *netif, struct _buf_t *p,
         ip_addr_const ipdest, ip_addr_const ipsrc);
 bool_t arp_add_header (struct _netif_t *netif, struct _buf_t *p,
-	const unsigned char *ipdest
+        ip_addr_const ipdest
 	, const unsigned char *ethdest);
 unsigned char *arp_lookup (struct _netif_t *netif, ip_addr_const ipaddr);
 void arp_timer (arp_t *arp);
