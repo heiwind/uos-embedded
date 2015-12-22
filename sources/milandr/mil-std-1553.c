@@ -9,14 +9,20 @@
 #include <kernel/internal.h>
 #include "mil-std-1553.h"
 
-#define RT_DEBUG 			0
-#define BC_DEBUG 			0
+#define RT_DEBUG               0
+#define BC_DEBUG               0
+
+#define MIL_STD_CLOCK_DIV      4
 
 #define LEFT_LED	4
 #define RIGHT_LED	2
 #define TOP_LED		1
 
 #define TOGLE(n)	((ARM_GPIOB->DATA & (n))?(ARM_GPIOB->DATA &= ~(n)):(ARM_GPIOB->DATA |= (n)))
+
+int read_idx, write_idx;
+status_item_t status_array[STATUS_ITEMS_SIZE];
+uint32_t nb_missing;
 
 static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
 {
@@ -105,6 +111,7 @@ static void copy_to_rt_rxq(milandr_mil1553_t *mil, uint8_t subaddr, uint8_t word
 
 static void start_slot(milandr_mil1553_t *mil, mil_slot_desc_t slot, uint16_t *pdata)
 {
+    mil->nb_reserved++;
     if (slot.transmit_mode == MIL_SLOT_BC_RT) {
         // Режим передачи КШ-ОУ
         mil->reg->CommandWord1 =
@@ -168,15 +175,25 @@ static void start_slot(milandr_mil1553_t *mil, mil_slot_desc_t slot, uint16_t *p
     }
 
     // Инициировать передачу команды в канал в режиме КШ
+#if 0
+    uint32_t  reg_control = mil->reg->CONTROL;
+    if ( reg_control & MIL_STD_CONTROL_BCSTART) {
+        debug_printf("\n%x\n", reg_control);
+    }
+#endif
+
+    while(mil->reg->CONTROL & MIL_STD_CONTROL_BCSTART) {
+        ;
+    }
     mil->reg->CONTROL |= MIL_STD_CONTROL_BCSTART;
 }
 
 void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
 {
-	if (status & MIL_STD_STATUS_ERR) {
-	    mil->nb_errors++;
-	    return;
-	}
+    if (status & MIL_STD_STATUS_ERR) {
+        mil->nb_errors++;
+        return;
+    }
 
     // Подадрес из командного слова 1
     const unsigned char subaddr = (comWrd1 & MIL_STD_COMWORD_SUBADDR_MODE_MASK) >> MIL_STD_COMWORD_SUBADDR_MODE_SHIFT;
@@ -416,20 +433,25 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
 void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
 {
 	mil1553_lock(&mil->milif);
+
     if (status & MIL_STD_STATUS_VALMESS) {
         if (mil->urgent_desc.reserve) {
             // Была передача вне очереди
             if (mil->pool && mil->urgent_desc.transmit_mode == MIL_SLOT_RT_BC)
                 copy_to_rxq(mil, mil->urgent_desc);
         } else {
-            mil_slot_desc_t slot = mil->cur_slot->desc;
-            if (mil->pool && slot.transmit_mode == MIL_SLOT_RT_BC)
-                copy_to_rxq(mil, slot);
+            if (mil->cur_slot != 0) {
+                mil_slot_desc_t slot = mil->cur_slot->desc;
+                if (mil->pool && slot.transmit_mode == MIL_SLOT_RT_BC) {
+                    copy_to_rxq(mil, slot);
+                }
+            }
         }
     } else if (status & MIL_STD_STATUS_ERR) {
 	    mil->nb_errors++;
 	}
 
+    mil->nb_transmitions++;
 
 	if (mil->urgent_desc.reserve) // Если была передача вне очереди, то сбрасываем дескриптор,
 		mil->urgent_desc.raw = 0; // чтобы не начать её повторно
@@ -441,12 +463,10 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
 			mil->cur_slot = mil->cyclogram;
 	}
 
-	udelay(6);
-
 	if (mil->urgent_desc.raw != 0) {    // Есть требование на выдачу вне очереди
 		start_slot(mil, mil->urgent_desc, mil->urgent_data);
 		mil->urgent_desc.reserve = 1;   // Признак того, что идёт передача вне очереди
-	} else if (mil->cur_slot != mil->cyclogram || mil->tim_reg == 0 || mil->period_ms == 0) {
+	} else if ((mil->cur_slot != mil->cyclogram) || (mil->tim_reg == 0) || (mil->period_ms == 0)) {
 		// если таймер не задан, или его период равен нулю циклограмма начинается с начала
 		if (mil->cur_slot != 0) {
 			start_slot(mil, mil->cur_slot->desc, mil->cur_slot->data);
@@ -530,9 +550,8 @@ static int mil_start(mil1553if_t *_mil)
 
     if (_mil->is_started(_mil))
         return MIL_ERR_OK;
-        
-    //unsigned control = MIL_STD_CONTROL_DIV((KHZ/4)/1000); // на блок подается MAIN_CLK/4 (128/4=32)
-    unsigned control = MIL_STD_CONTROL_DIV((KHZ/2)/1000); // на блок подается MAIN_CLK/2 (128/2=64)
+
+    unsigned control = MIL_STD_CONTROL_DIV((KHZ/MIL_STD_CLOCK_DIV)/1000); // на блок подается MAIN_CLK/MIL_STD_CLOCK_DIV
         
     if ((mil->mode == MIL_MODE_BC_MAIN) || (mil->mode == MIL_MODE_BC_RSRV)) {
         control |= MIL_STD_CONTROL_MODE(MIL_STD_MODE_BC);
@@ -575,9 +594,6 @@ static int mil_start(mil1553if_t *_mil)
         return MIL_ERR_NOT_SUPP;
     }
 
-    // debug
-    // ARM_GPIOB->DATA = 4; // левый
-    
     mil->is_running = 1;
     return MIL_ERR_OK;
 }
@@ -604,6 +620,10 @@ static int mil_stop(mil1553if_t *_mil)
         	mem_queue_get(&mil->rt_rxq, &que_elem);
         	mem_free(que_elem);
     }
+
+    memset(status_array, 0, sizeof(status_array));
+    read_idx = 0;
+    write_idx = 0;
 
     mil->is_running = 0;
     return MIL_ERR_OK;
@@ -686,17 +706,16 @@ static int mil_bc_urgent_send(mil1553if_t *_mil, mil_slot_desc_t descr, void *da
     return MIL_ERR_OK;
 }
 
-int read_idx, write_idx;
-status_item_t status_array[STATUS_ITEMS_SIZE];
-uint32_t nb_missing;
 static bool_t status_handler(void *arg)
 {
 	MIL_STD_1553B_t     *reg = (MIL_STD_1553B_t *)arg;
+	uint32_t flag = reg->STATUS;
 
 	if (status_array[write_idx].done) {
 		nb_missing++;
 	} else {
-		status_array[write_idx].status = reg->STATUS;
+		status_array[write_idx].status = flag;
+		status_array[write_idx].error = reg->ERROR;
 		status_array[write_idx].command_word_1 = reg->CommandWord1;
 		status_array[write_idx].msg = reg->MSG;
 		status_array[write_idx].time_stamp = ARM_TIMER2->TIM_CNT;
@@ -731,8 +750,17 @@ void milandr_mil1553_init(milandr_mil1553_t *_mil, int port, mem_pool_t *pool, u
     }
 
     // Разрешение тактовой частоты на контроллер ГОСТ Р52070-2003
-    //ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(2) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 4
+#if MIL_STD_CLOCK_DIV==1
+    ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(0) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 1
+#elif MIL_STD_CLOCK_DIV==2
     ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(1) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 2
+#elif MIL_STD_CLOCK_DIV==4
+    ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(2) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 4
+#elif MIL_STD_CLOCK_DIV==8
+    ARM_RSTCLK->ETH_CLOCK |= ARM_ETH_CLOCK_MAN_BRG(3) | ARM_ETH_CLOCK_MAN_EN; // частота делится на 8
+#else
+#error  MIL_STD_CLOCK_DIV not valid
+#endif
 
     mil->pool = pool;
     if (nb_rxq_msg) {
@@ -825,4 +853,3 @@ void milandr_mil1553_init_pins(int port)
         milandr_init_pin(ARM_GPIOF, PORT_F, 12, FUNC_MAIN);  // PRD_PRM_D
     }
 }
-
