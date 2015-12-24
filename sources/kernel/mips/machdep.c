@@ -445,14 +445,6 @@ _arch_interrupt_ (void)
 			irq = 30;
 			status &= ~ST_IM_COMPARE;
 			mips_write_c0_register (C0_STATUS, status);
-		} else if (pending & ST_IM_SW0) {
-		    irq = 28;
-			status &= ~ST_IM_SW0;
-			mips_write_c0_register (C0_STATUS, status);
-		} else if (pending & ST_IM_SW1) {
-		    irq = 29;
-			status &= ~ST_IM_SW1;
-			mips_write_c0_register (C0_STATUS, status);
 		} else if (pending & ST_IM_QSTR0) {
 			/* QSTR0 interrupt: 0..31. */
 			irq = 31 - mips_count_leading_zeroes (MC_QSTR0 & MC_MASKR0);
@@ -471,6 +463,14 @@ _arch_interrupt_ (void)
 			if (irq < 36)
 				break;
 			MC_MASKR2 &= ~(1 << (irq - 36));
+        } else if (pending & ST_IM_SW0) {
+            irq = 28;
+            status &= ~ST_IM_SW0;
+            mips_write_c0_register (C0_STATUS, status);
+        } else if (pending & ST_IM_SW1) {
+            irq = 29;
+            status &= ~ST_IM_SW1;
+            mips_write_c0_register (C0_STATUS, status);
 		} else
 			break;
 #endif
