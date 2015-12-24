@@ -34,17 +34,20 @@ typedef struct _milandr_mil1553_t
 //    uint16_t tx_buf[MIL_DATA_LENGTH];   // только для RT
 
     // Статистика
+    unsigned            nb_transmitions;
     unsigned            nb_lost;
     unsigned            nb_errors;
+    unsigned            nb_reserved;
 } milandr_mil1553_t;
 
 
 typedef struct _status_item_t {
-	volatile uint32_t status;
-	volatile uint16_t command_word_1;
-	volatile uint16_t msg;
-	volatile uint32_t time_stamp;
-	volatile uint32_t done;
+    volatile uint32_t status;
+    volatile uint16_t command_word_1;
+    volatile uint16_t msg;
+    volatile uint32_t time_stamp;
+    volatile uint32_t done;
+    volatile uint32_t error;
 } status_item_t;
 
 extern status_item_t status_array[STATUS_ITEMS_SIZE];

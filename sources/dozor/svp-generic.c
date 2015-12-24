@@ -182,3 +182,44 @@ void svp_start (SVP_T *psvp)
 	svp_write16(psvp, SVP_GCR, svp_read16(psvp, SVP_GCR) | SVP_GRUN);
 }
 
+int svp_in_work (SVP_T *psvp)
+{
+    return (svp_read16(psvp, SVP_GSR) & SVP_WORK);
+}
+
+void svp_switch_mode (SVP_T *psvp, int new_mode)
+{
+    if (!svp_in_work(psvp))
+        return;
+    if (! (svp_read16(psvp, SVP_GCR) & SVP_MST))
+        return;
+        
+    svp_write32(psvp, SVP_AKR, SVP_ACCESS_KEY);
+    svp_write16(psvp, SVP_NMR, SVP_CMODE(svp_read16(psvp, SVP_CMR)) | SVP_NMODE(new_mode));
+    svp_write32(psvp, SVP_AKR, 0);
+}
+
+void svp_set_tracking(SVP_T *psvp, int track_nb, uint64_t node_mask)
+{
+    svp_write_array(psvp, SVP_CVEC(track_nb), &node_mask, 8);
+}
+
+int svp_tracking_found(SVP_T *psvp, int track_nb)
+{
+    return !(svp_read16(psvp, SVP_RSR(0)) & SVP_CNE(track_nb)) ||
+           !(svp_read16(psvp, SVP_RSR(1)) & SVP_CNE(track_nb));
+}
+
+int svp_tracking_lost_some(SVP_T *psvp, int track_nb)
+{
+    return (svp_read16(psvp, SVP_RSR(0)) & SVP_CNE(track_nb)) &&
+           (svp_read16(psvp, SVP_RSR(1)) & SVP_CNE(track_nb));
+}
+
+int svp_tracking_lost_all(SVP_T *psvp, int track_nb)
+{
+    return (svp_read16(psvp, SVP_RSR(0)) & SVP_CEM(track_nb)) &&
+           (svp_read16(psvp, SVP_RSR(1)) & SVP_CEM(track_nb));
+}
+
+

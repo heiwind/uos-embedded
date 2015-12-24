@@ -14,7 +14,7 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 
-#if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
+#if defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 extern volatile uint32_t __timer_ticks_uos;
 #endif
 
@@ -187,19 +187,18 @@ interval_greater_or_equal (long interval, long msec)
 /*
  * Timer update function.
  */
-#ifndef SW_TIMER
-
 CODE_ISR 
 inline void timer_mutex_note(mutex_t* t, unsigned long message){
     mutex_awake (t, (void*) message);
 }
-#endif
 
+#ifndef SW_TIMER
 CODE_ISR 
 static inline
+#endif
 void timer_update (timer_t *t)
 {
-#if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
+#if defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 	__timer_ticks_uos++;
 
 	if (__timer_ticks_uos==0)
@@ -264,7 +263,7 @@ void timer_update (timer_t *t)
     t->usec_in_msec = usec;
 #else
     msec += interval;
-#endif
+#endif //USEC_TIMER
 
 #ifndef TIMER_NO_DAYS
     if (msec >= TIMER_MSEC_PER_DAY) {
@@ -312,7 +311,7 @@ void timer_update (timer_t *t)
             ut->cur_time = now;
         }
     }
-#endif
+#endif //USER_TIMERS
 }
 
 /*
