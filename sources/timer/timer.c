@@ -415,7 +415,7 @@ static inline unsigned long umuldiv1000(unsigned long khz, unsigned long usec_pe
     //res = khz*usec_per_tick /1000
     unsigned long long res = khz>>3;
     res = res * usec_per_tick;
-    const long Nmod = 128*128; 
+    //const long Nmod = 128*128; 
     //res = res*(Nmod/125);
     //return res/Nmod;
     res = res / 125;
@@ -824,33 +824,6 @@ void user_timer_remove (timer_t *t, user_timer_t *ut){
     mutex_lock (&t->lock);
     list_unlink (&ut->item);
     mutex_unlock (&t->lock);
-}
-
-void user_timer_wait (user_timer_t *ut)
-{
-    mutex_wait (&ut->lock);
-}
-
-/**\~russian
- * останавливает активность таймера.
- * при этом теряются его параметры - точка старта, период  
- * */
-void user_timer_stop (user_timer_t *ut){
-    while (ut->cur_time != 0)
-        ut->cur_time = 0;
-}
-
-/**\~russian
- * перезапускает периодический таймер с текущего момента.
- * */
-void user_timer_restart (user_timer_t *ut){
-#ifdef USEC_TIMER
-    while (ut->cur_time != (long)ut->usec_per_tick)
-        ut->cur_time = ut->usec_per_tick;
-#else
-    while (ut->cur_time != ut->msec_per_tick)
-        ut->cur_time = ut->msec_per_tick;
-#endif
 }
 
 #endif // USER_TIMERS
