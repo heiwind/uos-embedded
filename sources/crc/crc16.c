@@ -3,7 +3,7 @@
 
 #ifdef __AVR__
 
-static const unsigned char poly_tab_data [32] = {
+static const unsigned char polyA001Nible_tab [32] = {
 	0x00, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01,
 	0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00,
 
@@ -11,7 +11,7 @@ static const unsigned char poly_tab_data [32] = {
 	0xA0, 0x6C, 0x78, 0xB4, 0x50, 0x9C, 0x88, 0x44,
 };
 
-static unsigned short poly_tab (unsigned char nibble)
+static unsigned short polyA001Nible_tab (unsigned char nibble)
 {
 	unsigned char low = FETCH_BYTE (&poly_tab_data [nibble]);
 	unsigned char high = FETCH_BYTE (&poly_tab_data [16 + nibble]);
@@ -21,27 +21,34 @@ static unsigned short poly_tab (unsigned char nibble)
 
 #else
 
-static const unsigned short poly_tab_data [16] = {
+// Nibble lookup for 0xA001 polynomial
+static const unsigned short polyA001_tab16_data [16] = {
 	0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
 	0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400,
 };
 
-static unsigned short poly_tab (unsigned char nibble)
+static unsigned short polyA001Nible_tab (unsigned char nibble)
 {
-	return poly_tab_data [nibble];
+	return polyA001_tab16_data [nibble];
 }
 
 #endif
 
-unsigned short
+unsigned short 
 crc16_byte (unsigned short sum, unsigned char byte)
 {
+#if 1
+    //code from https://my.st.com/public/STe2ecommunities/mcu/Lists/cortex_mx_stm32/Flat.aspx?RootFolder=%2Fpublic%2FSTe2ecommunities%2Fmcu%2FLists%2Fcortex_mx_stm32%2FCRC%20computation&FolderCTID=0x01200200770978C69A1141439FE559EB459D7580009C4E14902C3CDE46A77F0FFD06506F5B&currentviews=7800
+    sum = sum ^ byte;
+    sum = (sum>>4) ^ polyA001Nible_tab (sum & 0xF);
+    sum = (sum>>4) ^ polyA001Nible_tab (sum & 0xF);
+#else
 	/* compute checksum of lower four bits of byte */
-	sum = (sum >> 4) ^ poly_tab (sum & 0xF) ^ poly_tab (byte & 0xF);
+	sum = (sum >> 4) ^ polyA001Nible_tab (sum & 0xF) ^ polyA001Nible_tab (byte & 0xF);
 
 	/* now compute checksum of upper four bits of byte */
-	sum = (sum >> 4) ^ poly_tab (sum & 0xF) ^ poly_tab (byte >> 4);
-
+	sum = (sum >> 4) ^ polyA001Nible_tab (sum & 0xF) ^ polyA001Nible_tab (byte >> 4);
+#endif
 	return sum;
 }
 
@@ -50,8 +57,8 @@ crc16_byte (unsigned short sum, unsigned char byte)
  * Use 0xffff as the initial sum value.
  * Do not forget to invert the final checksum value.
  */
-unsigned short
-crc16 (unsigned short sum, unsigned const char *buf, unsigned short len)
+unsigned short 
+crc16 (unsigned short sum, unsigned const char *buf, unsigned len)
 {
 	if (len) do
 		sum = crc16_byte (sum, *buf++);
