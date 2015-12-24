@@ -110,7 +110,10 @@ ip_addr ipadr_4ucs(const unsigned char* x) __THROW
 #endif
     // на платформе с адресацией слов с обязательным выраниванием
     //  невыравненые данные вызовут исключение 
-    res.val = x[0]|(x[1]<<8)|(x[2]<<16)|(x[3]<<24);
+    //res.val = x[0]|(x[1]<<8)|(x[2]<<16)|(x[3]<<24);
+    res.val = (x[3]<<8) | x[2];
+    res.val = (res.val <<8) | x[1];
+    res.val = (res.val <<8) | x[0];
     return res;
 }
 
