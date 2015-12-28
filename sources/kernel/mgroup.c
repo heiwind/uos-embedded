@@ -71,7 +71,7 @@ mutex_group_listen (mutex_group_t *g)
 	mutex_slot_t *s;
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	for (s = g->slot + g->num; --s >= g->slot; ) {
 		assert (list_is_empty (&s->item));
 		s->message = 0;
@@ -93,7 +93,7 @@ mutex_group_unlisten (mutex_group_t *g)
 	mutex_slot_t *s;
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	for (s = g->slot + g->num; --s >= g->slot; ) {
 		assert (! list_is_empty (&s->item));
 		s->message = 0;
@@ -138,7 +138,7 @@ mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 	struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	assert (task_current->wait == 0);
 	assert (g->num > 0);
 
@@ -165,7 +165,7 @@ mutex_group_lockwaiting (mutex_t *m, mutex_group_t *g, mutex_t **lock_ptr, void 
     struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
 
     arch_intr_disable (&x);
-    assert (STACK_GUARD (task_current));
+    assert_task_good_stack(task_current);
     assert (task_current->wait == 0);
     assert (g->num > 0);
     if (m != NULL)

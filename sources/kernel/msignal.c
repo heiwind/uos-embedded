@@ -34,7 +34,7 @@ mutex_signal (mutex_t *m, void *message)
 	arch_state_t x;
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	if (! m->item.next)
 		mutex_init (m);
 
@@ -118,7 +118,7 @@ bool_t mutex_wait_until (mutex_t *m
 #endif
 
     arch_intr_disable (&x);
-    assert (STACK_GUARD (task_current));
+    assert_task_good_stack(task_current);
     assert (task_current->wait == 0);
 
     /* On pending irq, we must call fast handler. */

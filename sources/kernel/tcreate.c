@@ -37,7 +37,7 @@ task_create (void (*func)(void*), void *arg, const char *name, int prio,
 	list_init (&t->slaves);
 
 	memset (t->stack, STACK_MAGIC, stacksz - sizeof(task_t));
-	assert (STACK_GUARD (t));
+	assert_task_good_stack(t);
 
 	/* Build an interrupt frame on the task stack.
 	 * Set instruction pointer to func, argument to arg. */

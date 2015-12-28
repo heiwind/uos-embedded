@@ -29,7 +29,7 @@ mutex_unlock_irq (mutex_t *m)
 {
 	arch_state_t x;
 
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack (task_current);
 	arch_intr_disable (&x);
 	assert (m->master != 0);
 

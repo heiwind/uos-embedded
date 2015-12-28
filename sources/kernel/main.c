@@ -156,7 +156,7 @@ main (void)
 	/* Create the idle task. */
 	task_idle = (task_t*) task_idle_data;
 	memset (task_idle->stack, STACK_MAGIC, ALIGNED_IDLE_TASK_STACKSZ);
-	assert (STACK_GUARD (task_idle));
+	assert_task_good_stack (task_idle);
 	
 	/* Move stack pointer to task_idle stack area */
     unsigned sp = (unsigned)(&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);

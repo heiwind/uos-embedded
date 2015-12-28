@@ -76,7 +76,7 @@ bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg
 
     arch_state_t x;
     arch_intr_disable (&x);
-    assert (STACK_GUARD (task_current));
+    assert_task_good_stack(task_current);
     assert (task_current != m->master);
     if (! m->item.next)
         mutex_init (m);
@@ -161,7 +161,7 @@ mutex_trylock (mutex_t *m)
 
     arch_state_t x;
     arch_intr_disable (&x);
-    assert (STACK_GUARD (task_current));
+    assert_task_good_stack(task_current);
     bool_t res = mutex_trylock_in(m);
     arch_intr_restore (x);
     return res;
@@ -255,7 +255,7 @@ mutex_unlock (mutex_t *m)
     assert(m->master == task_current);
 
     arch_state_t x;
-	assert (STACK_GUARD (task_current));
+    assert_task_good_stack(task_current);
 	arch_intr_disable (&x);
 
 #if RECURSIVE_LOCKS
