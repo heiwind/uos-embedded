@@ -22,6 +22,7 @@
  * Halt uOS, return to the parent operating system (if any).
  * Optionally print debugging information about the system state.
  */
+__attribute__((noreturn))
 void
 uos_halt (int dump_flag)
 {

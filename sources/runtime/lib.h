@@ -98,7 +98,7 @@ bool_t uos_valid_memory_address (void*);
 /*
  * Halt the system.
  */
-void uos_halt (int);
+void uos_halt (int) __NORETURN;
 
 #ifndef __AVR__
 INLINE unsigned
