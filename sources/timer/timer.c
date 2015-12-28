@@ -22,6 +22,12 @@ extern volatile uint32_t __timer_ticks_uos;
 #define CODE_ISR
 #endif
 
+#ifndef SW_TIMER
+#define CODE_TIMER CODE_ISR
+#else
+#define CODE_TIMER
+#endif
+
 #if I386
 #   include <runtime/i386/i8253.h>
 #   define TIMER_IRQ        0   /* IRQ0 */
@@ -165,7 +171,7 @@ extern volatile uint32_t __timer_ticks_uos;
  * Проверка, прошло ли указанное количество миллисекунд `msec'.
  * Параметр `interval' содержит интервал времени, возможно, переходящий границу суток.
  */
-CODE_ISR 
+CODE_TIMER 
 bool_t 
 interval_greater_or_equal (long interval, long msec)
 {
@@ -187,13 +193,13 @@ interval_greater_or_equal (long interval, long msec)
 /*
  * Timer update function.
  */
-CODE_ISR 
+CODE_TIMER 
 inline void timer_mutex_note(mutex_t* t, unsigned long message){
     mutex_awake (t, (void*) message);
 }
 
 #ifndef SW_TIMER
-CODE_ISR 
+CODE_TIMER 
 static inline
 #endif
 void timer_update (timer_t *t)
@@ -205,36 +211,6 @@ void timer_update (timer_t *t)
 		__timer_ticks_uos++;
 #endif
 /*debug_printf ("<ms=%ld> ", t->milliseconds);*/
-#if defined (ELVEES)
-    /* Clear interrupt. */
-    MC_ITCSR &= ~MC_ITCSR_INT;
-#endif
-#if ARM_AT91SAM
-    /* Clear interrupt. */
-    *AT91C_PITC_PIVR;
-#endif
-#if ARM_OMAP44XX
-    /* Clear interrupt. */
-    ARM_PRT_INT_STATUS = ARM_PRT_EVENT;
-#endif
-#if ARM_1986BE1
-    SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ARR_EVENT;
-#endif
-#if PIC32MX
-    /* Increment COMPARE register. */
-    unsigned compare = mips_read_c0_register (C0_COMPARE);
-    do {
-        compare += t->compare_step;
-        mips_write_c0_register (C0_COMPARE, compare);
-    } while ((int) (compare - mips_read_c0_register (C0_COUNT)) < 0);
-#endif
-#if defined (RTC_TIMER)
-#   if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
-        RTC->ISR &= ~RTC_WUTF;
-        PWR->CR |= PWR_CWUF;
-        EXTI->PR = EXTI_RTC_WKUP;
-#   endif
-#endif
 
 #ifdef USEC_TIMER
     const unsigned long interval = t->usec_per_tick;
@@ -320,15 +296,47 @@ void timer_update (timer_t *t)
 #ifndef UOS_ON_TIMER
 #define UOS_ON_TIMER(t)
 #else
+CODE_TIMER
 __attribute__((weak, noinline))
 void uos_on_timer_hook(timer_t *t)
 {}
 #endif
 
-CODE_ISR 
+CODE_TIMER 
 bool_t 
 timer_handler (timer_t *t)
 {
+#if defined (ELVEES)
+    /* Clear interrupt. */
+    MC_ITCSR &= ~MC_ITCSR_INT;
+#endif
+#if ARM_AT91SAM
+    /* Clear interrupt. */
+    *AT91C_PITC_PIVR;
+#endif
+#if ARM_OMAP44XX
+    /* Clear interrupt. */
+    ARM_PRT_INT_STATUS = ARM_PRT_EVENT;
+#endif
+#if ARM_1986BE1
+    SYS_TIMER->TIM_STATUS &= ~ARM_TIM_CNT_ARR_EVENT;
+#endif
+#if PIC32MX
+    /* Increment COMPARE register. */
+    unsigned compare = mips_read_c0_register (C0_COMPARE);
+    do {
+        compare += t->compare_step;
+        mips_write_c0_register (C0_COMPARE, compare);
+    } while ((int) (compare - mips_read_c0_register (C0_COUNT)) < 0);
+#endif
+#if defined (RTC_TIMER)
+#   if defined (ARM_STM32L151RC) || defined (ARM_STM32L152RC)
+        RTC->ISR &= ~RTC_WUTF;
+        PWR->CR |= PWR_CWUF;
+        EXTI->PR = EXTI_RTC_WKUP;
+#   endif
+#endif
+
     UOS_ON_TIMER(t);
     timer_update (t);
 
