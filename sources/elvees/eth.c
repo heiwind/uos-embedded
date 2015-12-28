@@ -96,13 +96,14 @@ unsigned eth_phy_wait_poll(eth_t *u)   {
     unsigned now;
     unsigned start = mips_read_c0_register (C0_COUNT);
     /* Wait until the PHY write completes. */
-    do {
-        status = MC_MAC_MD_STATUS;
-        if (! (status & MD_STATUS_BUSY))
+    status = MC_MAC_MD_STATUS;
+    while ((status & MD_STATUS_BUSY) != 0) {
+        now = mips_read_c0_register (C0_COUNT);
+        if ((now-start) > MDIO_CPUTO)
             break;
         task_yield();
-        now = mips_read_c0_register (C0_COUNT);
-    } while ((now-start) < MDIO_CPUTO);
+        status = MC_MAC_MD_STATUS;
+    };
     return status;
 }
 #else
@@ -304,10 +305,14 @@ chip_init (eth_t *u)
 	u->phy.adr = 31;
 #ifndef DEBUG_SIMULATE
 	for (;;) {
-		id = phy_read (u, PHY_ID1) << 16 |
-			phy_read (u, PHY_ID2);
-		if (id != 0 && id != 0xffffffff)
-			break;
+        unsigned tmp = phy_read (u, PHY_ID1);
+        if (tmp != 0 && tmp != 0xffff) {
+            id = tmp << 16; 
+            tmp = phy_read (u, PHY_ID2);
+            id |= tmp;
+            if (tmp != 0 && id != 0xffff)
+                break;
+        }
 		if (u->phy.adr > 0)
 			u->phy.adr--;
 		else {
@@ -323,7 +328,8 @@ chip_init (eth_t *u)
 	id = PHY_ID_KS8721BL;
 #endif
 #ifndef NDEBUG
-	debug_printf ("eth_init: transceiver `%s' detected at address %d\n",
+	debug_printf ("eth_init: transceiver 0x%08x:`%s' detected at address %d\n"
+	        , id, 
 		((id & PHY_ID_MASK) == PHY_ID_KS8721BL) ? "KS8721" : "Unknown",
 		u->phy.adr);
 #endif
