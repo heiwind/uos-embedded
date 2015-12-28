@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>libuos</name>
+	<name>uosdev</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -18,10 +18,6 @@
 					<value>true</value>
 				</dictionary>
 				<dictionary>
-					<key>org.eclipse.cdt.make.core.autoBuildTarget</key>
-					<value></value>
-				</dictionary>
-				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildArguments</key>
 					<value></value>
 				</dictionary>
@@ -31,11 +27,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildLocation</key>
-					<value>${workspace_loc:/libuos/MultiCore_Configuration_Debug}</value>
-				</dictionary>
-				<dictionary>
-					<key>org.eclipse.cdt.make.core.cleanBuildTarget</key>
-					<value>clean</value>
+					<value>${workspace_loc:/uosdev/MultiCore_Configuration_Debug}</value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.contents</key>
@@ -52,10 +44,6 @@
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.enableFullBuild</key>
 					<value>true</value>
-				</dictionary>
-				<dictionary>
-					<key>org.eclipse.cdt.make.core.fullBuildTarget</key>
-					<value>all </value>
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.stopOnError</key>
@@ -81,126 +69,4 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>buf</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/buf</locationURI>
-		</link>
-		<link>
-			<name>crc</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/crc</locationURI>
-		</link>
-		<link>
-			<name>elvees</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/elvees</locationURI>
-		</link>
-		<link>
-			<name>flash</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/flash</locationURI>
-		</link>
-		<link>
-			<name>fs</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/fs</locationURI>
-		</link>
-		<link>
-			<name>iic</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/iic</locationURI>
-		</link>
-		<link>
-			<name>kernel</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/kernel</locationURI>
-		</link>
-		<link>
-			<name>max3421e</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/max3421e</locationURI>
-		</link>
-		<link>
-			<name>mem</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/mem</locationURI>
-		</link>
-		<link>
-			<name>net</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/net</locationURI>
-		</link>
-		<link>
-			<name>posix</name>
-			<type>2</type>
-			<locationURI>uOS_ROOT/contrib/posix</locationURI>
-		</link>
-		<link>
-			<name>random</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/random</locationURI>
-		</link>
-		<link>
-			<name>regexp</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/regexp</locationURI>
-		</link>
-		<link>
-			<name>regexp9</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/regexp9</locationURI>
-		</link>
-		<link>
-			<name>runtime</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/runtime</locationURI>
-		</link>
-		<link>
-			<name>snmp</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/snmp</locationURI>
-		</link>
-		<link>
-			<name>spi</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/spi</locationURI>
-		</link>
-		<link>
-			<name>stream</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/stream</locationURI>
-		</link>
-		<link>
-			<name>tcl</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/tcl</locationURI>
-		</link>
-		<link>
-			<name>timer</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/timer</locationURI>
-		</link>
-		<link>
-			<name>uart</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/uart</locationURI>
-		</link>
-		<link>
-			<name>usb</name>
-			<type>2</type>
-			<locationURI>uOS_SRC/usb</locationURI>
-		</link>
-	</linkedResources>
-	<variableList>
-		<variable>
-			<name>uOS_ROOT</name>
-			<value>file:/c:/Projects/uOS.hg</value>
-		</variable>
-		<variable>
-			<name>uOS_SRC</name>
-			<value>$%7BuOS_ROOT%7D/sources</value>
-		</variable>
-	</variableList>
 </projectDescription>

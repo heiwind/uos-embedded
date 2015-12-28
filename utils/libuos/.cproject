@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
-		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Debug">
-				<macros>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
-					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
-					<stringMacro name="CROSS_DSP" type="VALUE_TEXT" value="c:/elvees/ToolsDSP"/>
-					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
-				</macros>
+		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.684049297">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.684049297" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Debug">
 				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
@@ -19,188 +13,33 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactExtension="a" artifactName="${ProjName}" buildArtefactType="org.elvees.mcs4.projmanager.staticLibArtefactType" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.elvees.mcs4.projmanager.staticLibArtefactType" cleanCommand="rm -f" description="" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840" name="MultiCore_Configuration_Debug" parent="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS" postannouncebuildStep="" postbuildStep="" preannouncebuildStep="" prebuildStep="">
-					<folderInfo id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.647732840." name="/" resourcePath="">
-						<toolChain errorParsers="" id="org.elvees.mcs4.projmanager.ToolsUGCC.debug.archiver.1806267470" name="MultiCore Toolchain (uOS)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.debug.archiver">
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu.61070922" name="Processor" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu" value="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu.NVCom-02T" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.1992680319" name="Endianness" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.little" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code.1101926386" name="Code" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.code.SDRAM" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ.1327142610" name="MPORT clock (DMPORT_KHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ" value="60000" valueType="string"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data.1462801459" name="Data" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.data.CRAM" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.1188122901" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.float" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.hard" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ.863539759" name="CPU clock (DKHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ" value="250000" valueType="string"/>
-							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform.1106799943" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform"/>
-							<builder autoBuildTarget="" buildPath="${workspace_loc:/libuos/MultiCore_Configuration_Debug}" cleanBuildTarget="clean" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.elvees.mcs4.projmanager.ToolsUGCC.builder.1645133802" incrementalBuildTarget="all " keepEnvironmentInBuildfile="false" managedBuildOn="true" name="MultiCore Builder" parallelizationNumber="1" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.builder"/>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.397851885" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths.1713264880" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-									<listOptionValue builtIn="false" value="${CROSS_TOOL}/mipsel-elf32/include"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.other.1506952553" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.other" valueType="stringList">
+				<configuration artifactExtension="a" artifactName="${ProjName}" buildArtefactType="org.elvees.mcs4.projmanager.staticLibArtefactType" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.elvees.mcs4.projmanager.staticLibArtefactType" cleanCommand="rm -f" description="" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.684049297" name="MultiCore_Configuration_Debug" parent="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS">
+					<folderInfo id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.684049297." name="/" resourcePath="">
+						<toolChain id="org.elvees.mcs4.projmanager.ToolsUGCC.debug.archiver.1289508099" name="MultiCore Toolchain (uOS)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.debug.archiver">
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu.499272334" name="Processor" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu" value="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu.NVCom-02T" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.884113788" name="Endianness" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.little" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code.1441518751" name="Code" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.code.CRAM" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ.1165811215" name="MPORT clock (DMPORT_KHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ" value="90000" valueType="string"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data.1561099450" name="Data" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.data.CRAM" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.1202650832" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.float" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.hard" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ.770604833" name="CPU clock (DKHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ" value="240000" valueType="string"/>
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform.138460649" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform"/>
+							<builder buildPath="${workspace_loc:/uosdev/MultiCore_Configuration_Debug}" id="org.elvees.mcs4.projmanager.ToolsUGCC.builder.1483543905" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="MultiCore Builder" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.builder"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.364390997" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.level.152709478" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.level.max" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.optimization.level.1028911353" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.optimization.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.optimization.level.optimize" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.other.568151913" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-gdwarf-2"/>
 								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def.1312866524" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="MIPS32"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths.1084576620" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def.329049689" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
+									<listOptionValue builtIn="false" value="DEBUG"/>
+									<listOptionValue builtIn="false" value="ELVEES_SAFE_LW_MXC0"/>
 									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
-									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
-									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
-									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
-									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
-									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
-									<listOptionValue builtIn="false" value="RAM_HI=0x9800"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags.1302331950" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags" value=" -EL -mhard-float -DARCH_HAVE_FPU -DKHZ=250000 -DMPORT_KHZ=60000 -DELVEES_CLKIN=10000" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.level.1393364253" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.debugging.level.max" valueType="enumerated"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.misc.other.212744733" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.misc.other" valueType="stringList">
-									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch -Xassembler --mc24r2 -fno-builtin -fsigned-char"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.optimization.level.83688516" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.optimization.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.optimization.level.optimize" valueType="enumerated"/>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType.288507504" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType"/>
-							</tool>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.1446761588" name="RISC C Compiler S - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.other.430166980" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.other" valueType="stringList">
-									<listOptionValue builtIn="false" value="-gdwarf-2"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths.1871389640" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-									<listOptionValue builtIn="false" value="${CROSS_TOOL}/mipsel-elf32/include"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def.1625453941" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="MIPS32"/>
-									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
-									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
-									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
-									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
-									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
-									<listOptionValue builtIn="false" value="RAM_HI=0x9800"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags.1593997715" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags" value=" -EL -mhard-float -DARCH_HAVE_FPU -DKHZ=250000 -DMPORT_KHZ=60000 -DELVEES_CLKIN=10000" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.level.1001700934" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.level.max" valueType="enumerated"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.misc.other.1390140977" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.misc.other" valueType="stringList">
-									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch -Xassembler --mc24r2 -fno-builtin -fsigned-char"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.optimization.level.2009458309" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.optimization.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.optimization.level.optimize" valueType="enumerated"/>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType.2011139344" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType"/>
-							</tool>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.1329741637" name="RISC Assembler - mipsel-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths.1750199385" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags.1894074995" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags" value=" --defsym  ELVEES_NVCOM02T=1 -EL -mhard-float" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.level.352374548" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.level.default" valueType="enumerated"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.flags.1332094367" name="Assembler flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.flags" valueType="stringList">
-									<listOptionValue builtIn="false" value="-G0 -mips32 --mc24r2"/>
-								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm.1274982728" name="RISC Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm"/>
-							</tool>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.69866055" name="DSP0 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags.1830301640" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags" value=" -mcx7" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.general.paths.269948435" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType.2043389858" name="DSP0 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType"/>
-							</tool>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.627387587" name="DSP1 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags.115022260" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags" value=" -mcx7" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.general.paths.677183464" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType.526830651" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType"/>
-							</tool>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.12230298" name="DSP2 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags.495237641" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags" value=" -mcx7" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.general.paths.1766590009" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType.1487710817" name="DSP2 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType"/>
-							</tool>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.371464136" name="DSP3 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags.76699581" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags" value=" -mcx7" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.general.paths.842265467" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType.82494290" name="DSP3 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType"/>
-							</tool>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-ld" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker.1654499601" name="DSP0 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker"/>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-ld" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker.2123482896" name="DSP1 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker"/>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-ld" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker.1278910808" name="DSP2 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker"/>
-							<tool command="${CROSS_DSP}/bin/elcore-elvis-elf-ld" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker.1965031174" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker"/>
-							<tool command="${CROSS_DSP}/bin/elcopy" commandLinePattern="${COMMAND} ${FLAGS} ${INPUTS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy.228013223" name="DSP0 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy"/>
-							<tool command="${CROSS_DSP}/bin/elcopy" commandLinePattern="${COMMAND} ${FLAGS} ${INPUTS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy.2035386960" name="DSP1 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy"/>
-							<tool command="${CROSS_DSP}/bin/elcopy" commandLinePattern="${COMMAND} ${FLAGS} ${INPUTS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy.55698337" name="DSP2 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy"/>
-							<tool command="${CROSS_DSP}/bin/elcopy" commandLinePattern="${COMMAND} ${FLAGS} ${INPUTS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy.1326539794" name="DSP3 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy"/>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-ar" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="" id="org.elvees.mcs4.projmanager.ToolsUGCC.arch.582735229" name="MultiCore Archiver - mipsel-elf32-ar" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.arch">
-								<outputType id="org.elvees.mcs4.projmanager.ToolsUGCC.arch.outputType.170513012" name="MultiCore Archiver Output" outputPrefix="" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.arch.outputType"/>
-							</tool>
-						</toolChain>
-					</folderInfo>
-					<sourceEntries>
-						<entry excluding="crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-					</sourceEntries>
-				</configuration>
-			</storageModule>
-			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
-		</cconfiguration>
-		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667">
-			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Release">
-				<macros>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
-					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
-					<stringMacro name="CROSS_DSP" type="VALUE_TEXT" value="c:/elvees/ToolsDSP"/>
-					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
-				</macros>
-				<externalSettings/>
-				<extensions>
-					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
-					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-				</extensions>
-			</storageModule>
-			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactExtension="a" artifactName="${ProjName}" buildArtefactType="org.elvees.mcs4.projmanager.staticLibArtefactType" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.elvees.mcs4.projmanager.staticLibArtefactType" cleanCommand="rm -f" description="" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667" name="MultiCore_Configuration_Release" parent="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS">
-					<folderInfo id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.2041170667." name="/" resourcePath="">
-						<toolChain id="org.elvees.mcs4.projmanager.ToolsUGCC.release.archiver.282335067" name="MultiCore Toolchain (uOS)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.release.archiver">
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu.243878400" name="Processor" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu" value="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu.NVCom-02T" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.1038049583" name="Endianness" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.little" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code.228018477" name="Code" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.code.CRAM" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ.1653629771" name="MPORT clock (DMPORT_KHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ" value="60000" valueType="string"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data.244096499" name="Data" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.data.CRAM" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.147574800" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.float" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.hard" valueType="enumerated"/>
-							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ.1105125995" name="CPU clock (DKHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ" value="250000" valueType="string"/>
-							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform.1570330278" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform"/>
-							<builder buildPath="${workspace_loc:/uos/MultiCore_Configuration_Release}" id="org.elvees.mcs4.projmanager.ToolsUGCC.builder.1924181680" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="MultiCore Builder" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.builder"/>
-							<tool command="$(CROSS_TOOL)/bin/mipsel-elf32-gcc" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.1686979157" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths.349013064" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-									<listOptionValue builtIn="false" value="${CROSS_TOOL}/mipsel-elf32/include"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def.275858595" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="MIPS32"/>
-									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
-									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
-									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
-									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
-									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
-									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags.1209535044" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags" value=" -EL -mhard-float -DARC_HAVE_FPU -DKHZ=250000 -DMPORT_KHZ=60000 -DELVEES_CLKIN=10000" valueType="string"/>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType.896791921" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType"/>
-							</tool>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-gcc" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.1331521385" name="RISC C Compiler S - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths.849708488" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${CROSS_TOOL}/mipsel-elf32/include&quot;"/>
-								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def.1738545300" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="MIPS32"/>
-									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
 									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
 									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
 									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
@@ -208,61 +47,189 @@
 									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
 									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
 								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags.948071949" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags" value=" -mhard-float -DARC_HAVE_FPU -DKHZ=250000 -DMPORT_KHZ=60000 -DELVEES_CLKIN=10000" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.misc.other.1683151449" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.misc.other" valueType="stringList">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags.1719569601" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags" value=" -EL -mhard-float -DARCH_HAVE_FPU -DKHZ=240000 -DMPORT_KHZ=90000 -DELVEES_CLKIN=10000" valueType="string"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.misc.other.15734502" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.misc.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch -Xassembler --mc24r2 -fno-builtin -fsigned-char"/>
+									<listOptionValue builtIn="false" value="-ffunction-sections"/>
+									<listOptionValue builtIn="false" value="-fdata-sections"/>
 								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType.603796877" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType.1535651873" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType"/>
 							</tool>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-as" id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.1966901005" name="RISC Assembler - mipsel-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths.34045193" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths" valueType="includePath">
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.325633055" name="RISC C Compiler S - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.optimization.level.1305723484" name="Optimization Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.optimization.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.optimization.level.optimize" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.other.676102221" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gdwarf-2"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.level.1487265145" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.debugging.level.default" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths.2138445777" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
 								</option>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags.106329061" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags" value=" --defsym  ELVEES_NVCOM02T=1 -mhard-float" valueType="string"/>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm.354666174" name="RISC Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm"/>
-							</tool>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-as" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.1574273449" name="DSP0 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags.2048604812" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags" value="" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.general.paths.1212092779" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def.665619445" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="RECURSIVE_LOCKS=0"/>
+									<listOptionValue builtIn="false" value="DEBUG"/>
+									<listOptionValue builtIn="false" value="ELVEES_SAFE_LW_MXC0"/>
+									<listOptionValue builtIn="false" value="ARCH_HAVE_FPU"/>
+									<listOptionValue builtIn="false" value="MIPS32"/>
+									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
 								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType.632161855" name="DSP0 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType"/>
-							</tool>
-							<tool command="${CROSS_TOOL})/bin/elcore-elvis-elf-as" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.879289024" name="DSP1 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags.711073961" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags" value="" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.general.paths.337324922" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags.383999247" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags" value=" -EL -mhard-float -DARCH_HAVE_FPU -DKHZ=240000 -DMPORT_KHZ=90000 -DELVEES_CLKIN=10000" valueType="string"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.misc.other.2027425898" name="Other flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.misc.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-c -fmessage-length=0 -G0 -mips32 -DMIPS32 -ffixed-k0 -ffixed-k1 -mno-check-zero-division -fno-delayed-branch -Xassembler --mc24r2 -DRECURSIVE_LOCKS=0 -fno-builtin -fsigned-char"/>
 								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType.287266330" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType.1630145990" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType"/>
 							</tool>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-as" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.1527255891" name="DSP2 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags.462651344" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags" value="" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.general.paths.426945513" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.686474681" name="RISC Assembler - mipsel-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.level.1343005656" name="Debug Level" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.level" value="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.level.default" valueType="enumerated"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.other.642435758" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="--gdwarf-2"/>
 								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType.129101096" name="DSP2 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType"/>
-							</tool>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-as" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.805063542" name="DSP3 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm">
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags.2065103506" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags" value="" valueType="string"/>
-								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.general.paths.1110435304" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.general.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${uOS_SRC}&quot;"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths.973526411" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
 								</option>
-								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType.267618743" name="DSP3 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType"/>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags.35109631" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags" value=" --defsym  ELVEES_NVCOM02T=1 -EL -mhard-float" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm.1014129121" name="RISC Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm"/>
 							</tool>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-ld" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker.1020130603" name="DSP0 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker"/>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-ld" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker.1019673951" name="DSP1 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker"/>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-ld" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker.1180312345" name="DSP2 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker"/>
-							<tool command="${CROSS_TOOL}/bin/elcore-elvis-elf-ld" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker.602549065" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker"/>
-							<tool command="${CROSS_TOOL}/bin/elcopy" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy.1623574783" name="DSP0 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy"/>
-							<tool command="${CROSS_TOOL}/bin/elcopy" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy.1951259029" name="DSP1 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy"/>
-							<tool command="${CROSS_TOOL}/bin/elcopy" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy.384199669" name="DSP2 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy"/>
-							<tool command="${CROSS_TOOL}/bin/elcopy" id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy.1085255135" name="DSP3 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy"/>
-							<tool command="${CROSS_TOOL}/bin/mipsel-elf32-ar" id="org.elvees.mcs4.projmanager.ToolsUGCC.arch.1455499957" name="MultiCore Archiver - mipsel-elf32-ar" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.arch"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.398622559" name="DSP0 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.debugging.other.1489068376" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gstabs"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags.1325790343" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType.1670671598" name="DSP0 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.1466851329" name="DSP1 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.debugging.other.1663027749" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gstabs"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags.460363440" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType.1119634718" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.2035073136" name="DSP2 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.debugging.other.1847189697" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gstabs"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags.1791458898" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType.817473943" name="DSP2 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.1705458097" name="DSP3 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.debugging.other.1965535683" name="Other debugging flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.debugging.other" valueType="stringList">
+									<listOptionValue builtIn="false" value="-gstabs"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags.815948477" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType.1188037020" name="DSP3 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker.710752429" name="DSP0 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker.597871800" name="DSP1 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker.513923346" name="DSP2 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker.717427632" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy.1060749176" name="DSP0 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy.813843178" name="DSP1 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy.1693838153" name="DSP2 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy.1528361435" name="DSP3 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.arch.419324513" name="MultiCore Archiver - mipsel-elf32-ar" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.arch"/>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="runtime/strrchr.c|runtime/strncpy.c|runtime/strncmp.c|runtime/strncat.c|runtime/strlen.c|runtime/strcpy.c|runtime/strcmp.c|runtime/strchr.c|runtime/strcat.c|runtime/memset.c|runtime/memmove.c|runtime/memcpy.c|runtime/memcmp.c|runtime/memchr.c|regexp9|adc|tap|enc28j60|dozor|cs8900|lcd2|lcd|input|i8042|gpanel|milandr|mil1553|microchip|pic32|pci|nvram|smc91c111|s3c4530|stm32l|vesa|crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.1372041414">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.1372041414" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Release">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactExtension="a" artifactName="${ProjName}" buildArtefactType="org.elvees.mcs4.projmanager.staticLibArtefactType" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.elvees.mcs4.projmanager.staticLibArtefactType" cleanCommand="rm -f" description="" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.1372041414" name="MultiCore_Configuration_Release" parent="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS">
+					<folderInfo id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.1372041414." name="/" resourcePath="">
+						<toolChain id="org.elvees.mcs4.projmanager.ToolsUGCC.release.archiver.686325831" name="MultiCore Toolchain (uOS)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.release.archiver">
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu.1772729543" name="Processor" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.cpu" value="org.elvees.mcs4.projmanager.ToolsMGCC.target.cpu.NVCom-02T" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.1479957790" name="Endianness" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.endian.little" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code.1541191563" name="Code" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Code" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.code.CRAM" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ.1436697430" name="MPORT clock (DMPORT_KHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DMPORT_KHZ" value="90000" valueType="string"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data.610431441" name="Data" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.Data" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.data.CRAM" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.1797461270" name="Floating Point" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.float" value="org.elvees.mcs4.projmanager.ToolsUGCC.target.float.hard" valueType="enumerated"/>
+							<option id="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ.1917431172" name="CPU clock (DKHZ) [in KHz]" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.target.DKHZ" value="240000" valueType="string"/>
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform.1415444400" isAbstract="false" name="MultiCore Target Platform" osList="win32,linux" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.targetPlatform"/>
+							<builder buildPath="${workspace_loc:/uosdev/MultiCore_Configuration_Release}" id="org.elvees.mcs4.projmanager.ToolsUGCC.builder.1913900043" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="MultiCore Builder" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.builder"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.2062971463" name="RISC C Compiler - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths.1491672558" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def.763398110" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags.2138945458" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.multicore.flags" value=" -mhard-float -DARCH_HAVE_FPU -DKHZ=240000 -DMPORT_KHZ=90000 -DELVEES_CLKIN=10000" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType.291634037" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.c.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.1747646458" name="RISC C Compiler S - mipsel-elf32-gcc" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths.222664510" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.includes.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def.1130072686" name="Defined symbols (-D)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.symbols.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="ELVEES_NVCOM02T"/>
+									<listOptionValue builtIn="false" value="ENABLE_ICACHE"/>
+									<listOptionValue builtIn="false" value="ENABLE_DCACHE"/>
+									<listOptionValue builtIn="false" value="MIPS_NOBEV"/>
+									<listOptionValue builtIn="false" value="ELVEES_VECT_CRAM"/>
+									<listOptionValue builtIn="false" value="RAM_HI=0x9801"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags.1034792082" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.multicore.flags" value=" -mhard-float -DARCH_HAVE_FPU -DKHZ=240000 -DMPORT_KHZ=90000 -DELVEES_CLKIN=10000" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType.1592676975" name="RISC C Compiler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.compiler.S.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.791762041" name="RISC Assembler - mipsel-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths.500455202" name="Include paths (-I)" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.general.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}&quot;"/>
+								</option>
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags.364495259" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.risc.asm.multicore.flags" value=" --defsym  ELVEES_NVCOM02T=1 -mhard-float" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm.1873551616" name="RISC Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.inputType.asm"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.907542657" name="DSP0 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags.1764566642" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType.1466282588" name="DSP0 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.2016267873" name="DSP1 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags.1048642878" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType.1500362000" name="DSP1 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.1715885547" name="DSP2 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags.732451290" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType.567559871" name="DSP2 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.640533643" name="DSP3 Assembler - elcore-elvees-elf32-as" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm">
+								<option id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags.808575865" name="Target Specific Flags" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.multicore.flags" value=" -mcx7" valueType="string"/>
+								<inputType id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType.1835323328" name="DSP3 Assembler Input" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.asm.inputType"/>
+							</tool>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker.2096538900" name="DSP0 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker.1412145439" name="DSP1 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker.95145539" name="DSP2 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker.272756787" name="DSP3 Linker - elcore-elvis-elf-ld" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.linker"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy.1136595892" name="DSP0 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp0.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy.278051110" name="DSP1 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp1.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy.443636972" name="DSP2 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp2.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy.379862036" name="DSP3 Objcopy - elcopy" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.dsp3.objcopy"/>
+							<tool id="org.elvees.mcs4.projmanager.ToolsUGCC.arch.589034955" name="MultiCore Archiver - mipsel-elf32-ar" superClass="org.elvees.mcs4.projmanager.ToolsUGCC.arch"/>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry excluding="runtime/strrchr.c|runtime/strncpy.c|runtime/strncmp.c|runtime/strncat.c|runtime/strlen.c|runtime/strcpy.c|runtime/strcmp.c|runtime/strchr.c|runtime/strcat.c|runtime/memset.c|runtime/memmove.c|runtime/memcpy.c|runtime/memcmp.c|runtime/memchr.c|regexp9|adc|tap|enc28j60|dozor|cs8900|lcd2|lcd|input|i8042|gpanel|milandr|mil1553|microchip|pic32|pci|nvram|smc91c111|s3c4530|stm32l|vesa|crc/test16-inet.c|stream/good-print.c|regexp/try.c|regexp9/test.c|net/udp-example.c|net/tcp-example.c|uart/uart-msp430.c|uart/uart-linux.c|runtime/mips/init-pic32.c|runtime/mips/init-malta.c|runtime/mips/startup-pic32.S|runtime/mips/startup-nobev.S|runtime/mips/startup-malta.S|runtime/mips/startup.S|runtime/math/jn.c|runtime/math/j1.c|runtime/math/j0.c|runtime/msp430|runtime/linux386|runtime/i386|runtime/cortex-m|runtime/avr|runtime/arm|kernel/msp430|kernel/linux386|kernel/i386|kernel/cortex-m|kernel/avr|kernel/arm" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -270,12 +237,13 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="uos.org.elvees.mcs4.projmanager.projectLibType_uOS.1676802592" name="MultiCore Static Library" projectType="org.elvees.mcs4.projmanager.projectLibType_uOS"/>
+		<project id="uosdev.org.elvees.mcs4.projmanager.projectLibType_uOS.1599959224" name="MultiCore Static Library" projectType="org.elvees.mcs4.projmanager.projectLibType_uOS"/>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="1">
-		<resource resourceType="PROJECT" workspacePath="/uos"/>
+		<resource resourceType="PROJECT" workspacePath="/uosdev"/>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

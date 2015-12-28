@@ -15,6 +15,8 @@ copy /Y %CUR_SRC_DIR%\buf-prio.c %CUR_DST_DIR%\buf-prio.c
 copy /Y %CUR_SRC_DIR%\buf-prio.h %CUR_DST_DIR%\buf-prio.h
 copy /Y %CUR_SRC_DIR%\buf-queue.c %CUR_DST_DIR%\buf-queue.c
 copy /Y %CUR_SRC_DIR%\buf-queue.h %CUR_DST_DIR%\buf-queue.h
+copy /Y %CUR_SRC_DIR%\buf-queue-header.c %CUR_DST_DIR%\buf-queue-header.c
+copy /Y %CUR_SRC_DIR%\buf-queue-header.h %CUR_DST_DIR%\buf-queue-header.h
 copy /Y %CUR_SRC_DIR%\buf.c %CUR_DST_DIR%\buf.c
 copy /Y %CUR_SRC_DIR%\buf.h %CUR_DST_DIR%\buf.h
 
@@ -84,7 +86,7 @@ copy /Y %CUR_SRC_DIR%\miic.h %CUR_DST_DIR%\miic.h
 set CUR_SRC_DIR=%SRC_ROOT%\kernel
 set CUR_DST_DIR=%DST_ROOT%\kernel
 md %CUR_DST_DIR%
-copy /Y %CUR_SRC_DIR%\halt.c %CUR_DST_DIR%\halt.c
+copy /Y %CUR_SRC_DIR%\uos_halt.c %CUR_DST_DIR%\uos_halt.c
 copy /Y %CUR_SRC_DIR%\iattach.c %CUR_DST_DIR%\iattach.c
 copy /Y %CUR_SRC_DIR%\internal.h %CUR_DST_DIR%\internal.h
 copy /Y %CUR_SRC_DIR%\irelease.c %CUR_DST_DIR%\irelease.c
@@ -173,6 +175,7 @@ copy /Y %CUR_SRC_DIR%\assert.h %CUR_DST_DIR%\assert.h
 copy /Y %CUR_SRC_DIR%\byteorder.h %CUR_DST_DIR%\byteorder.h
 copy /Y %CUR_SRC_DIR%\ctype.c %CUR_DST_DIR%\ctype.c
 copy /Y %CUR_SRC_DIR%\ctype.h %CUR_DST_DIR%\ctype.h
+copy /Y %CUR_SRC_DIR%\string.h %CUR_DST_DIR%\string.h
 copy /Y %CUR_SRC_DIR%\debug-dump.c %CUR_DST_DIR%\debug-dump.c
 copy /Y %CUR_SRC_DIR%\debug-printf.c %CUR_DST_DIR%\debug-printf.c
 copy /Y %CUR_SRC_DIR%\halt.c %CUR_DST_DIR%\halt.c
@@ -206,6 +209,18 @@ copy /Y %CUR_SRC_DIR%\strtoul.c %CUR_DST_DIR%\strtoul.c
 copy /Y %CUR_SRC_DIR%\time.h %CUR_DST_DIR%\time.h
 copy /Y %CUR_SRC_DIR%\tz-parse.c %CUR_DST_DIR%\tz-parse.c
 copy /Y %CUR_SRC_DIR%\tz-time.c %CUR_DST_DIR%\tz-time.c
+
+md %DST_ROOT%\runtime\c++
+set CUR_SRC_DIR=%SRC_ROOT%\runtime\c++
+set CUR_DST_DIR=%DST_ROOT%\runtime\c++
+md %CUR_DST_DIR%
+copy /Y %CUR_SRC_DIR%\strings.hpp %CUR_DST_DIR%\string.hpp
+
+md %DST_ROOT%\runtime\sys
+set CUR_SRC_DIR=%SRC_ROOT%\runtime\sys
+set CUR_DST_DIR=%DST_ROOT%\runtime\sys
+md %CUR_DST_DIR%
+copy /Y %CUR_SRC_DIR%\uosc.h %CUR_DST_DIR%\uosc.h
 
 set CUR_SRC_DIR=%SRC_ROOT%\runtime\math
 set CUR_DST_DIR=%DST_ROOT%\runtime\math
