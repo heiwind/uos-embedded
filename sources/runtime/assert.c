@@ -1,4 +1,5 @@
 #include <runtime/lib.h>
+#include <stdarg.h>
 
 /*
  * Called from assert() macro.
@@ -13,6 +14,7 @@ __assert_fail_ndebug ()
 	uos_halt (1);
 }
 #else
+__NORETURN
 void
 __assert_fail (const char *cond, const char *file, unsigned int line,
 	const char *func)
@@ -21,4 +23,16 @@ __assert_fail (const char *cond, const char *file, unsigned int line,
 		func, file, line, cond);
 	uos_halt (1);
 }
+
+void __assert_msg(const char *msg, ...)
+{
+    va_list args;
+
+    va_start (args, msg);
+    debug_vprintf (msg, args);
+    va_end (args);
+}
+
+const char uos_assert_task_name_msg[] = "asserted task:%S\n";
+
 #endif
