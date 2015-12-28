@@ -111,7 +111,6 @@ static void copy_to_rt_rxq(milandr_mil1553_t *mil, uint8_t subaddr, uint8_t word
 
 static void start_slot(milandr_mil1553_t *mil, mil_slot_desc_t slot, uint16_t *pdata)
 {
-    mil->nb_reserved++;
     if (slot.transmit_mode == MIL_SLOT_BC_RT) {
         // Режим передачи КШ-ОУ
         mil->reg->CommandWord1 =
@@ -221,6 +220,7 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             mil->reg->StatusWord1 = answerWord;
         }
         if ((status & MIL_STD_STATUS_VALMESS) != 0) {
+            mil->nb_transmitions++;
             copy_to_rt_rxq(mil, subaddr, wordsCount);
         }
 
@@ -257,6 +257,7 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
 
         }
         if ((status & MIL_STD_STATUS_VALMESS) != 0) {
+            mil->nb_transmitions++;
             copy_to_rt_rxq(mil, subaddr, wordsCount);
         }
         break;
@@ -706,6 +707,35 @@ static int mil_bc_urgent_send(mil1553if_t *_mil, mil_slot_desc_t descr, void *da
     return MIL_ERR_OK;
 }
 
+static int mil_bc_ordinary_send(mil1553if_t *_mil, int slot_index, void *data)
+{
+	milandr_mil1553_t *mil = (milandr_mil1553_t *)_mil;
+
+    mil_lock(_mil);
+	mil_slot_t *s = mil->cyclogram;
+	if (s == 0) {
+		mil_unlock(_mil);
+		return MIL_ERR_NOT_PERM;
+	}
+	while (slot_index) {
+		s = s->next;
+		if (s == 0) {
+			mil_unlock(_mil);
+			return MIL_ERR_NOT_PERM;
+		}
+		slot_index--;
+	}
+	int wc = (s->desc.words_count == 0 ? 32 : s->desc.words_count);
+	uint16_t *dst = s->data;
+	uint16_t *slot_data = data;
+	while(wc) {
+		*dst++ = *slot_data++;
+		wc--;
+	}
+	mil_unlock(_mil);
+	return MIL_ERR_OK;
+}
+
 static bool_t status_handler(void *arg)
 {
 	MIL_STD_1553B_t     *reg = (MIL_STD_1553B_t *)arg;
@@ -805,6 +835,7 @@ void milandr_mil1553_init(milandr_mil1553_t *_mil, int port, mem_pool_t *pool, u
     mil->milif.bc_set_cyclogram = mil_bc_set_cyclogram;
     mil->milif.bc_set_period = mil_bc_set_period;
     mil->milif.bc_urgent_send = mil_bc_urgent_send;
+    mil->milif.bc_ordinary_send = mil_bc_ordinary_send;
 
 
     // IRQ 1 (MIL_STD_1553B1_IRQn)  никогда не запрещается

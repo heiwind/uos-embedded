@@ -29,9 +29,12 @@ void mem_queue_free (mem_queue_t *q)
 		mem_free (*q->tail);
 		if (--q->tail < q->queue)
 			q->tail += q->msg_num;
+		--q->count;
 	}
-	if (q->queue)
+	if (q->queue) {
 		mem_free (*q->queue);
+		q->queue = 0;
+	}
 }
 
 /*

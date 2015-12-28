@@ -153,6 +153,7 @@ struct _mil1553if_t
     int (* bc_set_cyclogram)(mil1553if_t *mil, mil_slot_t *head, unsigned nb_slots);
     int (* bc_set_period)(mil1553if_t *mil, unsigned period_ms);
     int (* bc_urgent_send)(mil1553if_t *mil, mil_slot_desc_t descr, void *data);
+    int (* bc_ordinary_send)(mil1553if_t *mil, int slot_number, void *data);
 };
 
 //
@@ -238,5 +239,9 @@ int mil1553_bc_urgent_send(mil1553if_t *mil, mil_slot_desc_t descr, void *data)
     return mil->bc_urgent_send(mil, descr, data);
 }
 
-
+static inline __attribute__((always_inline))
+int mil1553_bc_ordinary_send(mil1553if_t *mil, int slot_number, void *data)
+{
+    return mil->bc_ordinary_send(mil, slot_number, data);
+}
 #endif
