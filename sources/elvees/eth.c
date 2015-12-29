@@ -939,7 +939,29 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		netif_free_buf (&u->netif, p);
 		return 0;
 	}
-	if (! (MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) && buf_queueh_is_empty (&u->outq)) {
+
+	/* Занято, ставим в очередь. */
+    #if 0
+    if (buf_queue_is_full (&u->outq)) {
+        /* Нет места в очереди: теряем пакет. */
+        ++u->netif.out_discards;
+        mutex_unlock (&u->tx_lock);
+        debug_printf ("eth_output: overflow\n");
+        buf_free (p);
+        return 0;
+    }
+    #else
+    ETH_printf ("eth_output: tx que %d bytes\n", p->tot_len);
+    while (buf_queueh_is_full (&u->outq)) {
+        mutex_wait (&u->tx_lock);
+    }
+    #endif
+
+    bool_t isbusy = ((MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) != 0);
+    if (!buf_queueh_is_empty (&u->outq) || (isbusy))
+        buf_queueh_put (&u->outq, p);
+
+    if (! isbusy ) {
 	    ETH_printf ("eth_output: tx %d bytes\n", p->tot_len);
 		/* Смело отсылаем. */
 		chip_transmit_packet (u, p);
@@ -947,24 +969,7 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		netif_free_buf (&u->netif, p);
 		return 1;
 	}
-	/* Занято, ставим в очередь. */
-	#if 0
-	if (buf_queue_is_full (&u->outq)) {
-		/* Нет места в очереди: теряем пакет. */
-		++u->netif.out_discards;
-		mutex_unlock (&u->tx_lock);
-		debug_printf ("eth_output: overflow\n");
-		buf_free (p);
-		return 0;
-	}
-	#else
-    ETH_printf ("eth_output: tx que %d bytes\n", p->tot_len);
-	while (buf_queueh_is_full (&u->outq)) {
-	    mutex_wait (&u->tx_lock);
-	}
-	#endif
 	
-	buf_queueh_put (&u->outq, p);
 	mutex_unlock (&u->tx_lock);
 	return 1;
 }
@@ -1226,12 +1231,17 @@ handle_transmit_interrupt (eth_t *u)
 void
 eth_poll (eth_t *u)
 {
-	mutex_lock (&u->netif.lock);
+#if ETH_OPTIMISE_SPEED > 0
+    mutex_t* const rx_lock = &u->rx_lock;
+#else
+    const mutex_t* rx_lock = &u->netif.lock;
+#endif
+	mutex_lock (rx_lock);
 	if (handle_receive_interrupt (u)) {
 		mutex_signal (&u->netif.lock, 0);
 		chip_poll_rxfifo(u);
 	}
-	mutex_unlock (&u->netif.lock);
+	mutex_unlock (rx_lock);
 	
 
 	mutex_lock (&u->tx_lock);
