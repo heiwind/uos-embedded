@@ -21,7 +21,9 @@
  * Optionally print debugging information about the system state.
  */
 void __attribute__((weak))
-__NORETURN 
+#ifndef NDEBUG
+__NORETURN
+#endif
 uos_halt (int dump_flag)
 {
 #if LINUX386

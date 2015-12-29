@@ -98,7 +98,12 @@ bool_t uos_valid_memory_address (void*);
 /*
  * Halt the system.
  */
+#ifndef NDEBUG
+void uos_halt (int);
+#else
+//* noreturn modifier breaks an stack contents, so debuger cant show call-stack
 void uos_halt (int) __NORETURN;
+#endif
 
 #ifndef __AVR__
 INLINE unsigned

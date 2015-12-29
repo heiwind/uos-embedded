@@ -10,7 +10,7 @@
     void __assert_fail_ndebug ();
 #else
     void __assert_fail (const char *expr, const char *file,
-                        unsigned line, const char *func) __NORETURN;
+                        unsigned line, const char *func);// __NORETURN;
     void __assert_msg(const char *msg, ...);
 #endif
 
@@ -19,11 +19,12 @@
  * Example:
  *	assert_always (ptr != NULL);
  */
+
 #define assert_always(condition) do {			\
 	if (__builtin_expect (! (condition), 0))	\
 	    { __assert_fail (#condition, __FILE__,	\
 			__LINE__, __PRETTY_FUNCTION__);	\
-			__builtin_unreachable ();       \
+          __builtin_unreachable ();         \
 	    }\
 	} while (0)
 
@@ -32,7 +33,7 @@
          {__assert_msg  (msg, __VA_ARGS__);      \
          __assert_fail (#condition, __FILE__,   \
             __LINE__, __PRETTY_FUNCTION__);     \
-         __builtin_unreachable ();       \
+         __builtin_unreachable ();              \
          }\
     } while (0)
 

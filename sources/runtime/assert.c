@@ -14,7 +14,7 @@ __assert_fail_ndebug ()
 	uos_halt (1);
 }
 #else
-__NORETURN
+//__NORETURN
 void
 __assert_fail (const char *cond, const char *file, unsigned int line,
 	const char *func)
