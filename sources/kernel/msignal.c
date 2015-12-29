@@ -109,15 +109,16 @@ bool_t mutex_wait_until (mutex_t *m
         , scheduless_condition waitfor, void* waitarg
         )
 {
-    if (! m->item.next)
-        mutex_init (m);
-
     arch_state_t x;
 #if RECURSIVE_LOCKS
     small_int_t deep;
 #endif
 
     arch_intr_disable (&x);
+
+    if (! m->item.next)
+        mutex_init (m);
+
     assert_task_good_stack(task_current);
     assert (task_current->wait == 0);
 
