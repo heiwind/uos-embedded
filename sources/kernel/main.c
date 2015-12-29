@@ -76,7 +76,7 @@ void task_schedule ()
         sp -= (MIPS_FSPACE+CONTEXT_WORDS*4);
         if (task_current->fpu_state != ~0)
             sp -= 32*4;
-        assert(sp > (unsigned)(task_current->stack));
+        assert2(sp > (unsigned)(task_current->stack), uos_assert_task_name_msg, task_current->name);
 #endif
 		arch_task_switch (new_task);
 	}
@@ -98,7 +98,7 @@ mutex_activate (mutex_t *m, void *message)
 
 	while (! list_is_empty (&m->waiters)) {
 		t = (task_t*) list_first (&m->waiters);
-		assert (t->wait == m);
+		assert2 (t->wait == m, uos_assert_task_name_msg, t->name);
 		t->wait = 0;
         t->message = message;
 #if UOS_SIGNAL_SMART > 0
