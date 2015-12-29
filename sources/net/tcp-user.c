@@ -246,11 +246,10 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	else
 	    targetip.val = 0;
 
-	s = (tcp_socket_t *)mem_alloc (ip->pool, sizeof (tcp_socket_t));
+	s = tcp_alloc (ip);
 	if (s == 0) {
 		return 0;
 	}
-	s->ip = ip;
 
 	/* Bind the connection to a local portnumber and IP address. */
 	mutex_lock (&ip->lock);
@@ -284,6 +283,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	}
 	s->local_port = port;
 	s->state = LISTEN;
+    buf_queueh_init(&s->inq, sizeof(s->queue));
 
 	tcp_list_add (&ip->tcp_listen_sockets, s);
 	mutex_unlock (&ip->lock);
