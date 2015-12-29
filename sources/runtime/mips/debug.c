@@ -17,6 +17,7 @@
  * "COPY-UOS.txt" for details.
  */
 #include <runtime/lib.h>
+#include <kernel/uos.h>
 
 
 bool_t debug_onlcr = 1;
@@ -39,6 +40,8 @@ debug_putchar (void *arg, short c)
 		mips_intr_disable (&x);
 
 	/* Wait for transmitter holding register empty. */
+    while (! (MC_LSR & MC_LSR_TEMT))
+        continue;
 	while (! (MC_LSR & MC_LSR_TXRDY))
 		continue;
 again:
@@ -83,6 +86,7 @@ debug_getchar (void)
 		if (! (MC_LSR & MC_LSR_RXRDY)) {
 /*			watchdog_alive ();*/
 			mips_intr_restore (x);
+			task_yield();
 			mips_intr_disable (&x);
 			continue;
 		}
