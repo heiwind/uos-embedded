@@ -538,7 +538,7 @@ bool_t eth_txfifo_chainset(eth_t* u, unsigned csr_tpl){
 }
 #endif
 
-#if defined(ETH_TX_USE_DMA_IRQ)
+#if ETH_TX_USE_DMA_IRQ > 0
 #define eth_tx_lock(u)      mutex_lock(&((u)->dma_tx.lock))
 #define eth_tx_unlock(u)    mutex_unlock(&((u)->dma_tx.lock))
 #else
@@ -569,7 +569,7 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
 	}
 #endif
 
-#ifdef ETH_TX_USE_DMA_IRQ
+#if ETH_TX_USE_DMA_IRQ > 0
 
 #ifdef ETH_DMA_WAITPOLL_TH
     if (nbytes < ETH_DMA_WAITPOLL_TH)
@@ -632,7 +632,7 @@ chip_write_txfifo (eth_t* u, unsigned physaddr, unsigned nbytes)
 }
 
 
-#ifdef ETH_TX_USE_DMA_IRQ
+#if ETH_TX_USE_DMA_IRQ > 0
 CODE_ISR
 bool_t eth_tx_on_emac(void* data){
     eth_t* u = (eth_t*)data;
@@ -892,7 +892,7 @@ chip_transmit_packet (eth_t *u, buf_t *p)
     chip_write_txfifo (u, phys_buf, phys_len);
 
 #if ETH_OPTIMISE_SPEED > 0
-#    if !defined(ETH_TX_USE_DMA_IRQ)
+#    if !defined(ETH_TX_USE_DMA_IRQ) || (ETH_TX_USE_DMA_IRQ == 0)
         //если используем обработчик прерывания ЕМАК, то старт передачи находится в нем.
         MC_MAC_TX_FRAME_CONTROL |= TX_FRAME_CONTROL_TX_REQ;
 #    endif
@@ -1276,7 +1276,7 @@ eth_transmitter (void *arg)
 
 	/* Register transmit interrupt. */
 	mutex_lock_irq (&u->tx_lock, ETH_IRQ_TRANSMIT, 0, 0);
-#ifdef ETH_TX_USE_DMA_IRQ        
+#if (ETH_TX_USE_DMA_IRQ > 0)
     mutex_attach_irq (&u->dma_tx.lock, ETH_IRQ_DMA_TX, &(eth_tx_on_emac), u);
     //arch_intr_allow (ETH_IRQ_DMA_TX);
     //mutex_unlock(&u->dma_tx.lock);

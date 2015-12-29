@@ -51,8 +51,10 @@ extern "C" {
 
 //*этот параметр задает порог длины приемного/передаваемого буфера, с которой начинаем использовать
 //*  ожидание на мутехе, при меньшей длине буфера, жду его передачи поллингом.
-//*  позволит избежать лишней нагрузки на переключениях контекста 
+//*  позволит избежать лишней нагрузки на переключениях контекста
+#ifndef ETH_DMA_WAITPOLL_TH
 #define ETH_DMA_WAITPOLL_TH    0x200
+#endif
 
 #include <stdint.h>
 // структура - блок параметров DMA
@@ -80,8 +82,10 @@ typedef struct __attribute__((packed,aligned(8))) _EMAC_PortCh_Settings
 
 // облегчаем жизнь просессору за счет устранения циклов ожидания, позволяет отдать 
 //  до 10мкс на пакетах более 512 байт
-//  но чуть ухудшает скорость запуска передатчика за счет вхождения в прерывание 
-//#define ETH_TX_USE_DMA_IRQ
+//  но чуть ухудшает скорость запуска передатчика за счет вхождения в прерывание
+#ifndef ETH_TX_USE_DMA_IRQ
+#define ETH_TX_USE_DMA_IRQ      1
+#endif
 
 #endif // defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
 #endif // #if ETH_OPTIMISE_SPEED > 0
@@ -129,7 +133,7 @@ typedef struct __attribute__ ((aligned(8))) _eth_t {
 	struct {
         //buf_t*   buf;
         unsigned byf_phys;
-#ifdef ETH_TX_USE_DMA_IRQ        
+#if (ETH_TX_USE_DMA_IRQ > 0)
         mutex_t  lock;        /* get tx dma interrupts here */
 #endif
 #if ETH_TX_CHUNKS > 0
