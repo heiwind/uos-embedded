@@ -450,6 +450,9 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
         }
     } else if (status & MIL_STD_STATUS_ERR) {
 	    mil->nb_errors++;
+	    if (mil->urgent_desc.reserve) {
+	    	mil->nb_emergency_errors++;
+	    }
 	}
 
     mil->nb_transmitions++;
