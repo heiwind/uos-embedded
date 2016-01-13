@@ -253,6 +253,7 @@ void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, void *arg, mutex_t *hal_mut
     assert (hal->ep_wait_in);
     assert (hal->ep_stall);
     assert (hal->in_avail);
+    assert (hal->in_nack);
     
     u->hal = hal;
     u->hal_arg = arg;
@@ -319,6 +320,7 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
                     u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
                     return;
                 case USBDEV_NACK:
+                	u->hal->em_nack(ep, USBDEV_DIR_IN, u->hal_arg)
                 default:
                     return;
             }
