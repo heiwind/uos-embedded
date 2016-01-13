@@ -79,6 +79,7 @@
 #define EP_STATE_WAIT_IN_ACK        0x040
 #define EP_STATE_NACK               0x100
 #define EP_STATE_STALL              0x200
+#define EP_STATE_FROM_SOF           0x400
 
 #define EP_WAIT_IN_STATES           0x070
 
@@ -124,7 +125,7 @@ typedef int  (*usbdev_in_avail_func_t) (unsigned ep, void *arg);
 // Данная функция должна установить внутренний флаг для аппаратной оконечной точки который будет сбрасыватся при SOF
 // ep - номер конечной точки.
 // dir - направление конечной точки (USBDEV_DIR_OUT или USBDEV_DIR_IN).
-typedef void  (*usbdev_in_nack_func_t) (unsigned ep, int dir, void *arg);
+typedef void  (*usbdev_ep_nack_func_t) (unsigned ep, int dir, void *arg);
 
 // Функция установки конечной точки в состояние ожидания приёма пакета от хоста.
 // Конечная точка должна принимать все входящие пакеты, как OUT, так и SETUP.
@@ -158,7 +159,7 @@ struct _usbdev_hal_t
     usbdev_ep_wait_in_func_t    ep_wait_in;
     usbdev_ep_stall_func_t      ep_stall;
     usbdev_in_avail_func_t      in_avail;
-    usbdev_in_nack_func_t       ep_nack;
+    usbdev_ep_nack_func_t       ep_nack;
 };
 
 //
@@ -265,10 +266,14 @@ void usbdevhal_suspend (usbdev_t *u);
 // ep - номер конечной точки, size - размер выданного пакета.
 void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size);
 
-// Эту функцию должен вызвать аппаратный драйвер по окончанию приёма пакета от хосту.
+// Эту функцию должен вызвать аппаратный драйвер по окончанию приёма пакета от хоста.
 // ep - номер конечной точки, pid - PID принятого пакета, data - указатель на
 // буфер с принятым пакетом, size - размер пакета.
 void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, int size);
+
+// Эту функцию должен вызвать аппаратный драйвер по приходу SOF если был вызвана функция ep_nack.
+// Функция разрешает работу BULK оконечной точки и поэтому может также вызыватся из программы пользователя
+void usbdev_enable_in_ep (usbdev_t *u, unsigned ep_n);
 
 //
 // USB device API
