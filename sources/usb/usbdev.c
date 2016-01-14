@@ -253,8 +253,7 @@ void usbdevhal_bind (usbdev_t *u, usbdev_hal_t *hal, void *arg, mutex_t *hal_mut
     assert (hal->ep_wait_in);
     assert (hal->ep_stall);
     assert (hal->in_avail);
-    assert (hal->ep_nack);
-    
+
     u->hal = hal;
     u->hal_arg = arg;
     u->hal_lock = hal_mutex;
@@ -317,7 +316,6 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
 					u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
 					return;
 				case USBDEV_NACK:
-					u->hal->ep_nack(ep, USBDEV_DIR_IN, u->hal_arg);
 					epi->state = EP_STATE_FROM_SOF;
 				default:
 					return;
@@ -341,7 +339,6 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
                     u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
                     return;
                 case USBDEV_NACK:
-                	u->hal->ep_nack(ep, USBDEV_DIR_IN, u->hal_arg);
                 	epi->state = EP_STATE_FROM_SOF;
                 default:
                     return;
@@ -607,35 +604,56 @@ void usbdev_set_ack (usbdev_t *u, unsigned ep_n)
         mutex_wait(u->hal_lock);
     }
 
-}
-
-void usbdev_enable_in_ep(usbdev_t *u, unsigned ep_n) {
-
-    assert (ep_n < USBDEV_NB_ENDPOINTS);
-    ep_n &= 0x7f;
-    ep_in_t *epi = &u->ep_in[ep_n];
-
     uint8_t *hdl_data;
     int hdl_size;
     int req_state = USBDEV_NACK;
 
     if (epi->specific_handler) {
-		req_state = epi->specific_handler(u, epi->specific_tag, 0, &hdl_data, &hdl_size);
-		switch (req_state) {
-			case USBDEV_ACK:
-				start_in (u, ep_n, 0, hdl_data, hdl_size, hdl_size);
-				break;
-			case USBDEV_STALL:
-				epi->state = EP_STATE_STALL;
-				u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
-				return;
-			case USBDEV_NACK:
-            	u->hal->ep_nack(ep_n, USBDEV_DIR_IN, u->hal_arg);
-            	epi->state = EP_STATE_FROM_SOF;
-				break;
-			default:
-				return;
-		}
+         req_state = epi->specific_handler(u, epi->specific_tag, 0, &hdl_data, &hdl_size);
+         switch (req_state) {
+             case USBDEV_ACK:
+                 start_in (u, ep_n, 0, hdl_data, hdl_size, hdl_size);
+                 break;
+             case USBDEV_STALL:
+                 epi->state = EP_STATE_STALL;
+                 u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
+                 break;
+             case USBDEV_NACK:
+                 epi->state = EP_STATE_FROM_SOF;
+                 break;
+             default:
+                 break;
+         }
+     }
+
+}
+
+void usbdev_sof_done(usbdev_t *u, unsigned ep_n) {
+
+    assert (ep_n < USBDEV_NB_ENDPOINTS);
+    ep_in_t *epi = &u->ep_in[ep_n];
+
+    if (epi->state == EP_STATE_FROM_SOF) {
+        uint8_t *hdl_data;
+        int hdl_size;
+        int req_state = USBDEV_NACK;
+
+        if (epi->specific_handler) {
+            req_state = epi->specific_handler(u, epi->specific_tag, 0, &hdl_data, &hdl_size);
+            switch (req_state) {
+                case USBDEV_ACK:
+                    start_in (u, ep_n, 0, hdl_data, hdl_size, hdl_size);
+                    break;
+                case USBDEV_STALL:
+                    epi->state = EP_STATE_STALL;
+                    u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
+                    break;
+                case USBDEV_NACK:
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }
 

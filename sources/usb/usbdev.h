@@ -121,12 +121,6 @@ typedef void (*usbdev_set_ep_attr_func_t) (unsigned ep, int dir, unsigned attr, 
 // номером ep.
 typedef int  (*usbdev_in_avail_func_t) (unsigned ep, void *arg);
 
-// Функция выставляет состояние оконечной точки nak.
-// Данная функция должна установить внутренний флаг для аппаратной оконечной точки который будет сбрасыватся при SOF
-// ep - номер конечной точки.
-// dir - направление конечной точки (USBDEV_DIR_OUT или USBDEV_DIR_IN).
-typedef void  (*usbdev_ep_nack_func_t) (unsigned ep, int dir, void *arg);
-
 // Функция установки конечной точки в состояние ожидания приёма пакета от хоста.
 // Конечная точка должна принимать все входящие пакеты, как OUT, так и SETUP.
 typedef void (*usbdev_ep_wait_out_func_t) (unsigned ep, int ack, void *arg);
@@ -159,7 +153,6 @@ struct _usbdev_hal_t
     usbdev_ep_wait_in_func_t    ep_wait_in;
     usbdev_ep_stall_func_t      ep_stall;
     usbdev_in_avail_func_t      in_avail;
-    usbdev_ep_nack_func_t       ep_nack;
 };
 
 //
@@ -271,9 +264,9 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size);
 // буфер с принятым пакетом, size - размер пакета.
 void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, int size);
 
-// Эту функцию должен вызвать аппаратный драйвер по приходу SOF если был вызвана функция ep_nack.
-// Функция разрешает работу BULK оконечной точки и поэтому может также вызыватся из программы пользователя
-void usbdev_enable_in_ep (usbdev_t *u, unsigned ep_n);
+// Эту функцию должен вызвать аппаратный драйвер по приходу SOF.
+// Функция подготавливает данные для передачи BULK IN оконечной точкой.
+void usbdev_sof_done (usbdev_t *u, unsigned ep_n);
 
 //
 // USB device API

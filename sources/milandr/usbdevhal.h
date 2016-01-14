@@ -11,10 +11,6 @@ typedef struct _ep_state_t {
     uint8_t max_size[2];
     int8_t  last_in_bytes;
     uint8_t busy;
-    uint8_t nack_flag;
-    uint8_t reserved1;
-    uint8_t reserved2;
-    uint8_t reserved3;
 } ep_state_t;
 
 

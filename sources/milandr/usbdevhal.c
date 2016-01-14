@@ -77,11 +77,6 @@ static void mldr_ep_wait_in (unsigned ep, int pid, const void *data, int size, i
 //debug_printf ("EP%d CTRL = %X\n", ep, ARM_USB->SEPS[ep].CTRL);
 }
 
-static void  mldr_ep_nack (unsigned ep, int dir, void *arg)
-{
-	ep_state[ep].nack_flag = 1;
-}
-
 static void mldr_ep_stall (unsigned ep, int dir, void *arg)
 {
 //debug_printf ("STALL EP%d\n", ep);
@@ -104,7 +99,6 @@ static usbdev_hal_t hal = {
     .ep_wait_in     = mldr_ep_wait_in,
     .ep_stall       = mldr_ep_stall,
     .in_avail       = mldr_in_avail_bytes,
-    .ep_nack        = mldr_ep_nack
 };
 
 static void mldr_usb_reset ()
@@ -174,13 +168,7 @@ static void usb_interrupt (void *arg)
 //debug_printf ("usb_interrupt: start of frame, SIS = %02X, SIM = %02X, SFN = %d.%d\n", ARM_USB->SIS, ARM_USB->SIM, ARM_USB->SFN_L, ARM_USB->SFN_H);
             ARM_USB->SIS = ARM_USB_SC_SOF_REC;
             for (ep = 0; ep < USBDEV_MAX_EP_NB; ++ep) {
-            	if (ep_state[ep].nack_flag) {
-            		ep_state[ep].nack_flag = 0;
-            		usbdev_enable_in_ep(usbdev, ep);
-            		if (ep_state[ep].nack_flag) {
-            			ARM_USB->SEPS[ep].CTRL |= ARM_USB_EPRDY;
-            		}
-            	}
+                usbdev_sof_done(usbdev, ep);
             }
         }
         if (ARM_USB->SIS & ARM_USB->SIM & ARM_USB_SC_TDONE) {
