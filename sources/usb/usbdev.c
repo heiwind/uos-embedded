@@ -594,8 +594,6 @@ void usbdev_ack_in (usbdev_t *u, unsigned ep_n, const void *data, int size)
 
 void usbdev_set_ack (usbdev_t *u, unsigned ep_n)
 {
-	ep_n &= 0x7f;
-
     assert (ep_n < USBDEV_NB_ENDPOINTS);
 
     ep_in_t *epi = &u->ep_in[ep_n];
@@ -609,23 +607,22 @@ void usbdev_set_ack (usbdev_t *u, unsigned ep_n)
     int req_state = USBDEV_NACK;
 
     if (epi->specific_handler) {
-         req_state = epi->specific_handler(u, epi->specific_tag, 0, &hdl_data, &hdl_size);
-         switch (req_state) {
-             case USBDEV_ACK:
-                 start_in (u, ep_n, 0, hdl_data, hdl_size, hdl_size);
-                 break;
-             case USBDEV_STALL:
-                 epi->state = EP_STATE_STALL;
-                 u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
-                 break;
-             case USBDEV_NACK:
-                 epi->state = EP_STATE_FROM_SOF;
-                 break;
+        req_state = epi->specific_handler(u, epi->specific_tag, 0, &hdl_data, &hdl_size);
+        switch (req_state) {
+            case USBDEV_ACK:
+                start_in (u, ep_n, 0, hdl_data, hdl_size, hdl_size);
+                break;
+            case USBDEV_STALL:
+                epi->state = EP_STATE_STALL;
+                u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
+                break;
+            case USBDEV_NACK:
+                epi->state = EP_STATE_FROM_SOF;
+                break;
              default:
                  break;
-         }
-     }
-
+        }
+    }
 }
 
 void usbdev_sof_done(usbdev_t *u, unsigned ep_n) {
