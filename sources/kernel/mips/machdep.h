@@ -184,6 +184,8 @@ arch_intr_disable (arch_state_t *x)
 	mips_intr_disable (x);
 }
 
+#define ARCH_intr_off() mips_intr_off()
+
 static inline void
 arch_intr_restore (arch_state_t x)
 {

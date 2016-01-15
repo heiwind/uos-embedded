@@ -22,6 +22,7 @@
 
 #include <runtime/arch.h>
 #include <runtime/assert.h>
+#include <kernel/uos.h>
 
 #ifdef __AVR__
 #	include <kernel/avr/machdep.h>
@@ -55,6 +56,24 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+//**************    marchdeps    ***************************** 
+#ifndef ARCH_intr_off
+
+INLINE 
+__attribute__ ((always_inline))
+arch_state_t arch_intr_off (void) {
+    arch_state_t x;
+    arch_intr_disable (&x);
+    return x;
+}
+
+#else
+#define arch_intr_off() ARCH_intr_off()
+#endif //!ARCH_intr_off
+
+
 
 /*
  * ----------

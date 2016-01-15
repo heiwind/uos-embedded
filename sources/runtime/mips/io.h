@@ -338,6 +338,18 @@ mips_intr_disable (int *x)
 #endif
 }
 
+//* fixed version if mips_intr_disable - that can invokes in exception
+static inline 
+__attribute__ ((always_inline))
+int mips_intr_off (void)
+{
+    int x = mips_read_c0_register (C0_STATUS) ;
+    if ( (x & (ST_EXL | ST_ERL)) == 0){
+        mips_intr_disable (&x);
+    }
+    return x;
+}
+
 /*
  * Restore the hardware interrupt mode using the saved interrupt state.
  */

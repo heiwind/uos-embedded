@@ -33,11 +33,7 @@ void
 debug_putchar (void *arg, short c)
 {
 #ifndef DEBUG_SIMULATE 
-	int x = 0;
-	int in_exception = mips_read_c0_register (C0_STATUS) & (ST_EXL | ST_ERL);
-
-	if (! in_exception)
-		mips_intr_disable (&x);
+	int x = mips_intr_off ();
 
 	/* Wait for transmitter holding register empty. */
     while (! (MC_LSR & MC_LSR_TEMT))
@@ -57,8 +53,7 @@ again:
 		c = '\r';
 		goto again;
 	}
-    if (! in_exception)
-        mips_intr_restore (x);
+    mips_intr_restore (x);
 #endif// ! DEBUG_SIMULATE
 }
 

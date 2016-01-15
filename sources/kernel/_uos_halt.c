@@ -18,6 +18,34 @@
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 
+void tasks_print(struct _stream_t *stream){
+    unsigned char n;
+    task_t *t;
+
+    task_print (stream, 0);
+    n = 0;
+    list_iterate (t, &task_active) {
+        if (t != task_idle && t != task_current)
+            task_print (stream, t);
+        if (! uos_valid_memory_address (t))
+            break;
+        if (++n > 32 || list_is_empty (&t->item)) {
+            debug_puts ("...\n");
+            break;
+        }
+    }
+    if (task_current && task_current != task_idle)
+        task_print (stream, task_current);
+}
+
+void uos_debug_dump(){
+    tasks_print(&debug);
+
+    debug_dump_stack (task_name (task_current), __builtin_alloca (0),
+        (void*) task_current->stack_context, __builtin_return_address (0));
+    debug_printf ("\n*** Please report this information");
+}
+
 /*
  * Halt uOS, return to the parent operating system (if any).
  * Optionally print debugging information about the system state.
@@ -31,31 +59,9 @@ uos_halt (int dump_flag)
 #if LINUX386
 	exit (0);
 #else
-	unsigned char n;
-	task_t *t;
-	arch_state_t x;
-
-	arch_intr_disable (&x);
-	if (dump_flag) {
-		task_print (&debug, 0);
-		n = 0;
-		list_iterate (t, &task_active) {
-			if (t != task_idle && t != task_current)
-				task_print (&debug, t);
-			if (! uos_valid_memory_address (t))
-				break;
-			if (++n > 32 || list_is_empty (&t->item)) {
-				debug_puts ("...\n");
-				break;
-			}
-		}
-		if (task_current && task_current != task_idle)
-			task_print (&debug, task_current);
-
-		debug_dump_stack (task_name (task_current), __builtin_alloca (0),
-			(void*) task_current->stack_context, __builtin_return_address (0));
-		debug_printf ("\n*** Please report this information");
-	}
+    arch_intr_off ();
+	if (dump_flag)
+	    uos_debug_dump();
 
 	/* Halt CPU. */
 	debug_printf ("\n*** System halted.\n");

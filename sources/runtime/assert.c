@@ -1,4 +1,5 @@
 #include <runtime/lib.h>
+#include <kernel/internal.h>
 #include <stdarg.h>
 
 /*
@@ -19,8 +20,7 @@ void
 __assert_fail (const char *cond, const char *file, unsigned int line,
 	const char *func)
 {
-    int x = 0;
-    mips_intr_disable (&x);
+    arch_intr_off ();
 	debug_printf ("\nAssertion failed in function `%S':\n%S, %u: %S\n\n",
 		func, file, line, cond);
 	uos_halt (1);
@@ -29,7 +29,7 @@ __assert_fail (const char *cond, const char *file, unsigned int line,
 void __assert_msg(const char *msg, ...)
 {
     int x = 0;
-    mips_intr_disable (&x);
+    arch_intr_off ();
     va_list args;
 
     va_start (args, msg);
