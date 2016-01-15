@@ -3,6 +3,13 @@
 
 #include <flash/flash-interface.h>
 #include <spi/spi-master-interface.h>
+#include <stdint.h> 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 
 struct _m25pxx_t
 {
@@ -14,5 +21,11 @@ struct _m25pxx_t
 typedef struct _m25pxx_t m25pxx_t;
 
 void m25pxx_init(m25pxx_t *m, spimif_t *s, unsigned freq, unsigned mode);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
