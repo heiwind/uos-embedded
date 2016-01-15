@@ -1265,7 +1265,8 @@ eth_receiver (void *arg)
 #endif
 
 	/* Register receive interrupt. */
-    mutex_lock_irq (rx_lock, ETH_IRQ_RECEIVE, 0, 0);
+    //mutex_init(&u->rx_lock);
+    mutex_lock_irq (rx_lock, ETH_IRQ_RECEIVE, 0, u);
 
 
 	for (;;) {
@@ -1285,7 +1286,8 @@ eth_transmitter (void *arg)
 	eth_t *u = (eth_t *)arg;
 
 	/* Register transmit interrupt. */
-	mutex_lock_irq (&u->tx_lock, ETH_IRQ_TRANSMIT, 0, 0);
+    //mutex_init(&u->tx_lock);
+	mutex_lock_irq (&u->tx_lock, ETH_IRQ_TRANSMIT, 0, u);
 #if (ETH_TX_USE_DMA_IRQ > 0)
     mutex_attach_irq (&u->dma_tx.lock, ETH_IRQ_DMA_TX, &(eth_tx_on_emac), u);
     //arch_intr_allow (ETH_IRQ_DMA_TX);

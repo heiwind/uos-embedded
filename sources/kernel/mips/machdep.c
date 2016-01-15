@@ -676,7 +676,7 @@ _arch_interrupt_ (void)
 		}
 
 		/* Signal the interrupt handler, if any. */
-		mutex_activate (h->lock, (void*)irq);
+		mutex_activate (h->lock, h->arg);
 	}
 
 	/* LY: copy a few lines of code from task_schedule() here. */
