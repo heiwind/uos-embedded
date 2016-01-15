@@ -24,7 +24,7 @@ void __attribute__((weak))
 #ifndef NDEBUG
 __NORETURN
 #endif
-uos_halt (int dump_flag)
+_uos_halt (int dump_flag)
 {
 #if LINUX386
 	exit (0);
