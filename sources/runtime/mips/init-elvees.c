@@ -502,6 +502,7 @@ static void dump_of_death (unsigned int context[])
 
 	debug_printf ("\nHalt...\n\n");
 	//asm volatile ("1: j 1b; nop");
+	uos_halt(1);
     while(1);
 }
 
