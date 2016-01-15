@@ -37,6 +37,7 @@ typedef struct _milandr_mil1553_t
     unsigned            nb_transmitions;
     unsigned            nb_lost;
     unsigned            nb_errors;
+    unsigned            nb_emergency_errors;
     unsigned            queue_len;
     unsigned            nb_transmits;
 } milandr_mil1553_t;

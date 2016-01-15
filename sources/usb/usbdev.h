@@ -79,6 +79,7 @@
 #define EP_STATE_WAIT_IN_ACK        0x040
 #define EP_STATE_NACK               0x100
 #define EP_STATE_STALL              0x200
+#define EP_STATE_FROM_SOF           0x400
 
 #define EP_WAIT_IN_STATES           0x070
 
@@ -258,10 +259,14 @@ void usbdevhal_suspend (usbdev_t *u);
 // ep - номер конечной точки, size - размер выданного пакета.
 void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size);
 
-// Эту функцию должен вызвать аппаратный драйвер по окончанию приёма пакета от хосту.
+// Эту функцию должен вызвать аппаратный драйвер по окончанию приёма пакета от хоста.
 // ep - номер конечной точки, pid - PID принятого пакета, data - указатель на
 // буфер с принятым пакетом, size - размер пакета.
 void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, int size);
+
+// Эту функцию должен вызвать аппаратный драйвер по приходу SOF.
+// Функция подготавливает данные для передачи BULK IN оконечной точкой.
+void usbdev_sof_done (usbdev_t *u, unsigned ep_n);
 
 //
 // USB device API

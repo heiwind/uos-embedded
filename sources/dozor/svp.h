@@ -428,6 +428,7 @@ void svp_start (SVP_T *psvp);
 // Возращает ненулевое значение, если узел в рабочем режиме; иначе 0.
 int svp_in_work (SVP_T *psvp);
 
+#ifndef SVP_VER_C1
 // Переключение номера режима кластера.
 // Переключать режим кластера может только ведущий узел в рабочем режиме.
 // psvp         - драйвер СВП.
@@ -459,7 +460,7 @@ int svp_tracking_lost_some(SVP_T *psvp, int track_nb);
 // Возращает ненулевое значение, если все узлы из маски отслеживания исчезли
 // из кластера; иначе 0.
 int svp_tracking_lost_all(SVP_T *psvp, int track_nb);
-
+#endif
 
 #endif /* _SVP_H_ */
 

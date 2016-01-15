@@ -175,17 +175,6 @@ void svp_init_node (SVP_T *psvp, svp_init_params_t *p)
 
     mutex_unlock (&psvp_gen->lock);
 }
-#endif
-
-void svp_start (SVP_T *psvp)
-{
-	svp_write16(psvp, SVP_GCR, svp_read16(psvp, SVP_GCR) | SVP_GRUN);
-}
-
-int svp_in_work (SVP_T *psvp)
-{
-    return (svp_read16(psvp, SVP_GSR) & SVP_WORK);
-}
 
 void svp_switch_mode (SVP_T *psvp, int new_mode)
 {
@@ -220,6 +209,17 @@ int svp_tracking_lost_all(SVP_T *psvp, int track_nb)
 {
     return (svp_read16(psvp, SVP_RSR(0)) & SVP_CEM(track_nb)) &&
            (svp_read16(psvp, SVP_RSR(1)) & SVP_CEM(track_nb));
+}
+#endif
+
+void svp_start (SVP_T *psvp)
+{
+	svp_write16(psvp, SVP_GCR, svp_read16(psvp, SVP_GCR) | SVP_GRUN);
+}
+
+int svp_in_work (SVP_T *psvp)
+{
+    return (svp_read16(psvp, SVP_GSR) & SVP_WORK);
 }
 
 

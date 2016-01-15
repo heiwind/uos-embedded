@@ -450,6 +450,9 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
         }
     } else if (status & MIL_STD_STATUS_ERR) {
 	    mil->nb_errors++;
+	    if (mil->urgent_desc.reserve) {
+	    	mil->nb_emergency_errors++;
+	    }
 	}
 
     mil->nb_transmitions++;
@@ -711,12 +714,13 @@ static int mil_bc_ordinary_send(mil1553if_t *_mil, int slot_index, void *data)
 {
 	milandr_mil1553_t *mil = (milandr_mil1553_t *)_mil;
 
-    mil_lock(_mil);
+        mil_lock(_mil);
 	mil_slot_t *s = mil->cyclogram;
 	if (s == 0) {
 		mil_unlock(_mil);
 		return MIL_ERR_NOT_PERM;
 	}
+
 	while (slot_index) {
 		s = s->next;
 		if (s == 0) {
@@ -732,7 +736,9 @@ static int mil_bc_ordinary_send(mil1553if_t *_mil, int slot_index, void *data)
 		*dst++ = *slot_data++;
 		wc--;
 	}
+
 	mil_unlock(_mil);
+
 	return MIL_ERR_OK;
 }
 
