@@ -28,7 +28,7 @@
  *		__builtin_frame_address (1),
  *		__builtin_return_address (0));
  */
-void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
+void mips_debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 {
 	unsigned int *from, *to, *p, len;
 	char c;

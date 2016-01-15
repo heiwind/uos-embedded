@@ -64,6 +64,9 @@ atol (const unsigned char *__p)
 extern const unsigned char *strmatch (const unsigned char*, const unsigned char*);
 extern void watchdog_alive (void);
 
+void mips_debug_dump_stack (const char *caption, void *sp, void* frame, void *callee);
+#define ARCH_debug_dump_stack mips_debug_dump_stack
+
 #ifdef __cplusplus
 }
 #endif

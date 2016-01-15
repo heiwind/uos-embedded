@@ -41,7 +41,11 @@ void debug_puts (const char *str);
 int debug_printf (const char *fmt, ...);
 int debug_vprintf (const char *fmt, va_list args);
 void debug_dump (const char *caption, void* data, unsigned len);
+#ifndef ARCH_debug_dump_stack
 void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee);
+#else
+#define debug_dump_stack ARCH_debug_dump_stack
+#endif
 void debug_redirect (void (*func) (void*, short), void *arg);
 
 #else
@@ -60,6 +64,9 @@ int debug_printf (const char *fmt, ...){return 0;};
 
 INLINE
 int debug_vprintf (const char *fmt, va_list args){return 0;};
+
+INLINE
+void uos_debug_dump(){};
 
 INLINE
 void debug_dump (const char *caption, void* data, unsigned len){};
@@ -97,6 +104,7 @@ bool_t uos_valid_memory_address (void*);
 
 /*
  * Halt the system.
+ * !! on MIPS cant invoke from exception
  */
 #ifndef NDEBUG
 void uos_halt (int);
