@@ -107,7 +107,7 @@ ETimer_ISR (void* data){
                     , timeover
                     , (unsigned)(event->handle.activate_task)
                     );
-            task_activate(event->handle.activate_task);
+            task_awake(event->handle.activate_task);
         }
         ETIMER_print_tasks(&task_active);
     

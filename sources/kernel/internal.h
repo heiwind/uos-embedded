@@ -272,12 +272,23 @@ INLINE bool_t task_is_waiting (task_t *task) {
 	return (task->lock || task->wait);
 }
 
+/* \~russian
+ * почти тоже самое что task_activate, только без ограничений. 
+ * используется для активации поллинга ожидающей\блокированой нитки 
+ * для того чтобы она могла проверить свои условия блокировки.
+ * см. timer/etimer.c
+ */
 CODE_ISR 
-INLINE void task_activate (task_t *task) {
-	assert (! task_is_waiting (task));
+INLINE void task_awake (task_t *task) {
 	list_append (&task_active, &task->item);
 	if (task_current->prio < task->prio)
 		task_need_schedule = 1;
+}
+
+CODE_ISR 
+INLINE void task_activate (task_t *task) {
+    assert (! task_is_waiting (task));
+    task_awake(task);
 }
 
 INLINE
