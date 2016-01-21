@@ -11,8 +11,8 @@ ENTRY(_reset_vector_)
 MEMORY
 {
   /*flash  (rx)   : ORIGIN = 0x9fc00000,	LENGTH = 16M*/
-  ccode	 (rx)   : ORIGIN = 0x98000000,  LENGTH = 72K
-  cdata	 (rw!x) : ORIGIN = 0x98012000,  LENGTH = 56K
+  ccode	 (rx)   : ORIGIN = 0x98000000,  LENGTH = 102K
+  cdata	 (rw!x) : ORIGIN = 0x98019800,  LENGTH = 26K
   xyram0 (rw!x) : ORIGIN = 0xb8400000,	LENGTH = 128K
   pram0  (rw!x) : ORIGIN = 0xb8440000,	LENGTH = 32K
   xyram1 (rw!x) : ORIGIN = 0x98800000,	LENGTH = 128K
