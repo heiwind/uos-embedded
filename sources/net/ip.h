@@ -159,7 +159,7 @@ INLINE unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
     return dst;
 }
 
-INLINE unsigned char* ipadr_assignl_ucs( unsigned char* __restrict__ dst
+INLINE unsigned char* ipadr_assignl_ucs( unsigned char* dst
                                         , ip_addr_t x
                                 ) __THROW
 {

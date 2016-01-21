@@ -106,6 +106,12 @@ bool_t netif_output_prio (netif_t *netif, struct _buf_t *p,
 struct _buf_t *netif_input (netif_t *netif);
 void netif_set_address (netif_t *netif, unsigned char *ethaddr);
 
+
+
+#ifdef __cplusplus
+}
+#endif
+
 /** netif_io_overlap - структура оверлап-запроса - кладется в начале буфера, 
  * позволяет передать опции, колбэк, сигнал с запросом. которые отрабатываются 
  * по окончании отправки/загрузки буфера.
@@ -114,6 +120,14 @@ void netif_set_address (netif_t *netif, unsigned char *ethaddr);
  *  он отдается на откуп обработчику.
  *  !!! следите за памятью.
  * */
+
+//        mutex import
+#include <kernel/uos.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum netif_io_overlap_option{
       nioo_ActionNone  = 0
     , nioo_ActionMutex = 0x40

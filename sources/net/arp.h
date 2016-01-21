@@ -2,6 +2,7 @@
 #define	__ARP_H_ 1
 
 #include <net/ip.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +32,7 @@ mac_addr macadr_4l(unsigned h, uint32_t l) __THROW
 }
 
 INLINE __CONST 
-mac_addr macadr_4ucs(const unsigned char* __restrict__ x) __THROW 
+mac_addr macadr_4ucs(const unsigned char* x) __THROW 
 {
     mac_addr res;
 #if CPU_ACCESSW_ALIGNMASK > 0
