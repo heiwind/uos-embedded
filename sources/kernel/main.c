@@ -98,7 +98,9 @@ mutex_activate (mutex_t *m, void *message)
 
 	while (! list_is_empty (&m->waiters)) {
 		t = (task_t*) list_first (&m->waiters);
-		assert2 (t->wait == m, uos_assert_task_name_msg, t->name);
+		assert2 (t->wait == m
+		        , "assert task %s wait %x activate from %x($%x)\n"
+		        , t->name, t->wait, m, (unsigned)message);//uos_assert_task_name_msg
 		t->wait = 0;
         t->message = message;
 #if UOS_SIGNAL_SMART > 0
