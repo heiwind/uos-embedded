@@ -70,6 +70,10 @@ namespace std {
     small_int_t strncmp (const char *s1, const char *s2, size_t n)
         {return ::strncmp((const unsigned char*)s1, (const unsigned char*)s2, n);};
 
+    inline 
+    small_int_t strnzcmp (const char *s1, const char *s2, size_t n)
+        {return ::strnzcmp((const unsigned char*)s1, (const unsigned char*)s2, n);};
+
     inline
     small_int_t strncasecmp (const char *s1, const char *s2, size_t n)
         {return ::strncasecmp((const unsigned char*)s1, (const unsigned char*)s2, n);};

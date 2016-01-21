@@ -82,6 +82,13 @@ strcmp (const unsigned char *s1, const unsigned char *s2);
 extern small_int_t
 strncmp (const unsigned char *s1, const unsigned char *s2, size_t n);
 
+/* Compare N characters of S1 and S2. until end of some string.
+ * \return >= 0  mutched symbols limited by N or end of string
+ *               (Sx+result) points mismatch char position
+ *         <  0 -  (Sx-result) points mismatch char position*/
+extern small_int_t
+strnzcmp (const unsigned char *s1, const unsigned char *s2, size_t n);
+
 /* Find the first occurrence of C in S.  */
 extern unsigned char *
 strchr (const unsigned char *s, unsigned char c);
