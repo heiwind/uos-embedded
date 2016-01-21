@@ -198,6 +198,7 @@ copy /Y %CUR_SRC_DIR%\strmatch.c %CUR_DST_DIR%\strmatch.c
 copy /Y %CUR_SRC_DIR%\strncasecmp.c %CUR_DST_DIR%\strncasecmp.c
 copy /Y %CUR_SRC_DIR%\strncat-fast.c %CUR_DST_DIR%\strncat-fast.c
 copy /Y %CUR_SRC_DIR%\strncmp-fast.c %CUR_DST_DIR%\strncmp-fast.c
+copy /Y %CUR_SRC_DIR%\strncmp-fast.c %CUR_DST_DIR%\strnzcmp-fast.c
 copy /Y %CUR_SRC_DIR%\strncpy-fast.c %CUR_DST_DIR%\strncpy-fast.c
 copy /Y %CUR_SRC_DIR%\strnlen.c %CUR_DST_DIR%\strnlen.c
 copy /Y %CUR_SRC_DIR%\strrchr-fast.c %CUR_DST_DIR%\strrchr-fast.c
