@@ -3,6 +3,7 @@
 
 #include <runtime/lib.h>
 #include <posix-port.h>
+#include <stream/stream.h>
 
 #ifdef __cplusplus
 extern "C" {
