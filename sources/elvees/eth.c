@@ -216,7 +216,10 @@ unsigned eth_phy_io(eth_t *u, unsigned address, unsigned cmd_data){
 void
 eth_phy_write (eth_t *u, unsigned address, unsigned data)
 {
-    unsigned res = eth_phy_io(u, address, MD_CONTROL_DATA (data) | MD_CONTROL_OP_WRITE);
+#ifdef DEBUG_NET_PHY
+    unsigned res = 
+#endif
+            eth_phy_io(u, address, MD_CONTROL_DATA (data) | MD_CONTROL_OP_WRITE);
     PHY_printf("PHY:now %x\n", res);
 }
 
