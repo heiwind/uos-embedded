@@ -130,7 +130,7 @@ bridge_filter (bridge_t *b, struct _buf_t *p)
 		s->time_to_live = MAXAGE_SEC / FULLSCAN_SEC;
 
 	/* Broadcast or multicast - pass through. */
-	if (h->dest[0] & 0x80)
+	if (h->dest[0] & 0x01)	/* unicast/multicast is LSB */
 		return p;
 
 	/* Check destination. */
