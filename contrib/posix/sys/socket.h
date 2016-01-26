@@ -4,7 +4,7 @@
 #include <runtime/sys/uosc.h>
 #include <net/ip.h>
 #include <netinet/in.h>
-#include <net/ip.h> 
+#include <net/tcp.h>
 
 
 typedef unsigned int socklen_t;
@@ -35,9 +35,10 @@ INLINE
 int accept (int /* base_socket_t* */ socket
             , sockaddr *address, socklen_t *address_len) __THROW
 {
-    base_socket_t* s = (base_socket_t*)socket;
+    tcp_socket_t* s = (tcp_socket_t*)socket;
     if (s->ip == NULL) return -1;
-    
+    tcp_socket_t *res = tcp_accept(s);
+    return (res)? (int)res : -1;
 }
 
 

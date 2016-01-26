@@ -110,8 +110,7 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 		(void*) s, arg, len);
 	mutex_lock (&s->lock);
 
-	if (s->state != SYN_SENT && s->state != SYN_RCVD &&
-	    s->state != ESTABLISHED /*&& s->state != CLOSE_WAIT*/) {
+	if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
 		mutex_unlock (&s->lock);
 		tcp_debug ("tcp_write() called in invalid state\n");
 		return -1;
@@ -138,8 +137,7 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 		mutex_lock (&s->lock);
 
 		/* Проверим, не закрылось ли соединение. */
-		if (s->state != SYN_SENT && s->state != SYN_RCVD &&
-		    s->state != ESTABLISHED /*&& s->state != CLOSE_WAIT*/) {
+		if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
 			mutex_unlock (&s->lock);
 			if (g)
 				mutex_group_unlisten (g);
@@ -156,6 +154,43 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 	return len;
 }
 
+#include <stdbool.h>
+
+/* \~russian ожидает появления данных в приемнике сокета
+ * */
+int tcp_lock_avail(tcp_socket_t *s, unsigned allow_states
+                    , scheduless_condition waitfor, void* waitarg)
+{
+    bool_t nonblock = (waitfor == (scheduless_condition)0) && (waitarg != (void*)0);
+    if (nonblock && tcp_queue_is_empty (s))
+        return 0;
+    mutex_lock (&s->lock);
+    while (tcp_queue_is_empty (s)) {
+        int res = -1;
+        if ( __glibc_unlikely(nonblock) )
+            ;
+        else if( __glibc_unlikely( ((1 << s->state) & allow_states) == 0) )
+            res = SENOTCONN;
+        else if (mutex_wait_until (&s->lock, waitfor, waitarg))
+                continue;
+        //else
+        //    res = -1; //SETIMEDOUT;
+
+        mutex_unlock (&s->lock);
+        return res;
+    }
+    return 0;
+}
+
+int tcp_wait_avail(tcp_socket_t *s
+                    , scheduless_condition waitfor, void* waitarg)
+{
+    int res = tcp_lock_avail(s, TCP_STATES_ONLINE, waitfor, waitarg);
+    if (res != 0)
+        mutex_unlock (&s->lock);
+    return res;
+}
+
 /*
  * Receive len>0 bytes. Return <0 on error.
  * When nonblock flag is zero, blocks until data get available (never returns 0).
@@ -164,54 +199,61 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 int
 tcp_read_poll (tcp_socket_t *s, void *arg, unsigned short len, int nonblock)
 {
-	buf_t *p, *q;
-	char *buf;
-	int n;
+    if (len == 0) {
+        return -1;
+    }
+    int res = tcp_read_until (s, arg, len, 0, (void*)nonblock);
+    return res;
+}
 
-	tcp_debug ("tcp_read(s=%p, arg=%p, len=%u)\n",
-		(void*) s, arg, len);
-	if (len == 0) {
-		return -1;
-	}
-	mutex_lock (&s->lock);
-	while (tcp_queue_is_empty (s)) {
-		if (s->state != SYN_SENT && s->state != SYN_RCVD &&
-		    s->state != ESTABLISHED) {
-			mutex_unlock (&s->lock);
-			tcp_debug ("tcp_read() called in invalid state\n");
-			return -1;
-		}
-		if (nonblock) {
-			mutex_unlock (&s->lock);
-			return 0;
-		}
-		mutex_wait (&s->lock);
-	}
+/** alternative tcp_read_poll with condition test function waitfor
+ * \arg waitfor - simple test function that must not affects mutex_xxx and schedule functionality
+ * */
+buf_t* tcp_read_buf_until (tcp_socket_t *s
+                , scheduless_condition waitfor, void* waitarg)
+{
+	buf_t *p;
+	bool_t nonblock = (waitfor == (scheduless_condition)0) && (waitarg != (void*)0);
+	if (nonblock && tcp_queue_is_empty (s))
+	    return 0;
+	int ok = tcp_lock_avail(s, TCP_STATES_TRANSFER, waitfor, waitarg);
+	if (ok != 0)
+	    return 0;
+	
 	p = tcp_queue_get (s);
 
 	tcp_debug ("tcp_read: received %u bytes, wnd %u (%u).\n",
 	       p->tot_len, s->rcv_wnd, TCP_WND - s->rcv_wnd);
 	mutex_unlock (&s->lock);
 
+    if (p == 0)
+        return 0;
+
 	mutex_lock (&s->ip->lock);
 	if (! (s->flags & TF_ACK_DELAY) && ! (s->flags & TF_ACK_NOW)) {
 		tcp_ack (s);
 	}
 	mutex_unlock (&s->ip->lock);
+	return p;
+}
+
+int tcp_read_until (tcp_socket_t *s, void *arg, unsigned short len
+                , scheduless_condition waitfor, void* waitarg)
+{
+    buf_t *p;
+    int n;
+
+    tcp_debug ("tcp_read_until(s=%p, arg=%p, len=%u)\n",
+        (void*) s, arg, len);
+    p = tcp_read_buf_until(s, waitfor, waitarg);
+    if (p == 0)
+        return 0;
+    if ((unsigned)p > SESOCKANY)
+        return (int)p;
 
 	/* Copy all chunks. */
-	buf = (char *)arg;
-	n = 0;
-	for (q=p; q!=0 && n<len; q=q->next) {
-		int bytes;
-		if (q->len == 0)
-			continue;
-
-		bytes = (q->len < len-n) ? q->len : len-n;
-		memcpy (buf, q->payload, bytes);
-		n += bytes;
-		buf += bytes;
-	}
+	n = buf_copy_continous(arg, p, len);
+	//! TODO need fix - if reads less then buffer len - loose rest of buf
 	buf_free (p);
 	return n;
 }
@@ -224,7 +266,10 @@ tcp_read_poll (tcp_socket_t *s, void *arg, unsigned short len, int nonblock)
 int
 tcp_read (tcp_socket_t *s, void *arg, unsigned short len)
 {
-	return tcp_read_poll (s, arg, len, 0);
+    if (len == 0) {
+        return -1;
+    }
+	return tcp_read_until (s, arg, len, 0, 0);
 }
 
 /*
@@ -293,25 +338,36 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 tcp_socket_t *
 tcp_accept (tcp_socket_t *s)
 {
+    tcp_socket_t * res;
+    do {
+        res = tcp_accept_until(s, (scheduless_condition)0, (void*)0);
+        if ((unsigned)res == SENOMEM)
+            //для совместимости со старым поведением
+            continue;
+        if ((unsigned)res > SESOCKANY)
+            return res;
+    } while (res == 0);
+    return res;
+}
+
+tcp_socket_t *tcp_accept_until (tcp_socket_t *s
+                                , scheduless_condition waitfor, void* waitarg)
+{
 	tcp_socket_t *ns;
 	buf_t *p;
 	ip_hdr_t *iph;
 	tcp_hdr_t *h;
 	unsigned long optdata;
-again:
-	mutex_lock (&s->lock);
-	for (;;) {
-		if (s->state != LISTEN) {
-			mutex_unlock (&s->lock);
-			tcp_debug ("tcp_accept: called in invalid state\n");
-			return 0;
-		}
-		if (! tcp_queue_is_empty (s)) {
-			p = tcp_queue_get (s);
-			break;
-		}
-		mutex_wait (&s->lock);
-	}
+    int ok = tcp_lock_avail(s, (1<<LISTEN)
+                              , waitfor, waitarg);
+    if (ok != 0){
+        if (s->state != LISTEN){
+            tcp_debug ("tcp_accept: called in invalid state\n");
+            return (tcp_socket_t *)SEINVAL;
+        }
+        return (tcp_socket_t *)ok;
+    }
+    p = tcp_queue_get (s);
 	mutex_unlock (&s->lock);
 
 	/* Create a new PCB, and respond with a SYN|ACK.
@@ -325,7 +381,7 @@ again:
 		++s->ip->tcp_in_discards;
 		mutex_unlock (&s->ip->lock);
 		buf_free (p);
-		goto again;
+		return (tcp_socket_t *)SENOMEM;
 	}
 	h = (tcp_hdr_t*) p->payload;
 	iph = ((ip_hdr_t*) p->payload) - 1;

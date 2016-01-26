@@ -355,6 +355,7 @@ typedef struct _base_socket_t {
     unsigned short  peer_port;
 } base_socket_t;
 
+#include <net/errors.h> 
 
 
 typedef struct _ip_t {

@@ -1,6 +1,8 @@
 #ifndef __ERRNO_H__
 #define __ERRNO_H__
 
+#include <net/errors.h>
+
 #define	EPERM		 1	/* Operation not permitted */
 #define	ENOENT		 2	/* No such file or directory */
 #define	ESRCH		 3	/* No such process */
@@ -9,10 +11,10 @@
 #define	ENXIO		 6	/* No such device or address */
 #define	E2BIG		 7	/* Arg list too long */
 #define	ENOEXEC		 8	/* Exec format error */
-#define	EBADF		 9	/* Bad file number */
+#define	EBADF		SEBADF //9	/* Bad file number */
 #define	ECHILD		10	/* No child processes */
-#define	EAGAIN		11	/* Try again */
-#define	ENOMEM		12	/* Out of memory */
+#define	EAGAIN		SEAGAIN //11	/* Try again */
+#define	ENOMEM		SENOMEM //12	/* Out of memory */
 #define	EACCES		13	/* Permission denied */
 #define	EFAULT		14	/* Bad address */
 #define	ENOTBLK		15	/* Block device required */
@@ -22,8 +24,8 @@
 #define	ENODEV		19	/* No such device */
 #define	ENOTDIR		20	/* Not a directory */
 #define	EISDIR		21	/* Is a directory */
-#define	EINVAL		22	/* Invalid argument */
-#define	ENFILE		23	/* File table overflow */
+#define	EINVAL		SEINVAL // 22	/* Invalid argument */
+#define	ENFILE		SENFILE // 23	/* File table overflow */
 #define	EMFILE		24	/* Too many open files */
 #define	ENOTTY		25	/* Not a typewriter */
 #define	ETXTBSY		26	/* Text file busy */
@@ -105,14 +107,14 @@
 #define	ENETDOWN	100	/* Network is down */
 #define	ENETUNREACH	101	/* Network is unreachable */
 #define	ENETRESET	102	/* Network dropped connection because of reset */
-#define	ECONNABORTED	103	/* Software caused connection abort */
+#define	ECONNABORTED	SECONNABORTED //103	/* Software caused connection abort */
 #define	ECONNRESET	104	/* Connection reset by peer */
-#define	ENOBUFS		105	/* No buffer space available */
+#define	ENOBUFS		SENOBUFS // 105	/* No buffer space available */
 #define	EISCONN		106	/* Transport endpoint is already connected */
-#define	ENOTCONN	107	/* Transport endpoint is not connected */
+#define	ENOTCONN	SENOTCONN // 107	/* Transport endpoint is not connected */
 #define	ESHUTDOWN	108	/* Cannot send after transport endpoint shutdown */
 #define	ETOOMANYREFS	109	/* Too many references: cannot splice */
-#define	ETIMEDOUT	110	/* Connection timed out */
+#define	ETIMEDOUT	SETIMEDOUT //110	/* Connection timed out */
 #define	ECONNREFUSED	111	/* Connection refused */
 #define	EHOSTDOWN	112	/* Host is down */
 #define	EHOSTUNREACH	113	/* No route to host */

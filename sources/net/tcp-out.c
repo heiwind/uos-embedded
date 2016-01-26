@@ -214,6 +214,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 	seg->tcphdr->ackno = HTONL (s->rcv_nxt);
 
 	/* silly window avoidance */
+	//! TODO need FIX - avoidance can block connected side to send even small chunck 
 	if (s->rcv_wnd < s->mss) {
 		seg->tcphdr->wnd = 0;
 	} else {

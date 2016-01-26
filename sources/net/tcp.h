@@ -240,7 +240,26 @@ tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr,
  */
 tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	unsigned short port);
+
+/* It extracts the first connection request on the queue of pending connections 
+ *  for the listening socket s, creates a new connected socket, 
+ *  and returns a new tcp_socket. 
+ *  The newly created socket is not in the listening state.
+ *  \return      = NULL if socket s aborted of failed
+ */
 tcp_socket_t *tcp_accept (tcp_socket_t *s);
+
+/* It extracts the first connection request on the queue of pending connections 
+ *  for the listening socket s, creates a new connected socket, 
+ *  and returns a new tcp_socket. 
+ *  The newly created socket is not in the listening state.
+ *   
+ * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
+ * \return      = NULL if no connection (due wait finishes)
+ * \return      = -1 (same ~0) if some failure
+ * */
+tcp_socket_t *tcp_accept_until (tcp_socket_t *s
+                                , scheduless_condition waitfor, void* waitarg);
 
 /*
  * Closes the connection held by the PCB.
@@ -255,6 +274,13 @@ int tcp_close (tcp_socket_t *s);
  */
 void tcp_abort (tcp_socket_t *s);
 
+/* \~russian ожидает появления данных в приемнике сокета
+ * \return = 0 - if socket have some dats in receiver
+ *         = -1 - if timedout with no data
+ *         = SEerror_code - on error
+ * */
+int tcp_wait_avail(tcp_socket_t *s
+                    , scheduless_condition waitfor, void* waitarg);
 /*
  * Blocking receive.
  * Return a number of received bytes >0.
@@ -269,6 +295,18 @@ int tcp_read (tcp_socket_t *s, void *dataptr, unsigned short len);
  */
 int tcp_read_poll (tcp_socket_t *s, void *dataptr, unsigned short len, int nonblock);
 
+/** alternative tcp_read_poll with condition test function waitfor
+ * \arg waitfor - simple test function that must not affects mutex_xxx and schedule functionality
+ * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
+ * */
+int tcp_read_until (tcp_socket_t *s, void *dataptr, unsigned short len
+                , scheduless_condition waitfor, void* waitarg);
+
+/* reads 1 received socket buffer - vs tcp_read_until do not internal to user buffer copy
+ * */
+buf_t* tcp_read_buf_until (tcp_socket_t *s
+                , scheduless_condition waitfor, void* waitarg);
+
 /*
  * Send len>0 bytes.
  * Return a number ob transmitted bytes, or -1 on error.
@@ -279,6 +317,42 @@ int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len);
  * Return the period of socket inactivity, in seconds.
  */
 unsigned long tcp_inactivity (tcp_socket_t *s);
+
+
+
+typedef enum _tcp_state_f {
+    tcpfCLOSED     = (1<<CLOSED),
+    tcpfLISTEN     = (1<<LISTEN),
+    tcpfSYN_SENT    = (1<<SYN_SENT),
+    tcpfSYN_RCVD    = (1<<SYN_RCVD),
+    tcpfESTABLISHED = (1<<ESTABLISHED),
+    tcpfFIN_WAIT_1  = (1<<FIN_WAIT_1),
+    tcpfFIN_WAIT_2  = (1<<FIN_WAIT_2),
+    tcpfCLOSE_WAIT  = (1<<CLOSE_WAIT),
+    tcpfCLOSING     = (1<<CLOSING),
+    tcpfLAST_ACK    = (1<<LAST_ACK),
+    tcpfTIME_WAIT   = (1<<TIME_WAIT),
+} tcp_state_f;
+typedef /*tcp_state_f*/ unsigned tcp_states_set;
+
+INLINE
+bool_t   tcp_socket_is_state(tcp_socket_t *s, tcp_states_set states){
+    return (((1<<s->state) & states) != 0);
+}
+
+#define TCP_STATES_ONLINE   (((tcpfESTABLISHED<<1)-1) ^ (tcpfLISTEN-1))
+#define TCP_STATES_TRANSFER (((tcpfESTABLISHED<<1)-1) ^ ((tcpfLISTEN<<1)-1))
+
+INLINE
+bool_t   tcp_socket_is_online(tcp_socket_t *s){
+    return tcp_socket_is_state(s, TCP_STATES_ONLINE);
+}
+
+
+
+/*********************************************************************
+ *      TCP stream :
+ **********************************************************************/
 
 #if defined(to_stream)
 /*
