@@ -169,6 +169,17 @@ netif_io_overlap* netif_is_overlaped(buf_t *p){
         return 0;
 }
 
+INLINE
+netif_io_overlap* netif_overlap_init(buf_t *p){
+    netif_io_overlap* over = (netif_io_overlap*)((char*)p + sizeof(buf_t));
+    if( (p->payload - sizeof(netif_io_overlap)) < (unsigned char*)over )
+        return 0;
+    over->mark = NETIF_OVERLAP_MARK;
+    over->options = 0;
+    over->action.signal = 0;
+    return over;
+}
+
 void netif_overlap_assign_mutex(buf_t *p, unsigned options
                                 , mutex_t* signal, void* msg);
 void netif_overlap_assign_cb(buf_t *p, unsigned options

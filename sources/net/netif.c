@@ -73,11 +73,14 @@ void netif_free_buf(netif_t *u, buf_t *p){
         buf_free (p);
         return;
     }
-    else if (action == nioo_ActionMutex){
-        mutex_signal(over->action.signal, (void*)(over->arg));
-    }
-    if (action == nioo_ActionCB){
-       over->action.callback(p, over->arg);
+    if (over->action.signal != 0){ 
+        if (action == nioo_ActionMutex){
+            mutex_signal(over->action.signal, (void*)(over->arg));
+        }
+        else
+        if (action == nioo_ActionCB){
+           over->action.callback(p, over->arg);
+        }
     }
 }
 
