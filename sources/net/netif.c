@@ -21,6 +21,10 @@ netif_output_prio (netif_t *netif, buf_t *p
 			ethdest = arp_lookup (netif, ipdest);
 			if (! ethdest) {
 				/* Send ARP request. */
+			    if (netif_is_overlaped(p)){
+			        netif_free_buf(netif, p);
+			        p = 0;
+			    }
 				arp_request (netif, p, ipdest, ipsrc);
 				goto discard;
 			}

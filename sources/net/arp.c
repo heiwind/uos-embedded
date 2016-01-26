@@ -256,6 +256,7 @@ arp_request (netif_t *netif, buf_t *p
 {
 	struct arp_hdr *ah;
 
+	if (p != 0) {
 	/* ARP packet place at the begin of buffer (offset 2) */
 	buf_add_header (p, p->payload - (unsigned char*) p - sizeof (buf_t) - 2);
 
@@ -266,6 +267,16 @@ arp_request (netif_t *netif, buf_t *p
 	}
 	buf_truncate (p, sizeof (struct arp_hdr));
 	p = buf_make_continuous (p);
+	}
+	else{
+	    p = buf_alloc(netif->arp->ip->pool
+	                , IP_ALIGNED( (sizeof (struct arp_hdr)) )
+	                , IP_ALIGNED( sizeof (struct eth_hdr)   )
+	                );
+	    if (p == 0)
+	        return 0;
+	    buf_add_header(p, sizeof (struct eth_hdr));
+	}//if (p != 0)
 
 	ah = (struct arp_hdr*) p->payload;
 	ah->eth.proto = PROTO_ARP;
