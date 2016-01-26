@@ -188,6 +188,104 @@ crc16_inet (unsigned short sum, unsigned const char *buf, unsigned short len)
 	return sum;
 }
 
+
+/* makes memcpy dst<-src and crc16_inet check sum calculates at once 
+ * */
+unsigned short memcpy_crc16_inet (unsigned short sum
+        , unsigned char *dst, unsigned const char *buf, unsigned len)
+{
+    /*
+     * Optimized for 32-bit architectures: ARM/Thumb and MIPS.
+     */
+    unsigned long longsum = sum;
+    unsigned long longlen = len;
+
+    if ((int) buf & 1) {
+        /* get first non-aligned byte */
+        *dst     = *buf;
+#if HTONS(1) == 1
+        longsum += *buf++ << 8;
+#else
+        longsum += *buf++;
+#endif
+        longsum = (longsum >> 8) + ((unsigned char) longsum << 8);
+        --longlen;
+    }
+#if CPU_HARD_MISALIGN > 0
+    if ((int) buf & 2) {
+        /* get first non-aligned word */
+        unsigned tmp = *(unsigned short*)buf;
+        *(unsigned short*)dst = tmp;
+        longsum += tmp;
+        buf += 2;
+        dst += 2;
+        longlen -=2;
+    }
+
+#   if UOS_FOR_SPEED > 1
+    if (longlen>BIGBLOCKSIZE){
+        for (; longlen>BIGBLOCKSIZE;){
+            unsigned* lbuf = (unsigned*)buf;
+            unsigned* ldst = (unsigned*)dst;
+            unsigned tmp;
+            unsigned tmp2;
+            unsigned sum2;
+
+            tmp = lbuf[0];
+            longsum += (unsigned short)tmp;
+            ldst[0] = tmp;
+            longsum += tmp>>16;
+
+            tmp2 = lbuf[1];
+            sum2  = (unsigned short)tmp2;
+            ldst[1] = tmp2;
+            sum2 += tmp2>>16;
+
+            tmp = lbuf[2];
+            longsum += (unsigned short)tmp;
+            ldst[2] = tmp;
+            longsum += tmp>>16;
+
+            tmp2 = lbuf[3];
+            sum2 += (unsigned short)tmp2;
+            ldst[3] = tmp2;
+            sum2 += tmp2>>16;
+            longsum += sum2;
+
+            longlen-=BIGBLOCKSIZE;
+            buf+=BIGBLOCKSIZE;
+            dst+=BIGBLOCKSIZE;
+        }
+    }
+#   endif
+#endif//CPU_HARD_MISALIGN > 0
+
+    for (; longlen>1; longlen-=2, buf+=2, dst+=2){
+        unsigned tmp = *(unsigned short*)buf;
+        *(unsigned short*)dst = tmp;
+        longsum += tmp;
+    }
+
+    if (longlen & 1) {
+        /* add up any odd byte */
+        *dst     = *buf;
+#if HTONS(1) == 1
+        longsum += *buf << 8;
+#else
+        longsum += *buf;
+#endif
+        longsum = (longsum >> 8) + ((unsigned char) longsum << 8);
+    }
+    /* Build cyclic sum. */
+    longsum = (longsum >> 16) + (unsigned short) longsum;
+    longsum = (longsum >> 16) + (unsigned short) longsum;
+    sum = longsum;
+
+    /*debug_printf (" -> %#04x\n", sum);*/
+    return sum;
+}
+
+
 unsigned short
 crc16_inet_header (const unsigned char *src, const unsigned char *dest,
 	unsigned char proto, unsigned short proto_len)

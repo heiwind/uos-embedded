@@ -18,6 +18,11 @@ unsigned short crc16_inet_header (const unsigned char *src, const unsigned char 
 	unsigned char proto, unsigned short proto_len);
 unsigned short crc16_inet_byte (unsigned short sum, unsigned char data);
 
+/* makes memcpy dst<-src and crc16_inet check sum calculates at once 
+ * */
+unsigned short memcpy_crc16_inet (unsigned short sum
+        , unsigned char *dst, unsigned const char *buf, unsigned len);
+
 
 
 #ifdef __cplusplus
