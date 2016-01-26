@@ -134,6 +134,7 @@ struct _tcp_segment_t {
 	void *dataptr;		/* pointer to the TCP data in the buf_t */
 	tcp_hdr_t *tcphdr;	/* the TCP header */
 	small_uint_t len;	/* the TCP length of this segment */
+	small_uint_t datacrc;// crc16_inet of data at dataptr, ==0 if no crc
 };
 typedef struct _tcp_segment_t tcp_segment_t;
 

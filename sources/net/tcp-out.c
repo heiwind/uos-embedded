@@ -42,13 +42,19 @@ tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
     over->options = nioo_ActionMutex;
     over->action.signal = 0;
 
+    seg->datacrc = 0;
+    seg->dataptr = p->payload;
     if (arg != 0) {
-        memcpy (p->payload, arg, seglen);
+        unsigned sum = memcpy_crc16_inet(CRC16_INET_INIT, p->payload, arg, seglen);
+        if (seglen & 1) {
+            /* Invert checksum bytes. */
+            sum = (sum << 8) | (unsigned char) (sum >> 8);
+        }
+        seg->datacrc = sum;
         seg->len = seglen;
     }
     else
         seg->len = 0;
-    seg->dataptr = p->payload;
 
     /* Build TCP header. */
     if (! buf_add_header (p, TCP_HLEN)) {
@@ -60,6 +66,7 @@ tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
     tcphdr->src = HTONS (s->local_port);
     tcphdr->dest = HTONS (s->remote_port);
     tcphdr->urgp = 0;
+    tcphdr->chksum = 0;
     seg->tcphdr = tcphdr;
 
     return seg;
@@ -120,7 +127,7 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len,
 		seglen = left > s->mss ? s->mss : left;
 
 		/* Allocate memory for tcp_segment, and fill in fields. */
-		seg = tcp_segment_new(s, ((arg!=0)? ptr : 0), (optdata)? optlen : seglen);
+		seg = tcp_segment_new(s, ((arg!=0)? ptr : 0), (arg!=0)? seglen : optlen);
 		if (seg == 0) {
 			tcp_debug ("tcp_enqueue: cannot allocate tcp_segment\n");
 			goto memerr;
@@ -231,24 +238,25 @@ memerr:
 }
 
 // overlaped buffer seg->p seems shouldn`t be sopy, caller responded on it`s life
-static void
+static bool_t
 tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 {
 	unsigned int n;
 	netif_t *netif;
 	buf_t *p;
+	tcp_hdr_t* tcphdr = seg->tcphdr;
 
 	/* The TCP header has already been constructed, but the ackno and
 	 * wnd fields remain. */
-	seg->tcphdr->ackno = HTONL (s->rcv_nxt);
+	tcphdr->ackno = HTONL (s->rcv_nxt);
 
 	/* silly window avoidance */
 	//! TODO need FIX - avoidance can block connected side to send even small chunck 
 	if (s->rcv_wnd < s->mss) {
-		seg->tcphdr->wnd = 0;
+		tcphdr->wnd = 0;
 	} else {
 		/* advertise our receive window size in this TCP segment */
-		seg->tcphdr->wnd = HTONS (s->rcv_wnd);
+		tcphdr->wnd = HTONS (s->rcv_wnd);
 	}
 
 	/* If we don't have a local IP address, we get one by
@@ -257,7 +265,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 	    ip_addr_const local_ip;
 		netif = route_lookup (s->ip, s->remote_ip.var, 0, &local_ip);
 		if (! netif)
-			return;
+			return 0;
 		s->local_ip = local_ip;
 	}
 
@@ -265,43 +273,61 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 
 	if (s->rttest == 0) {
 		s->rttest = s->ip->tcp_ticks;
-		s->rtseq = NTOHL (seg->tcphdr->seqno);
+		s->rtseq = NTOHL (tcphdr->seqno);
 	}
-	s->snd_nxt = NTOHL (seg->tcphdr->seqno) + TCP_TCPLEN (seg);
+	s->snd_nxt = NTOHL (tcphdr->seqno) + TCP_TCPLEN (seg);
 	if (TCP_SEQ_LT (s->snd_max, s->snd_nxt)) {
 		s->snd_max = s->snd_nxt;
 	}
 	tcp_debug ("tcp_output_segment: %lu:%lu, snd_nxt = %u\n",
-		HTONL (seg->tcphdr->seqno),
-		HTONL (seg->tcphdr->seqno) + seg->len, s->snd_nxt);
+		HTONL (tcphdr->seqno),
+		HTONL (tcphdr->seqno) + seg->len, s->snd_nxt);
 
 	p = seg->p;
-	n = (unsigned int) ((unsigned char*) seg->tcphdr -
+
+	n = (unsigned int) ((unsigned char*) tcphdr -
 		(unsigned char*) p->payload);
 	p->len -= n;
 	p->tot_len -= n;
-	p->payload = (unsigned char*) seg->tcphdr;
+	p->payload = (unsigned char*) tcphdr;
 
-	seg->tcphdr->chksum = 0;
-	n = buf_chksum (p, crc16_inet_header (ipref_as_ucs(s->local_ip), s->remote_ip.ucs,
-		IP_PROTO_TCP, p->tot_len));
-	if (p->tot_len & 1) {
-		/* Invert checksum bytes. */
-		n = (n << 8) | (unsigned char) (n >> 8);
-	}
-	seg->tcphdr->chksum = n;
+	tcphdr->chksum = 0;
+
+    unsigned hsum = crc16_inet_header (ipref_as_ucs(s->local_ip), s->remote_ip.ucs,
+            IP_PROTO_TCP, p->tot_len);
+
+    if (seg->datacrc != 0) {
+        unsigned tsum = crc16_inet(hsum, p->payload, ((unsigned char*)seg->dataptr - (unsigned char*) tcphdr) );
+        //if have tcp-data crc calculated, the recalc only header
+        unsigned sum = tsum + seg->datacrc; 
+        sum = (unsigned short)sum + (sum>>16);
+        sum = (unsigned short)sum + (sum>>16);
+        tcphdr->chksum = ~((unsigned short)sum);
+        /*if (sum != n){
+            debug_printf("tcp crc:valid %x , cached %x, cacheddata %x, data %x, tcpdat %x, tcph %x, header %x\n"
+                    , n, sum, seg->datacrc, dsum, tdsum, tsum, hsum);
+        }*/
+    }
+    else {
+        n = buf_chksum (p, hsum);
+        if (p->tot_len & 1) {
+            /* Invert checksum bytes. */
+            n = (n << 8) | (unsigned char) (n >> 8);
+        }
+        tcphdr->chksum = n;
+    }
 
     netif_io_overlap* over = netif_is_overlaped(p);
     if (over == 0) {
         // overlaped buffer seems shouldn`t be sopy, caller responded on it`s life 
 	p = buf_copy (p);
 	if (! p)
-		return;
+		return 0;
     }//if (over == 0)
 /*	buf_print_tcp (p);*/
 
 	++s->ip->tcp_out_datagrams;
-	ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+	return ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
 }
 
 /*
