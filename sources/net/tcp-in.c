@@ -107,7 +107,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				s->snd_buf += s->acked;
 				/* Send a signal for tcp_write when
 				 * s->snd_queuelen is decreased. */
-				mutex_signal (&s->lock, 0);
+				mutex_signal (&s->lock, s);
 			}
 			/* Reset the fast retransmit variables. */
 			s->dupacks = 0;
@@ -168,7 +168,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				}
 				/* Send a signal for tcp_write when
 				 * s->snd_queuelen is decreased. */
-				mutex_signal (&s->lock, 0);
+				mutex_signal (&s->lock, s);
 			}
 		}
 
@@ -202,7 +202,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 			/* Send a signal for tcp_write when
 			 * s->snd_queuelen is decreased. */
-			mutex_signal (&s->lock, 0);
+			mutex_signal (&s->lock, s);
 		}
 
 		/* End of ACK for new data processing. */
