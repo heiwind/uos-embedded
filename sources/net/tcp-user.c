@@ -58,6 +58,11 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 	mutex_lock (&ip->lock);
 
 	s = tcp_alloc (ip);
+	if (s == 0){
+        mutex_unlock (&ip->lock);
+	    return 0;
+	}
+	
 	s->remote_ip = ipadr_4ucs(ipaddr);
 	s->remote_port = port;
 	if (s->local_port == 0) {
