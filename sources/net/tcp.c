@@ -10,6 +10,7 @@
 #include <mem/mem.h>
 #include <net/ip.h>
 #include <net/tcp.h>
+#include <net/netif.h>
 
 /*
  * Called every 500 ms and implements the retransmission timer and the timer that
@@ -234,8 +235,14 @@ tcp_socket_purge (tcp_socket_t *s)
 	}
 	if (s->unacked != 0) {
 		tcp_debug ("tcp_socket_purge: data left on ->unacked\n");
-		tcp_segments_free (s->unacked);
-		s->unacked = 0;
+	    tcp_segment_t *useg = s->unacked;
+	    while (useg != 0){
+	        netif_terminate_buf(0, useg->p);
+            s->unacked = useg->next;
+	        useg->p = 0;
+	        tcp_segment_free (useg);
+	        useg = s->unacked;
+	    }
 	}
 	s->snd_queuelen = 0;
 }

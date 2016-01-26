@@ -515,12 +515,7 @@ tcp_abort (tcp_socket_t *s)
 
 	mutex_lock (&ip->lock);
 	tcp_socket_remove (&ip->tcp_sockets, s);
-	if (s->unacked != 0) {
-		tcp_segments_free (s->unacked);
-	}
-	if (s->unsent != 0) {
-		tcp_segments_free (s->unsent);
-	}
+	tcp_socket_purge(s);
 
 	tcp_debug ("tcp_abort: sending RST\n");
 	tcp_rst (ip, seqno, ackno, ipref_as_ucs(s->local_ip), s->remote_ip.ucs,
