@@ -947,12 +947,18 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
     netif_io_overlap* over = netif_is_overlaped(p);
     if (over != 0){
         over->asynco = nios_inprocess;
-        unsigned qlimit = over->options & nioo_FreeLevel;
+        unsigned ops = over->options;
+        if ( (ops & nioo_ActionTerminate) == 0)
+        {
+        unsigned qlimit = ops & nioo_FreeLevel;
         if (qlimit == 0)
             qlimit = ETH_OUTQ_SIZE - ETH_OUTQ_PRESERVE;
         else
             qlimit = ETH_OUTQ_SIZE - qlimit;
         is_full = qlimit <= u->outq.count;
+        }
+        else
+            is_full = 1;
         //пакет с оверлеем не ожидает очереди, потому что он умеет самообслуживаться
         //  потому сразу отказываем ему если он не помещается в очередь
         if (is_full) {

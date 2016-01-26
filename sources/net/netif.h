@@ -139,7 +139,18 @@ enum netif_io_overlap_option{
     //* пакет не претендует - если в очереди осталось меньше места, драйвер отвергает его
     //* возвращая ошибку.
     , nioo_FreeLevel   = 0xf
+    , nioo_ActionTerminate  = 0x20
 } ;
+
+enum netif_io_overlay_asynco{
+      nios_free         = 0
+      //буфер просигналил и готовится освободиться. делается проверка терминирования
+    , nios_leave
+    //буфер в фазе сигналинга, начиная с этой фазы терминация буфера лежит на 
+    //    netio 
+    , nios_inaction
+    , nios_inprocess
+};
 
 typedef void (*netif_callback)(buf_t *p, unsigned arg);
 #define NETIF_OVERLAP_MARK 0x5a
@@ -151,7 +162,9 @@ typedef struct _netif_io_overlap{
         netif_callback callback;
     } action;
     unsigned arg;
-    char options;
+    //*внутреннее поле оверлея для организации конкурентной обработки
+    volatile char asynco;
+    volatile char options;
     //контрольный маркер, чтобы убедиться что в буфере лежит именно оверлап
     char mark;
 } netif_io_overlap;
@@ -187,6 +200,14 @@ void netif_overlap_assign_cb(buf_t *p, unsigned options
 
 //используется интерфейсами для освобождения буфера
 void netif_free_buf(netif_t *u, buf_t *p);
+
+
+//прерывает передачу буфера - драйвер не отсылает буфер, а сразу его освобождает 
+void netif_abort_buf(netif_t *u, buf_t *p);
+//конкурентно-безопасный дестрой буфера, прерывает передачу буфера, и инициирует его 
+//  дестрой. терминируемый буфер - не сигналит, а сразу дестроится!!! 
+void netif_terminate_buf(netif_t *u, buf_t *p);
+
 
 #ifdef __cplusplus
 }

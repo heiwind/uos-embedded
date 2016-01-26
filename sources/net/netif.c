@@ -1,5 +1,6 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
+#include <kernel/internal.h>
 #include <mem/mem.h>
 #include <buf/buf.h>
 #include <net/netif.h>
@@ -73,6 +74,7 @@ void netif_free_buf(netif_t *u, buf_t *p){
         buf_free (p);
         return;
     }
+    over->asynco = nios_inaction;
     if (over->action.signal != 0){ 
         if (action == nioo_ActionMutex){
             mutex_signal(over->action.signal, (void*)(over->arg));
@@ -82,6 +84,51 @@ void netif_free_buf(netif_t *u, buf_t *p){
            over->action.callback(p, over->arg);
         }
     }
+
+    if ( (over->options&nioo_ActionTerminate) == 0){
+        over->asynco = nios_leave;
+    }
+    if ( (over->options&nioo_ActionTerminate) == 0){
+        over->asynco = nios_free;
+    }
+    else {
+        action = over->options&nioo_ActionMASK;
+        if (action == nioo_ActionNone)
+            buf_free (p);
+    }
+}
+
+// TODO - надо протестировать конкурентную терминацию\обрыв буфера
+//прерывает передачу буфера - драйвер не отсылает буфер, а сразу его освобождает 
+void netif_abort_buf(netif_t *u, buf_t *p){
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over == (void*)0){
+        return;
+    }
+    
+    arch_state_t x = arch_intr_off();
+    if (over->asynco <= nios_leave){
+    }
+    else {
+        over->options |= nioo_ActionTerminate;
+    }
+    arch_intr_restore(x);
+}
+
+void netif_terminate_buf(netif_t *u, buf_t *p){
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over == (void*)0){
+        buf_free (p);
+        return;
+    }
+    arch_state_t x = arch_intr_off();
+    if (over->asynco <= nios_leave){
+        buf_free (p);
+    }
+    else {
+        over->options = nioo_ActionTerminate|nioo_ActionNone;
+    }
+    arch_intr_restore(x);
 }
 
 INLINE 
