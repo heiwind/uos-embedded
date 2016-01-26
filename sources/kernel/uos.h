@@ -94,6 +94,7 @@ void mutex_unlock (mutex_t *lock);
 bool_t mutex_trylock (mutex_t *lock);
 INLINE bool_t mutex_is_locked (mutex_t *m);
 INLINE bool_t mutex_is_wait (mutex_t *m);
+INLINE bool_t mutex_is_my (mutex_t *m);
 
 /*! this is function that called from schdeler-switcher context, it should not use
  *   os routines that can cause task block 
@@ -147,6 +148,8 @@ bool_t mutex_group_lockwaiting (mutex_t *lock, mutex_group_t *g, mutex_t **lock_
 
 /* User-supplied startup routine. */
 extern void uos_init (void);
+
+
 
 /*
  * ----------
@@ -224,6 +227,14 @@ bool_t mutex_is_wait (mutex_t *m){
     return     !list_is_empty (&m->waiters) 
             || !list_is_empty (&m->groups)
             || (m->irq != (void*)0);
+}
+
+/* Current running task. */
+extern task_t *task_current;
+
+INLINE
+bool_t mutex_is_my (mutex_t *m){
+    return (m->master == task_current);
 }
 
 #ifdef __cplusplus

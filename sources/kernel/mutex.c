@@ -150,9 +150,6 @@ CODE_FAST
 bool_t 
 mutex_trylock (mutex_t *m)
 {
-    if (! m->item.next)
-        mutex_init (m);
-
     if (mutex_recurcived_lock(m))
         return 1;
 
@@ -161,6 +158,10 @@ mutex_trylock (mutex_t *m)
 
     arch_state_t x;
     arch_intr_disable (&x);
+
+    if (! m->item.next)
+        mutex_init (m);
+
     assert_task_good_stack(task_current);
     bool_t res = mutex_trylock_in(m);
     arch_intr_restore (x);
