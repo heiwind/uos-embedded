@@ -66,4 +66,45 @@
 
 
 
+/**************************************************************************
+ * TCP options
+ */
+//#define TCP_WND                         2048
+//#define TCP_MAXRTX                      12
+//#define TCP_SYNMAXRTX                   6
+
+/// TCP Maximum segment size. 256 /* conservative default
+//#define TCP_MSS             1460
+
+/* TCP sender buffer space (bytes). */
+//#define TCP_SND_BUF                     2048
+
+/* TCP sender buffer space (pbufs).
+ * This must be at least = 2 * TCP_SND_BUF/TCP_MSS for things to work. */
+//#define TCP_SND_QUEUELEN                4 * TCP_SND_BUF/TCP_MSS
+
+
+/* Maximum number of retransmissions of data segments. */
+
+/* Maximum number of retransmissions of SYN segments. */
+
+/* TCP writable space (bytes). This must be less than or equal
+   to TCP_SND_BUF. It is the amount of space which must be
+   available in the tcp snd_buf for select to return writable */
+//#define TCP_SNDLOWAT                    TCP_SND_BUF/2
+
+//#define TCP_TMR_INTERVAL    100 /* TCP timer interval in msec. */
+//#define TCP_FAST_INTERVAL   200 /* fine grained timeout in msec */
+//#define TCP_SLOW_INTERVAL   500 /* coarse grained timeout in msec */
+//#define TCP_STUCK_TIMEOUT   5000    /* milliseconds */
+
+//#define TCP_MSL         60000  /* maximum segment lifetime in usec */
+
+//#define TCP_LOCAL_PORT_RANGE_START 4096
+//#define TCP_LOCAL_PORT_RANGE_END   0x7fff
+
+//#define TCP_DEBUG
+
+
+
 #endif /* UOS_CONF_NET_H_ */
