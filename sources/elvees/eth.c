@@ -943,6 +943,25 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
 		return 0;
 	}
 
+    bool_t is_full  = buf_queueh_is_full  (&u->outq);
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over != 0){
+        over->asynco = nios_inprocess;
+        unsigned qlimit = over->options & nioo_FreeLevel;
+        if (qlimit == 0)
+            qlimit = ETH_OUTQ_SIZE - ETH_OUTQ_PRESERVE;
+        else
+            qlimit = ETH_OUTQ_SIZE - qlimit;
+        is_full = qlimit <= u->outq.count;
+        //пакет с оверлеем не ожидает очереди, потому что он умеет самообслуживаться
+        //  потому сразу отказываем ему если он не помещается в очередь
+        if (is_full) {
+            mutex_unlock (&u->tx_lock);
+            netif_free_buf (&u->netif, p);
+            return 0;
+        }
+    }
+
 	/* Занято, ставим в очередь. */
     #if 0
     if (buf_queue_is_full (&u->outq)) {
@@ -961,10 +980,12 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
     #endif
 
     bool_t isbusy = ((MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) != 0);
-    if (!buf_queueh_is_empty (&u->outq) || (isbusy))
+    bool_t is_clean = buf_queueh_is_empty (&u->outq);
+
+    if (!is_clean || (isbusy))
         buf_queueh_put (&u->outq, p);
 
-    if (! isbusy ) {
+    else {
 	    ETH_printf ("eth_output: tx %d bytes\n", p->tot_len);
 		/* Смело отсылаем. */
 		chip_transmit_packet (u, p);

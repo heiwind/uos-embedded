@@ -119,6 +119,7 @@ void netif_set_address (netif_t *netif, unsigned char *ethaddr);
  * если в оверлапе задан сигнал или обработчик, то буфер не дестроится после передачи,
  *  он отдается на откуп обработчику.
  *  !!! следите за памятью.
+ *  
  * */
 
 //        mutex import
@@ -134,6 +135,10 @@ enum netif_io_overlap_option{
     , nioo_ActionCB    = 0x80
     , nioo_ActionTask  = 0xc0
     , nioo_ActionMASK  = 0xc0
+    //* задает уровень свободных слотов в очереди передачи драйвера, на которые 
+    //* пакет не претендует - если в очереди осталось меньше места, драйвер отвергает его
+    //* возвращая ошибку.
+    , nioo_FreeLevel   = 0xf
 } ;
 
 typedef void (*netif_callback)(buf_t *p, unsigned arg);

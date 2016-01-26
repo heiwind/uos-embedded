@@ -34,6 +34,10 @@
 //#   define ETH_STACKSZ        1000
 //#   define ETH_INQ_SIZE       16
 //#   define ETH_OUTQ_SIZE      8
+/** \~russian этот резерв старается удерживать свободные слоты в буфере передачи
+ * отвергая пакеты с оверлапами. позволяет защитить канал передачи от полной загрузки 
+ * */
+//#   define ETH_OUTQ_PRESERVE  2
 //#   define ETH_MTU            1518    /* maximum ethernet frame length */
 
 //#   define ETH_MDIO_KHZ       2500ul

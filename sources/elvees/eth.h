@@ -43,6 +43,13 @@ extern "C" {
 #   define ETH_OUTQ_SIZE 	8
 #endif
 
+/** \~russian этот резерв старается удерживать свободные слоты в буфере передачи
+ * отвергая пакеты с оверлапами. позволяет защитить канал передачи от полной загрузки 
+ * */
+#ifndef ETH_OUTQ_PRESERVE
+#   define ETH_OUTQ_PRESERVE  (ETH_OUTQ_SIZE/4)
+#endif
+
 #ifndef ETH_MTU
 #   define ETH_MTU		1518	/* maximum ethernet frame length */
 #endif
