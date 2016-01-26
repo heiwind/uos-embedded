@@ -122,6 +122,8 @@ typedef struct _tcp_hdr tcp_hdr_t;
 
 /* Length of the TCP header, excluding options. */
 #define TCP_HLEN		20
+#define TCP_CAPLEN       (TCP_HLEN + IP_HLEN + MAC_HLEN)
+#define TCP_HRESERVE     IP_ALIGNED(TCP_CAPLEN)
 
 /*
  * This structure is used to repressent TCP segments when queued.
@@ -131,7 +133,7 @@ struct _tcp_segment_t {
 	struct _buf_t *p;	/* buffer containing data + TCP header */
 	void *dataptr;		/* pointer to the TCP data in the buf_t */
 	tcp_hdr_t *tcphdr;	/* the TCP header */
-	unsigned short len;	/* the TCP length of this segment */
+	small_uint_t len;	/* the TCP length of this segment */
 };
 typedef struct _tcp_segment_t tcp_segment_t;
 
@@ -142,6 +144,8 @@ typedef struct _tcp_segment_t tcp_segment_t;
  * The TCP protocol control block
  */
 struct _tcp_socket_t {//: base_socket_t
+    //! lock demarcate access between send/recv, and it must not use to demarcate
+    //  concurent recv or sends - their can be interleaved
 	mutex_t lock;
 	struct _ip_t *ip;
 	struct _tcp_socket_t *next;	/* for the linked list */
@@ -448,7 +452,7 @@ tcp_next_seqno (ip_t *ip)
 	return ip->tcp_seqno;
 }
 
-int tcp_enqueue (tcp_socket_t *s, void *dataptr, unsigned short len,
+int tcp_enqueue (tcp_socket_t *s, void *dataptr, small_uint_t len,
 	unsigned char flags, unsigned char *optdata, unsigned char optlen);
 
 void tcp_rexmit_seg (tcp_socket_t *s, tcp_segment_t *seg);

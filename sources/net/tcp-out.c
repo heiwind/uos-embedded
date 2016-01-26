@@ -16,6 +16,55 @@
 #define tcp_debug			wdog_alive(); debug_printf
 */
 
+/* alloc tcp seg and eth-frame buffer with <len> data allocated  
+ * */
+tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
+{
+    tcp_segment_t * seg;
+    /* Allocate memory for tcp_segment, and fill in fields. */
+    seg = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
+    if (seg == 0) {
+        return 0;
+    }
+
+    /* Allocate memory and copy data into it.
+     * If optdata is != NULL, we have options instead of data. */
+    buf_t *p = buf_alloc (s->ip->pool, seglen, IP_ALIGNED(TCP_HRESERVE+NETIO_OVERLAP_HLEN) );
+    seg->p = p;
+    if (p == 0) {
+        tcp_debug ("tcp_new_seg: could not allocate %u bytes\n", seglen);
+        tcp_segment_free(seg);
+        return 0;
+    }
+
+    //overlap this buffer, to avoid unnesesary buf copy at tcp_output_segment
+    netif_io_overlap* over = netif_overlap_init(p);
+    over->options = nioo_ActionMutex;
+    over->action.signal = 0;
+
+    if (arg != 0) {
+        memcpy (p->payload, arg, seglen);
+        seg->len = seglen;
+    }
+    else
+        seg->len = 0;
+    seg->dataptr = p->payload;
+
+    /* Build TCP header. */
+    if (! buf_add_header (p, TCP_HLEN)) {
+        tcp_debug ("tcp_enqueue: no room for TCP header\n");
+        tcp_segment_free(seg);
+        return 0;
+    }
+    tcp_hdr_t* tcphdr = (tcp_hdr_t*) p->payload;
+    tcphdr->src = HTONS (s->local_port);
+    tcphdr->dest = HTONS (s->remote_port);
+    tcphdr->urgp = 0;
+    seg->tcphdr = tcphdr;
+
+    return seg;
+}
+
 /*
  * Send data or options or flags.
  * Allocate a new buf and append it to socket send queue.
@@ -23,7 +72,7 @@
  * Return 0 on error.
  */
 int
-tcp_enqueue (tcp_socket_t *s, void *arg, unsigned short len,
+tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len,
 	unsigned char flags, unsigned char *optdata, unsigned char optlen)
 {
 	tcp_segment_t *seg, *useg, *queue;
@@ -71,48 +120,17 @@ tcp_enqueue (tcp_socket_t *s, void *arg, unsigned short len,
 		seglen = left > s->mss ? s->mss : left;
 
 		/* Allocate memory for tcp_segment, and fill in fields. */
-		seg = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
+		seg = tcp_segment_new(s, ((arg!=0)? ptr : 0), (optdata)? optlen : seglen);
 		if (seg == 0) {
 			tcp_debug ("tcp_enqueue: cannot allocate tcp_segment\n");
 			goto memerr;
 		}
 
-		if (queue == 0) {
-			queue = seg;
-		} else {
-			/* Attach the segment to the end of the queued segments. */
-			for (useg = queue; useg->next != 0; useg = useg->next)
-				;
-			useg->next = seg;
-		}
-
-		/* Allocate memory and copy data into it.
-		 * If optdata is != NULL, we have options instead of data. */
-		seg->p = buf_alloc (s->ip->pool, optdata ? optlen : seglen,
-			16 + IP_HLEN + TCP_HLEN);
-		if (seg->p == 0) {
-			tcp_debug ("tcp_enqueue: could not allocate %u bytes\n",
-				optdata ? optlen : seglen);
-			goto memerr;
-		}
-		++queuelen;
-		if (arg != 0) {
-			memcpy (seg->p->payload, ptr, seglen);
-		}
-		seg->dataptr = seg->p->payload;
-		seg->len = seglen;
-
 		/* Build TCP header. */
-		if (! buf_add_header (seg->p, TCP_HLEN)) {
-			tcp_debug ("tcp_enqueue: no room for TCP header\n");
-			goto memerr;
-		}
-		seg->tcphdr = (tcp_hdr_t*) seg->p->payload;
-		seg->tcphdr->src = HTONS (s->local_port);
-		seg->tcphdr->dest = HTONS (s->remote_port);
-		seg->tcphdr->seqno = HTONL (seqno);
-		seg->tcphdr->urgp = 0;
-		seg->tcphdr->flags = flags;
+		tcp_hdr_t* tcphdr = (tcp_hdr_t*) seg->p->payload;
+		tcphdr->seqno = HTONL (seqno);
+		tcphdr->urgp = 0;
+		tcphdr->flags = flags;
 		/* don't fill in tcphdr->ackno and tcphdr->wnd until later */
 
 		if (optdata) {
@@ -120,14 +138,24 @@ tcp_enqueue (tcp_socket_t *s, void *arg, unsigned short len,
 			 * Options can thus only be sent in non data carrying
 			 * segments such as SYN|ACK. */
 			memcpy (seg->dataptr, optdata, optlen);
-			seg->tcphdr->offset = (5 + optlen / 4) << 4;
+			tcphdr->offset = (5 + optlen / 4) << 4;
 		} else {
-			seg->tcphdr->offset = 5 << 4;
+			tcphdr->offset = 5 << 4;
 		}
 		tcp_debug ("tcp_enqueue: queueing %lu:%lu (flags 0x%x)\n",
-			NTOHL (seg->tcphdr->seqno),
-			NTOHL (seg->tcphdr->seqno) + TCP_TCPLEN (seg),
+			NTOHL (tcphdr->seqno),
+			NTOHL (tcphdr->seqno) + TCP_TCPLEN (seg),
 			flags);
+
+        if (queue == 0) {
+            queue = seg;
+        } else {
+            /* Attach the segment to the end of the queued segments. */
+            for (useg = queue; useg->next != 0; useg = useg->next)
+                ;
+            useg->next = seg;
+        }
+        ++queuelen;
 
 		left -= seglen;
 		seqno += seglen;
@@ -202,6 +230,7 @@ memerr:
 	return 0;
 }
 
+// overlaped buffer seg->p seems shouldn`t be sopy, caller responded on it`s life
 static void
 tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 {
@@ -262,9 +291,13 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 	}
 	seg->tcphdr->chksum = n;
 
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over == 0) {
+        // overlaped buffer seems shouldn`t be sopy, caller responded on it`s life 
 	p = buf_copy (p);
 	if (! p)
 		return;
+    }//if (over == 0)
 /*	buf_print_tcp (p);*/
 
 	++s->ip->tcp_out_datagrams;
@@ -276,6 +309,8 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
  * Must be called with ip locked.
  * Return 0 on error.
  */
+//empty overlaped buffer seg->p managed by netif_output to free or hold in segment
+//  after tx 
 int
 tcp_output (tcp_socket_t *s)
 {
@@ -347,10 +382,22 @@ tcp_output (tcp_socket_t *s)
 			s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
 		}
 
+	    netif_io_overlap* over = netif_is_overlaped(p);
+		int tcpseglen = TCP_TCPLEN (seg);
+		if (tcpseglen == 0){
+            //empty buffer not acked, so we can free it right in after send
+	        if (over != 0) {
+	            //empty overlaped buffer should with no action, to manage netif_output
+	            //  to free it after tx
+	            over->options &= ~nioo_ActionMASK;
+	            over->options |= nioo_ActionNone;
+	        }
+		}
+
 		tcp_output_segment (seg, s);
 
 		/* put segment on unacknowledged list if length > 0 */
-		if (TCP_TCPLEN (seg) > 0) {
+		if (tcpseglen > 0) {
 			seg->next = 0;
 			if (s->unacked == 0) {
 				s->unacked = seg;
@@ -360,6 +407,9 @@ tcp_output (tcp_socket_t *s)
 				useg->next = seg;
 			}
 		} else {
+		    if (over != 0)
+                //empty overlaped buffer managed by netif_output to free it after tx
+		        seg->p = 0;
 			tcp_segment_free (seg);
 		}
 		seg = s->unsent;
