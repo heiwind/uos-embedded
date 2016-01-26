@@ -83,6 +83,12 @@ buf_t *buf_make_continuous (buf_t *h);
  */
 buf_t *buf_copy (buf_t *h);
 
+/* copy  len bytes from buffer src to single memory chunk dst
+ *      takes into account if src have less data then len
+ * \return - copyed data size 
+ * */
+unsigned buf_copy_continous(void* dst, buf_t *src, unsigned len);
+
 /*
  * Count number of bufs in a chain.
  */

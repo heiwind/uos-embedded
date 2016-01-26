@@ -195,3 +195,28 @@ buf_make_continuous (buf_t *p)
 	p->next = 0;
 	return p;
 }
+
+/* copy  len bytes from buffer src to single memory chunk dst 
+ * */
+unsigned buf_copy_continous(void* dst, buf_t *src, unsigned len)
+{
+    if ( !src || !dst)
+        return 0;
+
+    const buf_t * null = (buf_t *)0;
+
+    buf_t *q = src;
+    buf_t *next;
+    unsigned char* pd = (unsigned char*)dst;
+    /* Copy all other chunks to the end of the first chunk. */
+    for (; (q != null) && (len > 0); q = next) {
+        next = q->next;
+        if (q->len <= 0)
+            continue;
+        unsigned l = (q->len > len)?len:q->len;
+        memcpy (pd, q->payload, l);
+        len -= l;
+        pd  += l;
+    }
+    return pd - (unsigned char*)dst;
+}
