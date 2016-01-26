@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <getopt.h>
+#include <unistd.h>
+
 
 #define PORT        0xBBBB
 /* REPLACE with your server machine name*/
@@ -22,6 +24,7 @@ static const struct option options_def[] = {
     , { NULL, 0, NULL  , 0}
 };
 
+int
 main(argc, argv)
 int argc; char **argv;
 {

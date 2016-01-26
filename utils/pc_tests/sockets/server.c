@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define PORT 		0xBBBB
 #define MSG_SIZE		365
@@ -12,6 +14,7 @@
 int msg[MSG_SIZE];
 int	sz;
 
+int
 main()
 {
 	int 	 sd, sd_current, cc, fromlen, tolen;
