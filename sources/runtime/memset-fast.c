@@ -71,10 +71,19 @@ memset(void *m, unsigned char c, size_t n)
 
       while (n >= LBLOCKSIZE*4)
         {
+#ifdef MIPS32
+          unsigned long* us = (unsigned long*)s;
+          us[0] = buffer;
+          us[1] = buffer;
+          us[2] = buffer;
+          us[3] = buffer;
+          s += 4*LBLOCKSIZE;
+#else
           *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
           *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
           *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
           *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
+#endif
           n -= 4*LBLOCKSIZE;
         }
 
