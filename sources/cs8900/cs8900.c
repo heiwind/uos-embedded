@@ -3,6 +3,7 @@
 #include "mem/mem.h"
 #include "buf/buf.h"
 #include "cs8900/cs8900.h"
+#include <net/netif.h>
 
 #define ETH_MTU		1514
 #define ETH_MIN		(64-4)	/* LY: Минимальна длина пакета без CRC. */
@@ -570,9 +571,14 @@ cs8900_output (cs8900_t *u, buf_t *p, small_uint_t prio)
 /*debug_printf ("cs8900_output: transmit %d bytes, link failed\n", p->tot_len);*/
 failed: 	++u->netif.out_errors;
 		mutex_unlock (&u->netif.lock);
-		buf_free (p);
+		netif_free_buf(&u->netif, p);
 		return 0;
 	}
+
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over != 0){
+        over->asynco = nios_inprocess;
+    }
 
 	/* Transmit command */
 	cs_out (TXCMD, TX_START_ALL_BYTES | (CS8900_RUNT ? TX_RUNT : 0));
@@ -649,7 +655,7 @@ failed: 	++u->netif.out_errors;
 	u->netif.out_bytes += p->tot_len;
 
 	mutex_unlock (&u->netif.lock);
-	buf_free (p);
+	netif_free_buf (&u->netif, p);
 	return 1;
 }
 

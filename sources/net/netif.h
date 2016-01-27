@@ -86,6 +86,7 @@ typedef struct _netif_t {
 #define NETIF_SIP			31	/* SMDS */
 #define NETIF_FRAME_RELAY		32
 
+//! см. netif_free_buf
 typedef struct _netif_interface_t {
 	/* Передача пакета. */
 	bool_t (*output) (netif_t *u, struct _buf_t *p,
@@ -199,6 +200,8 @@ void netif_overlap_assign_cb(buf_t *p, unsigned options
                                 , netif_callback cb, void* msg);
 
 //используется интерфейсами для освобождения буфера
+//!!! начиная с версии "+tcp:out:nocopy" обязательно использовать этот метод, 
+//    чтобы ТСП-стек работоспособен был
 void netif_free_buf(netif_t *u, buf_t *p);
 
 

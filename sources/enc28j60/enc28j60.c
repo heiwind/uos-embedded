@@ -15,6 +15,7 @@
 #include <stream/stream.h>
 #include <mem/mem.h>
 #include <buf/buf.h>
+#include <net/netif.h>
 #include <enc28j60/eth.h>
 #include <enc28j60/regs.h>
 
@@ -417,7 +418,7 @@ chip_transmit_packet (enc28j60_t *u, buf_t *p)
 
 	++u->netif.out_packets;
 	u->netif.out_bytes += len;
-	buf_free (p);
+	netif_free_buf (&u->netif, p);
 }
 
 /*
@@ -436,10 +437,15 @@ enc28j60_output (enc28j60_t *u, buf_t *p, small_uint_t prio)
 /*debug_printf ("enc28j60_output: transmit %d bytes, link failed\n", p->tot_len);*/
 		++u->netif.out_errors;
 		mutex_unlock (&u->netif.lock);
-		buf_free (p);
+		netif_free_buf (&u->netif, p);
 		return 0;
 	}
 /*debug_printf ("enc28j60_output: transmit %d bytes\n", p->tot_len);*/
+
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over != 0){
+        over->asynco = nios_inprocess;
+    }
 
 	if (chip_read (u, ECON1) & ECON1_TXRTS) {
 		/* Занято, ставим в очередь. */
@@ -447,7 +453,7 @@ enc28j60_output (enc28j60_t *u, buf_t *p, small_uint_t prio)
 			++u->netif.out_discards;
 			mutex_unlock (&u->netif.lock);
 /*			debug_printf ("enc28j60_output: overflow\n");*/
-			buf_free (p);
+			netif_free_buf (&u->netif, p);
 			return 0;
 		}
 		buf_queue_put (&u->outq, p);
