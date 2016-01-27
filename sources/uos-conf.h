@@ -160,8 +160,21 @@
  ************************************************************************** */
 //#define UOS_ON_NEW_TASK(t)
 //#define UOS_ON_DESTROY_TASK(t, message)
-//#define UOS_ON_SWITCH_TOTASK(t) uos_on_task_switch(t)
-//#define UOS_ON_TIMER(t)         uos_on_timer_hook(t)
+
+//#define UOS_WITH_NEWLIB
+//!	Newlib port: см. posix/sys/newlib.h
+//этот хук на переключение задач УОС, его надо назначить на uos-conf:UOS_ON_SWITCH_TOTASK(t) или
+//	использовать в своем хуке
+#ifdef UOS_WITH_NEWLIB
+//	NewLib использует _impure_ptr для связи с контекстом нитки.
+//	!!! позаботьтесь сами о том чтобы каждая нитка имела свой newlib-контест -  _reent,
+//		задача этого хука - получать этот контекст в _impure_ptr
+#define UOS_ON_SWITCH_TOTASK(t) newlib_on_task_switch(t)
+#else
+#define UOS_ON_SWITCH_TOTASK(t) uos_on_task_switch(t)
+#endif
+
+#define UOS_ON_TIMER(t)         uos_on_timer_hook(t)
 
 
 /**\~russian
