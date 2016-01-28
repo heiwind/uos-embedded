@@ -143,7 +143,8 @@ int fscanf (FILE *fd, const char *fmt, ...)
 	{ return 0; }
 
 INLINE_STDC
-int fprintf (FILE *fd, const char *fmt, ...) __THROW
+__NOTHROW
+int fprintf (FILE *fd, const char *fmt, ...) __noexcept
 {
 	va_list args;
 	int err;
@@ -175,7 +176,9 @@ INLINE_STDC int feof (FILE *stream)
 INLINE_STDC int fflush (FILE *stream)
     { return 0; }
 
-INLINE_STDC int fputs (const char *s, FILE *stream)
+INLINE_STDC
+__NOTHROW
+int fputs (const char *s, FILE *stream) __noexcept
     { return 0; }
 
 INLINE_STDC char *fgets (char *s, int size, FILE *stream)
@@ -195,25 +198,30 @@ INLINE_STDC int vfprintf (FILE *stream, const char *format, va_list ap)
 #if (!defined(to_stream)) || defined(__cplusplus) 
 
 INLINE_STDC
-int putchar (int c)
+__NOTHROW
+int putchar (int c) __noexcept
     { return c; }
 
 INLINE_STDC
-int getchar (void)
+__NOTHROW
+int getchar (void) __noexcept
     { return -1; }
 
 //peekchar
 
 INLINE_STDC
-int puts (const char *s)
+__NOTHROW
+int puts (const char *s) __noexcept
     { return 0; }
 
 INLINE_STDC
-char *gets (char *s)
+__NOTHROW
+char *gets (char *s) __noexcept
     { return 0; }
 
 INLINE_STDC
-int printf (const char *fmt, ...) __THROW
+__NOTHROW
+int printf (const char *fmt, ...) __noexcept
 {
     va_list args;
     int err;
@@ -238,26 +246,31 @@ int printf (const char *fmt, ...) __THROW
 #endif
 
 INLINE_STDC
-int putchar (int c) __THROW
+__NOTHROW
+int putchar (int c) __noexcept
     { stdout->interface->putc(stdout, c); return 0 ;}
 
 INLINE_STDC
-int getchar (void) __THROW
+__NOTHROW
+int getchar (void) __noexcept
     { return stdin->interface->getc(stdin); }
 
 //peekchar
 
 INLINE_STDC
-int puts (const char *s) __THROW
+__NOTHROW
+int puts (const char *s) __noexcept
     { return stream_puts (to_stream (stdout), s);}
 
 //this is posix-incompatible, use fgets better  
 INLINE_STDC
-char *gets (char *s, int len) __THROW
+__NOTHROW
+char *gets (char *s, int len) __noexcept
     { return (char*) stream_gets(to_stream (stdin), (unsigned char*)s, len);}
 
 INLINE_STDC
-int printf (const char *fmt, ...) __THROW
+__NOTHROW
+int printf (const char *fmt, ...) __noexcept
 {
     va_list args;
     int err;

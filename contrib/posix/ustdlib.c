@@ -60,6 +60,8 @@ int fputs (const char *s, FILE *stream)
 {
 	if (stream == (FILE*)stdout)
 		return stream_puts (to_stream (stdout), s);
+	else if (stream == (FILE*)stderr)
+		return stream_puts (to_stream (stderr), s);
 	return 0;
 }
 
@@ -76,18 +78,18 @@ int fputs (const char *s, FILE *stream)
 
 #ifdef __cplusplus
 extern "C"{
-int vsprintf (char *buf, const char *fmt, va_list args) __THROW;
-int sprintf (char *buf, const char *fmt, ...) __THROW;
+int __NOTHROW vsprintf (char *buf, const char *fmt, va_list args);
+int __NOTHROW sprintf (char *buf, const char *fmt, ...);
 }
 #endif // __cplusplus
 
-int vsprintf (char *buf, const char *fmt, va_list args) __THROW
+int __NOTHROW vsprintf (char *buf, const char *fmt, va_list args)
 {
 	return vsnprintf((unsigned char*)buf, INT_MAX, fmt, args);
 }
 
 //* для совместимости с newlib как минимум надо реализовать этоти функции
-int sprintf (char *buf, const char *fmt, ...) __THROW
+int __NOTHROW sprintf (char *buf, const char *fmt, ...)
 {
     va_list args;
     int err;

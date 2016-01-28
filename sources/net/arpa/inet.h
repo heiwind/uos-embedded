@@ -12,8 +12,8 @@ extern "C" {
 /** returns the dots-and-numbers string in a static buffer that is overwritten 
  * with each call to the function.
  * */
-char*   inet_iptoasn( ip_addr ip, char *cp, unsigned cplen) __THROW;
-int     inet_atoip(const char *cp, ip_addr *ip) __THROW;
+__noexcept char*   inet_iptoasn( ip_addr ip, char *cp, unsigned cplen) __NOTHROW;
+__noexcept int     inet_atoip(const char *cp, ip_addr *ip) __NOTHROW;
 
 
 

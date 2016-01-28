@@ -47,14 +47,6 @@
 #define __nonnull(seq) __attribute__((nonull seq )) 
 #endif
 
-#ifndef __THROW
-#   ifdef __cplusplus
-#       define __THROW throw()
-#   else
-#       define __THROW 
-#   endif
-#endif
-
 #ifndef __CONST
 #define __CONST __attribute__ ((__const__))
 #endif
@@ -110,6 +102,18 @@
 # define __glibc_likely(cond)   (cond)
 #endif
 
+//* __NOTHROW declares that routine not rises exception, in c++11 same as noexcept
+#ifndef __NOTHROW
+# if __cplusplus >= 201103L
+//since GCC 4.7 supports C++11 noexcept keyword use it with stantart gcc nothrow attribute
+#  define __NOTHROW		__attribute__((nothrow))
+#  define __noexcept	noexcept
+# else
+#  define __NOTHROW		__attribute__((nothrow))
+#  define __noexcept
+# endif
+#endif
+
 
 
 /**\~rissian эти модификаторы предназначены для более аккуратной линковки кода:
@@ -136,6 +140,11 @@
 
 #ifndef DATA_TASK
 #define DATA_TASK
+#endif
+
+# if __cplusplus >= 201103L
+// GNU disables typeof in C++11, must use decltype
+#define typeof(x)	decltype(x)
 #endif
 
 

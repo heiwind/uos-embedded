@@ -31,24 +31,28 @@ extern mem_pool_t *uos_memory;
 #define strdup(str)			mem_strdup (POSIX_memory, str)
 
 INLINE_STDC
-void* realloc (void* ptr, size_t size) __THROW {
+__NOTHROW
+void* realloc (void* ptr, size_t size) __noexcept {
 	return mem_realloc (ptr, size);
 }
 
 INLINE_STDC
-void* malloc(size_t size) __THROW {
+__NOTHROW
+void* malloc(size_t size)  __noexcept {
 	return mem_alloc (POSIX_memory, size);
 }
 
 INLINE_STDC
-void free( void* ptr) __THROW {
+__NOTHROW
+void free( void* ptr)  __noexcept {
 	mem_free (ptr);
 }
 
 /* Allocate SIZE bytes on a page boundary.  The storage cannot be freed.  */
 INLINE_STDC
 __attribute__((warning("uos can`t aligned memory alloc!!!")))
-void *valloc (size_t __size)  __THROW
+__NOTHROW
+void* valloc (size_t __size) __noexcept
 {
     return mem_alloc (POSIX_memory, __size);
 }
@@ -56,7 +60,8 @@ void *valloc (size_t __size)  __THROW
 /* Allocate memory of SIZE bytes with an alignment of ALIGNMENT.  */
 INLINE_STDC
 __attribute__((warning("uos can`t aligned memory alloc!!!")))
-int posix_memalign (void **__memptr, size_t __alignment, size_t __size) __THROW
+__NOTHROW
+int posix_memalign (void **__memptr, size_t __alignment, size_t __size) __noexcept
 {
     void* res = mem_alloc (POSIX_memory, __size);
     if ( res != NULL){
@@ -69,7 +74,8 @@ int posix_memalign (void **__memptr, size_t __alignment, size_t __size) __THROW
 /* ISO C variant of aligned allocation.  */
 INLINE_STDC
 __attribute__((warning("uos can`t aligned memory alloc!!!")))
-void *aligned_alloc (size_t __alignment, size_t __size) __THROW
+__NOTHROW
+void * aligned_alloc (size_t __alignment, size_t __size) __noexcept
 {
     return mem_alloc (POSIX_memory, __size);
 }
@@ -92,7 +98,8 @@ void exit(int status)
 
 
 INLINE_STDC
-void abort() __THROW
+__NOTHROW
+void abort() __noexcept
 	{ uos_halt(0); }
 
 
@@ -105,19 +112,23 @@ void abort() __THROW
 #include <new>
 
 INLINE_STDC
-void operator delete (void *ptr)
+__NOTHROW
+void operator delete (void *ptr) __noexcept
     { mem_free (ptr); }
 
 INLINE_STDC
-void operator delete[] (void *ptr)
+__NOTHROW
+void operator delete[] (void *ptr) __noexcept
     { mem_free (ptr); }
 
 INLINE_STDC
-void *operator new (unsigned size)
+__NOTHROW
+void *operator new (unsigned size) __noexcept
     { return mem_alloc (POSIX_memory, size); }
 
 INLINE_STDC
-void *operator new[] (unsigned size)
+__NOTHROW
+void *operator new[] (unsigned size) __noexcept
     { return mem_alloc (POSIX_memory, size); }
 
 #endif

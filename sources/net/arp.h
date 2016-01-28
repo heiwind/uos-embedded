@@ -22,8 +22,8 @@ typedef union __attribute__ ((packed,aligned(4))) _mac_addr{
     unsigned char   ucs[6];
 } mac_addr;
 
-INLINE __CONST 
-mac_addr macadr_4l(unsigned h, uint32_t l) __THROW 
+INLINE
+mac_addr __CONST macadr_4l(unsigned h, uint32_t l)
 {
     mac_addr res;
     res.val.l = l;
@@ -31,8 +31,8 @@ mac_addr macadr_4l(unsigned h, uint32_t l) __THROW
     return res;
 }
 
-INLINE __CONST 
-mac_addr macadr_4ucs(const unsigned char* x) __THROW 
+INLINE
+mac_addr __PURE macadr_4ucs(const unsigned char* x)
 {
     mac_addr res;
 #if CPU_ACCESSW_ALIGNMASK > 0
@@ -64,18 +64,20 @@ mac_addr macadr_4ucs(const unsigned char* x) __THROW
     return res;
 }
 
-INLINE mac_addr macadr_assign(      mac_addr* __restrict__ dst
+INLINE
+mac_addr macadr_assign(      mac_addr* __restrict__ dst
                             , const mac_addr* __restrict__ src
-                            ) __THROW
+                            )
 {
     dst->val.l = src->val.l;
     dst->val.h = src->val.h;
     return *dst;
 }
 
-INLINE unsigned char* macadr_assign_ucs(      unsigned char* __restrict__ dst
+INLINE
+unsigned char* macadr_assign_ucs(      unsigned char* __restrict__ dst
                                 , const unsigned char* __restrict__ src
-                                ) __THROW
+                                )
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( (((uintptr_t)dst|(uintptr_t)src)&CPU_ACCESSW_ALIGNMASK) == 0){
@@ -107,18 +109,18 @@ INLINE unsigned char* macadr_assign_ucs(      unsigned char* __restrict__ dst
     return dst;
 }
 
-INLINE 
-bool_t __CONST macadr_is_same(    const mac_addr* a
+INLINE
+bool_t __PURE macadr_is_same(    const mac_addr* a
                                 , const mac_addr* b
-                                ) __THROW
+                                )
 {
         return (a->val.l == b->val.l) && (a->val.h == b->val.h);
 }
 
-INLINE 
-bool_t macadr_is_same_ucs( const unsigned char* __restrict__ a
+INLINE __NOTHROW
+bool_t __PURE macadr_is_same_ucs( const unsigned char* __restrict__ a
                         ,   const unsigned char* __restrict__ b
-                        ) __THROW
+                        ) __noexcept
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( (((uintptr_t)a|(uintptr_t)b)&CPU_ACCESSW_ALIGNMASK) == 0){
@@ -150,14 +152,14 @@ bool_t macadr_is_same_ucs( const unsigned char* __restrict__ a
 #endif
 }
 
-INLINE  
-bool_t __CONST macadr_not0(const mac_addr a) __THROW
+INLINE
+bool_t __CONST macadr_not0(const mac_addr a)
 {
         return ((a.val.l|a.val.h) != 0)? true : false;
 }
 
-INLINE  
-bool_t macadr_not0_ucs(const unsigned char* a) __THROW
+INLINE __NOTHROW
+bool_t __PURE macadr_not0_ucs(const unsigned char* a) __noexcept
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){

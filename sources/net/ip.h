@@ -90,16 +90,16 @@ typedef ip_addr_t       ip_addr_const;
 typedef ip_addr ip_naddr;
 typedef const unsigned char* const_ip4_ucs;
 
-INLINE __CONST 
-ip_addr ipadr_4l(uint32_t x) __THROW 
+INLINE
+ip_addr __CONST ipadr_4l(uint32_t x)
 {
     ip_addr res;
     res.val = x;
     return res;
 }
 
-INLINE 
-ip_addr ipadr_4ucs(const unsigned char* x) __THROW 
+INLINE
+ip_addr __PURE ipadr_4ucs(const unsigned char* x)
 {
     ip_addr res;
 #if CPU_ACCESSW_ALIGNMASK > 0
@@ -117,25 +117,28 @@ ip_addr ipadr_4ucs(const unsigned char* x) __THROW
     return res;
 }
 
-INLINE ip_addr ipadr_assign(        ip_addr* __restrict__ dst
+INLINE
+ip_addr ipadr_assign(        ip_addr* __restrict__ dst
                             , const ip_addr* __restrict__ src
-                            ) __THROW
+                            )
 {
     dst->val = src->val;
     return *dst;
 }
 
-INLINE ip_addr ipadr_assign_l(        ip_addr*  dst
+INLINE
+ip_addr ipadr_assign_l(        ip_addr*  dst
                             , const ip_addr_t x
-                            ) __THROW
+                            )
 {
     dst->val = x;
     return *dst;
 }
 
-INLINE unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
+INLINE __NOTHROW
+unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
                                 , const unsigned char* __restrict__ src
-                                ) __THROW
+                                )
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ((((uintptr_t)dst|(uintptr_t)src)&CPU_ACCESSW_ALIGNMASK) == 0){
@@ -159,9 +162,10 @@ INLINE unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
     return dst;
 }
 
-INLINE unsigned char* ipadr_assignl_ucs( unsigned char* dst
+INLINE __NOTHROW
+unsigned char* ipadr_assignl_ucs( unsigned char* dst
                                         , ip_addr_t x
-                                ) __THROW
+                                ) __noexcept
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)dst & CPU_ACCESSW_ALIGNMASK) == 0){
@@ -181,10 +185,10 @@ INLINE unsigned char* ipadr_assignl_ucs( unsigned char* dst
 
 //!!! ip==0 - дает всегда true в сравнении
 #ifdef IPREF_IS_VAL
-INLINE 
+INLINE
 bool_t __CONST ipadr_is_same(     ip_addr_const a_or0
                                 , ip_addr_const b
-                                ) __THROW
+                                )
 {
         if (a_or0 != 0)
         if (b != 0)
@@ -192,10 +196,10 @@ bool_t __CONST ipadr_is_same(     ip_addr_const a_or0
         return true;
 }
 
-INLINE 
+INLINE
 bool_t __CONST ipadr_is_same_l(   ip_addr_const a
                                 , const ip_addr_t b
-                                ) __THROW
+                                )
 {
         if (a != 0)
         if (b != 0)
@@ -204,10 +208,10 @@ bool_t __CONST ipadr_is_same_l(   ip_addr_const a
 }
 #endif
 
-INLINE 
-bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
+INLINE __NOTHROW
+bool_t __PURE ipadr_is_same_ucs( const unsigned char* __restrict__ a
                         , const unsigned char* __restrict__ b
-                        ) __THROW
+                        )  __noexcept
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( (((uintptr_t)a|(uintptr_t)b)&CPU_ACCESSW_ALIGNMASK) == 0){
@@ -239,10 +243,10 @@ bool_t ipadr_is_same_ucs( const unsigned char* __restrict__ a
 
 #ifdef IPREF_IS_VAL
 // тоже самое, но false eсли  a==NULL
-INLINE 
-bool_t ipadr_or0_is_same( ip_addr_const  a_or0
+INLINE __NOTHROW
+bool_t __CONST ipadr_or0_is_same( ip_addr_const  a_or0
                         , ip_addr_const  b
-                        ) __THROW
+                        ) __noexcept
 {
     if (a_or0 != 0)
         return ipadr_is_same(a_or0, b);
@@ -251,10 +255,10 @@ bool_t ipadr_or0_is_same( ip_addr_const  a_or0
 }
 
 // тоже самое, но true eсли  a==NULL
-INLINE 
-bool_t ipadr_is_same_or0( ip_addr_const  a_or0
+INLINE __NOTHROW
+bool_t __CONST ipadr_is_same_or0( ip_addr_const  a_or0
                         , ip_addr_const  b
-                        ) __THROW 
+                        ) __noexcept
 {
     if (a_or0 != 0)
         return ipadr_is_same(a_or0, b);
@@ -263,10 +267,10 @@ bool_t ipadr_is_same_or0( ip_addr_const  a_or0
 }
 #endif
 
-INLINE 
-bool_t ipadr_or0_is_same_ucs( const unsigned char* __restrict__ a_or0
+INLINE __NOTHROW
+bool_t __PURE ipadr_or0_is_same_ucs( const unsigned char* __restrict__ a_or0
                             , const unsigned char* __restrict__ b
-                            ) __THROW
+                            ) __noexcept
 {
     if (a_or0 != NULL)
         return ipadr_is_same_ucs(a_or0, b);
@@ -275,10 +279,10 @@ bool_t ipadr_or0_is_same_ucs( const unsigned char* __restrict__ a_or0
 }
 
 
-INLINE 
-bool_t ipadr_is_same_or0_ucs( const unsigned char* __restrict__ a_or0
+INLINE __NOTHROW
+bool_t __PURE ipadr_is_same_or0_ucs( const unsigned char* __restrict__ a_or0
                             , const unsigned char* __restrict__ b
-                            ) __THROW
+                            ) __noexcept
 {
     if (a_or0 != NULL)
         return ipadr_is_same_ucs(a_or0, b);
@@ -287,21 +291,21 @@ bool_t ipadr_is_same_or0_ucs( const unsigned char* __restrict__ a_or0
 }
 
 #ifdef IPREF_IS_VAL
-INLINE  
-bool_t __CONST ipadr_not0(ip_addr_const a) __THROW
+INLINE
+bool_t __CONST ipadr_not0(ip_addr_const a)
 {
         return (a != 0)? true : false;
 }
 
-INLINE 
-bool_t __CONST ipadr_is_broadcast(ip_addr_const a) __THROW
+INLINE
+bool_t __CONST ipadr_is_broadcast(ip_addr_const a)
 {
         return ((a == 0) || (~a == 0)) ? true : false;
 }
 #endif
 
-INLINE  
-bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
+INLINE
+bool_t __PURE ipadr_not0_ucs(const unsigned char* a)
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){
@@ -316,8 +320,8 @@ bool_t ipadr_not0_ucs(const unsigned char* a) __THROW
     return tmp != 0;
 }
 
-INLINE 
-bool_t __CONST ipadr_is_broadcast_ucs(const unsigned char* a) __THROW
+INLINE
+bool_t __PURE ipadr_is_broadcast_ucs(const unsigned char* a)
 {
 #if CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){
