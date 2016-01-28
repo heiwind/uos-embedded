@@ -45,7 +45,7 @@ tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
     seg->datacrc = 0;
     seg->dataptr = p->payload;
     if (arg != 0) {
-        unsigned sum = memcpy_crc16_inet(CRC16_INET_INIT, p->payload, arg, seglen);
+        unsigned short sum = memcpy_crc16_inet(CRC16_INET_INIT, p->payload, arg, seglen);
         if (seglen & 1) {
             /* Invert checksum bytes. */
             sum = (sum << 8) | (unsigned char) (sum >> 8);
