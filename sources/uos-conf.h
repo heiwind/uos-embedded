@@ -141,7 +141,7 @@
 /** \~russian
  * NDEBUG отключает дебажный вывод функций assert
  */
-#define NDEBUG
+//#define NDEBUG
 
 /** \~russian
  * NO_DEBUG_PRINT отключает дебажный вывод функций debug_XXX
@@ -171,10 +171,10 @@
 //		задача этого хука - получать этот контекст в _impure_ptr
 #define UOS_ON_SWITCH_TOTASK(t) newlib_on_task_switch(t)
 #else
-#define UOS_ON_SWITCH_TOTASK(t) uos_on_task_switch(t)
+//#define UOS_ON_SWITCH_TOTASK(t) uos_on_task_switch(t)
 #endif
 
-#define UOS_ON_TIMER(t)         uos_on_timer_hook(t)
+//#define UOS_ON_TIMER(t)         uos_on_timer_hook(t)
 
 
 /**\~russian
