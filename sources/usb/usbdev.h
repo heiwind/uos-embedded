@@ -80,6 +80,7 @@
 #define EP_STATE_NACK               0x100
 #define EP_STATE_STALL              0x200
 #define EP_STATE_FROM_SOF           0x400
+#define EP_STATE_BEGIN_IN           0x800
 
 #define EP_WAIT_IN_STATES           0x070
 
@@ -187,6 +188,8 @@ typedef struct _ep_in_t {
     int             pid;            // PID для следующей выдачи
     int             shorter_len;    // Признак ответа хосту пакетом меньшей длины, чем запрошено
     
+    int 			active;			// Признак активной BULK IN EP
+
     usbdev_specific_t   specific_handler;
     void *              specific_tag;
 } ep_in_t;
