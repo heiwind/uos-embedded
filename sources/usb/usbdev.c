@@ -267,6 +267,7 @@ void usbdevhal_reset (usbdev_t *u)
         u->ep_out[i].state = EP_STATE_DISABLED;
         u->ep_in[i].state = EP_STATE_DISABLED;
         u->ep_in[i].pid = 0;
+        u->ep_in[i].active = 0;
     }
     //u->state = USBDEV_STATE_DEFAULT;
     u->ep_out[0].state = EP_STATE_WAIT_SETUP;
