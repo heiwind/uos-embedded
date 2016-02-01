@@ -3,6 +3,12 @@
 
 #include <runtime/sys/uosc.h>
 
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* This prints an "Assertion failed" message and aborts. */
 #ifdef NDEBUG
 #   define __assert_fail(a,b,c,d) __assert_fail_ndebug()
@@ -12,6 +18,10 @@
     void __assert_fail (const char *expr, const char *file,
                         unsigned line, const char *func);// __NORETURN;
     void __assert_msg(const char *msg, ...);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 /*

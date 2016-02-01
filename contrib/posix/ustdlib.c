@@ -10,10 +10,10 @@
  */
 #define INLINE_STDC
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
+#include "stdlib.h"
+#include "stdio.h"
+#include "unistd.h"
+#include "string.h"
 
 #ifndef __cplusplus
 
@@ -102,8 +102,27 @@ int __NOTHROW sprintf (char *buf, const char *fmt, ...)
 
 
 
+/**The __cxa_pure_virtual function is an error handler that is invoked when a pure virtual function is called.
+ * If you are writing a C++ application that has pure virtual functions you must supply your own __cxa_pure_virtual
+ * error handler function. For example:
+ * extern "C" void __cxa_pure_virtual() { while (1); }
+ */
+#include <runtime/assert.h>
+
+//extern "C"
+void __cxa_pure_virtual() {
+	assert(0);
+}
+
+//extern "C"
+void __cxa_deleted_virtual() {
+	assert(0);
+}
+
+
 
 #include <sys/newlib.h>
 struct _reent *_impure_ptr __ATTRIBUTE_IMPURE_PTR__;
+
 
 
