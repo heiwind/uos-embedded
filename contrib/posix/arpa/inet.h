@@ -15,14 +15,14 @@ extern "C" {
 /** returns the dots-and-numbers string in a static buffer that is overwritten 
  * with each call to the function.
  * */
-INLINE 
-char*   inet_ntoa( in_addr ip) __THROW
+INLINE __NOTHROW
+char*   inet_ntoa( in_addr ip) __noexcept
 {
     return inet_iptoasn(ipadr_4l(ip.s_addr) , (char*)NULL, 0);
 }
 
-INLINE 
-int     inet_aton(const char *cp, in_addr *ip) __THROW
+INLINE __NOTHROW
+int     inet_aton(const char *cp, in_addr *ip) __noexcept
 {
     ip_addr res;
     res.val = 0;
@@ -32,7 +32,8 @@ int     inet_aton(const char *cp, in_addr *ip) __THROW
     return res.val;
 }
 
-in_addr_t inet_addr (const char *__cp) __THROW
+INLINE __NOTHROW
+in_addr_t inet_addr (const char *__cp) __noexcept
 {
     ip_addr res;
     res.val = 0;

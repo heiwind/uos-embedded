@@ -35,7 +35,7 @@ struct sched_param
 
 /* Get maximum priority value for a scheduler.  */
 INLINE __CONST
-int sched_get_priority_max (int __algorithm) __THROW
+int sched_get_priority_max (int __algorithm)
 {
 #ifdef TASK_PRIORITY_MAX
     return TASK_PRIORITY_MAX;
@@ -45,8 +45,8 @@ int sched_get_priority_max (int __algorithm) __THROW
 }
 
 /* Get minimum priority value for a scheduler.  */
-INLINE __CONST 
-int sched_get_priority_min (int __algorithm) __THROW
+INLINE __CONST
+int sched_get_priority_min (int __algorithm)
 {
 #ifdef TASK_PRIORITY_MIN
     return TASK_PRIORITY_MIN;

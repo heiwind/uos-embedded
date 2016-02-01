@@ -10,8 +10,9 @@
 typedef unsigned int socklen_t;
 typedef struct sockaddr_in sockaddr;
 
-INLINE 
-int getpeername(int/* base_socket_t* */ socket, sockaddr *address, socklen_t *address_len) __THROW
+INLINE __NOTHROW
+int getpeername(int/* base_socket_t* */ socket, sockaddr *address, socklen_t *address_len)
+__noexcept
 {
     base_socket_t* s = (base_socket_t*)socket;
     if (s->ip == NULL) return -1;
@@ -31,9 +32,10 @@ int getpeername(int/* base_socket_t* */ socket, sockaddr *address, socklen_t *ad
 
    This function is a cancellation point and therefore not marked with
    __THROW.  */
-INLINE
+INLINE __NOTHROW
 int accept (int /* base_socket_t* */ socket
-            , sockaddr *address, socklen_t *address_len) __THROW
+            , sockaddr *address, socklen_t *address_len)
+__noexcept
 {
     tcp_socket_t* s = (tcp_socket_t*)socket;
     if (s->ip == NULL) return -1;

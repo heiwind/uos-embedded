@@ -65,7 +65,6 @@ typedef int pthread_attr_t;
 /* Set thread name visible in the kernel and its interfaces.  */
 INLINE  
 int pthread_setname_np (pthread_t __target_thread, const char *__name) 
-     __THROW //__nonnull((2))
 {
     __target_thread->name = __name;
     return 0;
@@ -97,30 +96,30 @@ void pthread_exit (void *__retval)
 
 /* Set the scheduling parameters for TARGET_THREAD according to POLICY
    and *PARAM.  */
-INLINE 
+INLINE __NOTHROW
 int pthread_setschedparam (pthread_t __target_thread, int __policy,
                   const struct sched_param *__param)
-     __THROW //__nonnull((3))
+__noexcept //__nonnull((3))
 {
     task_set_priority(__target_thread, __param->__sched_priority);
     return 0;
 }
 
 /* Set the scheduling priority for TARGET_THREAD.  */
-INLINE
+INLINE __NOTHROW
 int pthread_setschedprio (pthread_t __target_thread, int __prio)
-     __THROW
+__noexcept
 {
     task_set_priority(__target_thread, __prio);
     return 0;
 }
 
 /* Return in *PARAM the scheduling parameters of *ATTR.  */
-INLINE 
+INLINE __NOTHROW
 int pthread_attr_getschedparam (pthread_t __target_thread
                         , int* __policy
                         , struct sched_param *__restrict __param)
- __THROW //__nonnull ((2, 3))
+__noexcept //__nonnull ((2, 3))
 {
     __param->__sched_priority = task_priority(__target_thread);
     *__policy = SCHED_RR;
