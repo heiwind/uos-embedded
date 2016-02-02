@@ -80,7 +80,6 @@
 #define EP_STATE_NACK               0x100
 #define EP_STATE_STALL              0x200
 #define EP_STATE_FROM_SOF           0x400
-#define EP_STATE_BEGIN_IN           0x800
 
 #define EP_WAIT_IN_STATES           0x070
 
@@ -286,4 +285,7 @@ void usbdev_ack_in (usbdev_t *u, unsigned ep_n, const void *data, int size);
 void usbdev_set_ack (usbdev_t *u, unsigned ep_n);
 int  usbdev_recv (usbdev_t *u, unsigned ep_n, void *data, int size);
 
+// Активация BULK EP
+void usbdev_activate_ep(usbdev_t *u, unsigned ep_n);
+void usbdev_deactivate_ep(usbdev_t *u, unsigned ep_n);
 #endif
