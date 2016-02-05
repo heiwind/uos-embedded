@@ -119,7 +119,7 @@ void udelay (unsigned usec)
 
         /* This comparison is valid only when using a signed type. */
         now = SYS_TIMER->TIM_CNT;
-        if ((int) (final - now) < 0)
+        if ((int) (final - now) < 0) // Считаем вверх
             break;
     }
 #else
@@ -140,12 +140,31 @@ void udelay (unsigned usec)
         }
     }
 
-    unsigned load = ARM_SYSTICK->LOAD & 0xFFFFFF;
-    unsigned now = ARM_SYSTICK->VAL & 0xFFFFFF;
+    uint32_t load = ARM_SYSTICK->LOAD & 0xFFFFFF;
+
+    uint32_t now;
+
+    if (!ticks) {
+        ctrl = ARM_SYSTICK->CTRL;
+        now = ARM_SYSTICK->VAL & 0xFFFFFF;
+        ctrl = ARM_SYSTICK->CTRL;
+        if (ctrl & ARM_SYSTICK_CTRL_COUNTFLAG) {
+            now = ARM_SYSTICK->VAL & 0xFFFFFF;
+        }
+    } else {
+        prev_ticks = ticks;
+        now = ARM_SYSTICK->VAL & 0xFFFFFF;
+        ticks = __timer_ticks_uos;
+        if (prev_ticks != ticks) {
+            now = ARM_SYSTICK->VAL & 0xFFFFFF;
+            prev_ticks = ticks;
+        }
+    }
+
 #ifdef SETUP_HCLK_HSI
-    unsigned final = now - (usec-1) * 8;
+    uint32_t final = now - (usec-1) * 8;
 #else
-    unsigned final = now - (usec-1) * (KHZ / 1000); // usec-1 нивелирует накладные раходы (вызов функции и т.п.)
+    uint32_t final = now - (usec-1) * (KHZ / 1000); // usec-1 нивелирует накладные раходы (вызов функции и т.п.)
 #endif
     for (;;) {
         if (!ticks) {
@@ -168,7 +187,7 @@ void udelay (unsigned usec)
         }
         /* This comparison is valid only when using a signed type. */
         now = ARM_SYSTICK->VAL & 0xFFFFFF;
-        if ((int) (now - final) < 0)
+        if ((int) (now - final) < 0) // Считаем вниз
             break;
     }
 #endif
