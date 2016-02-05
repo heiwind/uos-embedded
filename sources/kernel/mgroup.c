@@ -54,6 +54,7 @@ mutex_group_add (mutex_group_t *g, mutex_t *m)
 	s->group = g;
 	s->lock = m;
 	s->message = 0;
+    //s->active = 0;
 	++g->num;
 	return 1;
 }
@@ -75,6 +76,7 @@ mutex_group_listen (mutex_group_t *g)
 	for (s = g->slot + g->num; --s >= g->slot; ) {
 		assert (list_is_empty (&s->item));
 		s->message = 0;
+	    s->active = 0;
 		list_prepend (&s->lock->groups, &s->item);
 	}
 	arch_intr_restore (x);
@@ -96,7 +98,7 @@ mutex_group_unlisten (mutex_group_t *g)
 	assert_task_good_stack(task_current);
 	for (s = g->slot + g->num; --s >= g->slot; ) {
 		assert (! list_is_empty (&s->item));
-		s->message = 0;
+		//s->message = 0;
 		list_unlink (&s->item);
 	}
 	arch_intr_restore (x);
