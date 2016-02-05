@@ -20,7 +20,14 @@ extern "C" {
  * \arg arg - (etimer*) инспектируемое событие
  * \return  true - если событие сработало
  * */
-bool_t etimer_is_timeout(void* arg);
+//#ifndef INLINE_ETIMER
+//#define INLINE_ETIMER extern inline
+//#endif
+INLINE
+bool_t etimer_is_timeout(void* arg){
+    etimer* t = (etimer*)arg;
+    return (t->cur_time <= 0);
+}
 
 /** \~russian
  * 

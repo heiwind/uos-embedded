@@ -112,6 +112,11 @@ extern etimer_device system_etimer;
 
 void etimer_system_init(timer_t* source_clock);
 
+INLINE
+bool_t etimer_system_online(){
+    return (system_etimer.clock != 0);
+}
+
 /**
  * \name Functions called from application programs
  * @{

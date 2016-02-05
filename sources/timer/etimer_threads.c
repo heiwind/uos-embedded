@@ -14,12 +14,10 @@
 
 #ifdef USER_TIMERS
 
+#define INLINE_ETIMER
 #include "etimer_threads.h"
 
-bool_t etimer_is_timeout(void* arg){
-    etimer* t = (etimer*)arg;
-    return (t->cur_time <= 0);
-}
+
 
 bool_t etimer_mutex_timedlock(mutex_t* m, etimer* t, etimer_time_t timeout)
 {
