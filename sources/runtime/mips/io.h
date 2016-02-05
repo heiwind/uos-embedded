@@ -164,6 +164,10 @@
 #   define MIPS_FSPACE		0	/* default minimum */
 #endif
 
+//see task_schedule - uses for task stack check
+#define ARCH_CONTEXT_SIZE (MIPS_FSPACE+CONTEXT_WORDS*4)
+#define ARCH_ISR_FSPACE    MIPS_FSPACE
+
 #ifndef __ASSEMBLER__
 
 #ifdef __cplusplus

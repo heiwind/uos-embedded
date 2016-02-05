@@ -25,8 +25,11 @@ task_t *task_yelds;         //points to 1st yelded task in active tasks list
 mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 
 #ifndef IDLE_TASK_STACKSZ
-#define IDLE_TASK_STACKSZ   (256+MIPS_FSPACE)
-
+#if ARCH_ISR_FSPACE > 0
+#define IDLE_TASK_STACKSZ   (256+ARCH_ISR_FSPACE)
+#else
+#define IDLE_TASK_STACKSZ   256
+#endif
 #endif
 
 #define ALIGNED_IDLE_TASK_STACKSZ ((IDLE_TASK_STACKSZ + UOS_STACK_ALIGN - 1) & ~(UOS_STACK_ALIGN - 1))
@@ -72,10 +75,14 @@ void task_schedule ()
 	if (new_task != task_current) {
 		new_task->ticks++;
 #ifndef NDEBUG
-        unsigned sp = (unsigned)mips_get_stack_pointer ();
-        sp -= (MIPS_FSPACE+CONTEXT_WORDS*4);
+        unsigned sp = (unsigned)arch_get_stack_pointer ();
+#ifdef ARCH_CONTEXT_SIZE
+        sp -= ARCH_CONTEXT_SIZE;
+#endif
+#ifdef MIPS32
         if (task_current->fpu_state != ~0)
             sp -= 32*4;
+#endif
         assert2(sp > (unsigned)(task_current->stack), uos_assert_task_name_msg, task_current->name);
 #endif
 		arch_task_switch (new_task);
@@ -99,8 +106,10 @@ mutex_activate (mutex_t *m, void *message)
 	while (! list_is_empty (&m->waiters)) {
 		t = (task_t*) list_first (&m->waiters);
 		assert2 (t->wait == m
-		        , "assert task %s wait %x activate from %x($%x)\n"
-		        , t->name, t->wait, m, (unsigned)message);//uos_assert_task_name_msg
+		        , "assert task %s(0x%x) wait %x activate from %x($%x)\n"
+		        , t->name, (unsigned)t
+		        , t->wait, m, (unsigned)message
+		        );//uos_assert_task_name_msg
 		t->wait = 0;
         t->message = message;
 #if UOS_SIGNAL_SMART > 0
