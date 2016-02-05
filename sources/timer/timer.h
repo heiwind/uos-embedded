@@ -216,6 +216,7 @@ INLINE bool_t timer_passed_tick(timer_t *t, clock_time_t t0, clock_time_t ticks)
  * в отличие от системного таймера - пользовательский таймер может останавливаться
  * */
 #ifdef USEC_TIMER
+#define USER_TIMER_MS   ((unsigned long)1000)
 void user_timer_init_us (user_timer_t *ut, unsigned long usec_per_tick);
 void user_timer_set_us  (user_timer_t *ut, usertimer_time_t usec_interval);
 
@@ -306,6 +307,7 @@ void user_timer_restart_interval (user_timer_t *ut, usertimer_time_t msec_interv
 }
 
 #else
+#define USER_TIMER_MS   1ul
 void user_timer_init (user_timer_t *ut, small_uint_t msec_per_tick);
 
 /**\~russian
