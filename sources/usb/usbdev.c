@@ -267,6 +267,7 @@ void usbdevhal_reset (usbdev_t *u)
         u->ep_out[i].state = EP_STATE_DISABLED;
         u->ep_in[i].state = EP_STATE_DISABLED;
         u->ep_in[i].pid = 0;
+        u->ep_in[i].active = 0;
     }
     //u->state = USBDEV_STATE_DEFAULT;
     u->ep_out[0].state = EP_STATE_WAIT_SETUP;
@@ -303,24 +304,7 @@ void usbdevhal_in_done (usbdev_t *u, unsigned ep, int size)
         break;
         
     case EP_STATE_FROM_SOF:
-    	epi->state = EP_STATE_NACK;
-		if (epi->specific_handler) {
-			req_state = epi->specific_handler(u, epi->specific_tag, 0,
-				&hdl_data, &hdl_size);
-			switch (req_state) {
-				case USBDEV_ACK:
-					start_in (u, ep, 0, hdl_data, hdl_size, hdl_size);
-					break;
-				case USBDEV_STALL:
-					epi->state = EP_STATE_STALL;
-					u->hal->ep_stall (ep, USBDEV_DIR_IN, u->hal_arg);
-					return;
-				case USBDEV_NACK:
-					epi->state = EP_STATE_FROM_SOF;
-				default:
-					return;
-			}
-		}
+
     	break;
     case EP_STATE_WAIT_IN_LAST:
         epi->state = EP_STATE_NACK;
@@ -602,27 +586,7 @@ void usbdev_set_ack (usbdev_t *u, unsigned ep_n)
         mutex_wait(u->hal_lock);
     }
 
-    uint8_t *hdl_data;
-    int hdl_size;
-    int req_state = USBDEV_NACK;
-
-    if (epi->specific_handler) {
-        req_state = epi->specific_handler(u, epi->specific_tag, 0, &hdl_data, &hdl_size);
-        switch (req_state) {
-            case USBDEV_ACK:
-                start_in (u, ep_n, 0, hdl_data, hdl_size, hdl_size);
-                break;
-            case USBDEV_STALL:
-                epi->state = EP_STATE_STALL;
-                u->hal->ep_stall (ep_n, USBDEV_DIR_IN, u->hal_arg);
-                break;
-            case USBDEV_NACK:
-                epi->state = EP_STATE_FROM_SOF;
-                break;
-             default:
-                 break;
-        }
-    }
+    epi->state = EP_STATE_FROM_SOF;
 }
 
 void usbdev_sof_done(usbdev_t *u, unsigned ep_n) {
@@ -630,7 +594,7 @@ void usbdev_sof_done(usbdev_t *u, unsigned ep_n) {
     assert (ep_n < USBDEV_NB_ENDPOINTS);
     ep_in_t *epi = &u->ep_in[ep_n];
 
-    if (epi->state == EP_STATE_FROM_SOF) {
+    if ((epi->state == EP_STATE_FROM_SOF) && (epi->active)) {
         uint8_t *hdl_data;
         int hdl_size;
         int req_state = USBDEV_NACK;
@@ -652,6 +616,24 @@ void usbdev_sof_done(usbdev_t *u, unsigned ep_n) {
             }
         }
     }
+}
+
+void usbdev_activate_ep(usbdev_t *u, unsigned ep_n) {
+
+    assert (ep_n < USBDEV_NB_ENDPOINTS);
+    ep_in_t *epi = &u->ep_in[ep_n];
+
+    epi->active = 1;
+
+}
+
+void usbdev_deactivate_ep(usbdev_t *u, unsigned ep_n) {
+
+    assert (ep_n < USBDEV_NB_ENDPOINTS);
+    ep_in_t *epi = &u->ep_in[ep_n];
+
+    epi->active = 0;
+
 }
 
 int usbdev_recv (usbdev_t *u, unsigned ep_n, void *data, int size)

@@ -187,6 +187,8 @@ typedef struct _ep_in_t {
     int             pid;            // PID для следующей выдачи
     int             shorter_len;    // Признак ответа хосту пакетом меньшей длины, чем запрошено
     
+    int 			active;			// Признак активной BULK IN EP
+
     usbdev_specific_t   specific_handler;
     void *              specific_tag;
 } ep_in_t;
@@ -283,4 +285,7 @@ void usbdev_ack_in (usbdev_t *u, unsigned ep_n, const void *data, int size);
 void usbdev_set_ack (usbdev_t *u, unsigned ep_n);
 int  usbdev_recv (usbdev_t *u, unsigned ep_n, void *data, int size);
 
+// Активация BULK EP
+void usbdev_activate_ep(usbdev_t *u, unsigned ep_n);
+void usbdev_deactivate_ep(usbdev_t *u, unsigned ep_n);
 #endif
