@@ -6,9 +6,8 @@
 #ifndef __IIC_MIIC_H_
 #define __IIC_MIIC_H_
 
-#ifndef __SYS_LIB_H_
 #include <runtime/lib.h>
-#endif
+#include <kernel/uos.h>
 
 #ifdef __cplusplus
 extern "C" {
