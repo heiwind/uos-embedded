@@ -143,7 +143,7 @@ bool_t mutex_wait_until (mutex_t *m
         task_schedule ();
         bool_t res = 1;
         if (waitfor != NULL)
-            res = (*waitfor)(waitarg);
+            res = !(*waitfor)(waitarg);
         arch_intr_restore (x);
         return res;
     }
