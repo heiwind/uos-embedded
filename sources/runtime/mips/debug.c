@@ -81,7 +81,9 @@ debug_getchar (void)
 		if (! (MC_LSR & MC_LSR_RXRDY)) {
 /*			watchdog_alive ();*/
 			mips_intr_restore (x);
+#           ifndef DEBUG_IO_NOCONCURENCE
 			task_yield();
+#           endif
 			mips_intr_disable (&x);
 			continue;
 		}
