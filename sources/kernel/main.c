@@ -55,8 +55,9 @@ void task_schedule ()
 	    //текущая задача в конец списка
 	    /* Enqueue always puts element at the tail of the list. */
         list_append(&task_active, &task_current->item);
-	    if (task_yelds == 0)
+	    if (task_yelds == 0){
 	        task_yelds = task_current;
+	    }
 	    if (task_yelds != (task_t*)list_first(&task_active)){
 	        //отключу временно пропускаемые задачи чтобы task_policy их обошел мимо
             __list_connect_together(task_yelds->item.prev, &task_active);
@@ -70,6 +71,10 @@ void task_schedule ()
         //восстановлю пропускаемые задачи обратно в активные
         __list_connect_together(task_yelds->item.prev, &task_yelds->item);
         __list_connect_together(&task_current->item, &task_active);
+        if (new_task == task_idle){
+            new_task = task_yelds;
+            task_yelds = 0;
+        }
 	}
 
 	if (new_task != task_current) {

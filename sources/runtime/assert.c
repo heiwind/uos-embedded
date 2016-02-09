@@ -28,7 +28,6 @@ __assert_fail (const char *cond, const char *file, unsigned int line,
 
 void __assert_msg(const char *msg, ...)
 {
-    int x = 0;
     arch_intr_off ();
     va_list args;
 

@@ -153,10 +153,13 @@ bool_t mutex_awake (mutex_t *m, void *message);
 // assign current task to m->slaves and schdule. priority adjusted
 void mutex_slaved_yield(mutex_t *m);
 void mutex_slave_task(mutex_t *m, task_t* t);
+
+#if UOS_SIGNAL_SMART > 0
 // check that task wants t->MUTEX_WANT mutex, and sequenced to lock on it
 // \return 0 - task no need to slaved on mutex
 // \return 1 - task wanted mutex and slaved on it
 bool_t mutex_wanted_task(task_t* t);
+#endif
 
 
 // assign current task to m->master

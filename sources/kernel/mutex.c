@@ -125,6 +125,7 @@ void mutex_slaved_yield(mutex_t *m){
     task_schedule ();
 }
 
+#if UOS_SIGNAL_SMART > 0
 CODE_FAST 
 bool_t mutex_wanted_task(task_t *t)
 {
@@ -138,6 +139,7 @@ bool_t mutex_wanted_task(task_t *t)
     mutex_slave_task(mm, t);
     return 1;
 }
+#endif
 
 
 /*
