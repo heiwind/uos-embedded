@@ -145,7 +145,10 @@ _reset_vector_: .globl  _reset_vector_
         SAFE_NOP
         .endm
 
+
+
 #ifndef MIPS_NOBEV
+        .section .init.pagefault
 
 #---------------------------------------
 # TLB refill vector at 0x....0200
@@ -175,6 +178,8 @@ _pagefault_vector_: .globl _pagefault_vector_
 #else
         .org    0x0380
 #endif
+
+        .section .init.exception
 
 _exception_vector_: .globl _exception_vector_
 
@@ -244,6 +249,8 @@ _exception_vector_: .globl _exception_vector_
 #else
         .org    0x0400
 #endif
+        .section .init.irq
+
 _interrupt_vector_: .globl _interrupt_vector_
 
         FLUSH_CACHE
@@ -269,6 +276,7 @@ _interrupt_vector_: .globl _interrupt_vector_
 #---------------------------------------
 # Hangle exceptions
 #
+        .section .init.exception.handle
 exception:
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
@@ -281,7 +289,10 @@ exception:
         la      $t0, _exception_handler_    #exception code can be far away from internal memory
         jr      $t0                         # Jump to C code, no return
         nop
+        j       _restore_regs_
+        nop
 
+        .section .init.context
 #---------------------------------------
 # Restore CPU state and return from interrupt
 _restore_regs_: .globl _restore_regs_
