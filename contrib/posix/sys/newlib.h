@@ -11,9 +11,23 @@
 #ifndef __UOS_POSIX_NEWLIB_H
 #define __UOS_POSIX_NEWLIB_H
 
-#include <stdlib.h>
-#include <reent.h>
 #include <kernel/uos.h>
+#include <kernel/internal.h>
+#include <reent.h>
+
+
+
+#ifndef INLINE_STDC
+//  когда сторонний код требует линковаться процедурам заявленным как инлайн, и ему надо предоставить
+//  объект с экземплярами этих процедур.(контрибут POSIX генерирует свой врап stdlib чтобы подключить stdc++.)
+//  в коде объекта этот инлайн отключаю чтобы получить нормальный код, линкуемый извне
+#define INLINE_STDC INLINE
+#endif
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //! этот хук на переключение задач УОС, его надо назначить на uos-conf:UOS_ON_SWITCH_TOTASK(t) или
 //	использовать в своем хуке
@@ -25,5 +39,8 @@ void newlib_on_task_switch(task_t *t)
 	_impure_ptr = (struct _reent *)(t->privatep);
 }
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif//__UOS_POSIX_NEWLIB_H

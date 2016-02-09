@@ -276,7 +276,7 @@ int printf (const char *fmt, ...) __noexcept
     int err;
 
     va_start (args, fmt);
-    err = vfprintf (stdout, fmt, args);
+    err = stream_vprintf (to_stream (stdout), fmt, args);
     va_end (args);
     return err;
 }

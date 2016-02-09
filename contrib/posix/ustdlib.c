@@ -14,6 +14,7 @@
 #include "stdio.h"
 #include "unistd.h"
 #include "string.h"
+#include "malloc.h"
 
 #ifndef __cplusplus
 
@@ -108,6 +109,12 @@ int __NOTHROW sprintf (char *buf, const char *fmt, ...)
  * extern "C" void __cxa_pure_virtual() { while (1); }
  */
 #include <runtime/assert.h>
+
+//__NORETURN
+void __assert_func(const char *file, int line, const char *func, const char *expr)
+{
+    __assert_fail(expr, file, line, func);
+}
 
 //extern "C"
 void __cxa_pure_virtual() {
