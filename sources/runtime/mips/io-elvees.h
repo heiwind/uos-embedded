@@ -1749,6 +1749,8 @@
 #define MC_IRQ_EVT_SW0              28
 #define MC_IRQ_EVT_SW1              29
 #define MC_IRQ_EVT_COMPARE          30
+#define MC_IRQ_EVT_UART1            5
+#define MC_IRQ_EVT_UART0            4
 
 
 
