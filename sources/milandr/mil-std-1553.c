@@ -24,9 +24,9 @@ int read_idx, write_idx;
 status_item_t status_array[STATUS_ITEMS_SIZE];
 uint32_t nb_missing;
 
-static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
+static void copy_to_cyclogram_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
 {
-    if (mem_queue_is_full(&mil->rxq)) {
+    if (mem_queue_is_full(&mil->cyclogram_rxq)) {
         mil->nb_lost++;
     } else {
         unsigned wrc = (slot.words_count == 0 ? 32 : slot.words_count);
@@ -35,7 +35,7 @@ static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
             mil->nb_lost++;
             return;
         }
-        mem_queue_put(&mil->rxq, que_elem);
+        mem_queue_put(&mil->cyclogram_rxq, que_elem);
         // Номер слота всегда 0
         *que_elem = 0;
         *(que_elem + 1) = 0;
@@ -63,6 +63,52 @@ static void copy_to_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
         debug_printf("wc=%d\n", wordscount);
         for (i=0;i<wordscount;i++) {
         	debug_printf("%04x\n", *que_elem_debug++);
+        }
+        debug_printf("\n");
+#endif
+
+    }
+}
+
+static void copy_to_urgent_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
+{
+    if (mem_queue_is_full(&mil->urgent_rxq)) {
+        mil->nb_lost++;
+    } else {
+        unsigned wrc = (slot.words_count == 0 ? 32 : slot.words_count);
+        uint16_t *que_elem = mem_alloc_dirty(mil->pool, 2*wrc + 8);
+        if (!que_elem) {
+            mil->nb_lost++;
+            return;
+        }
+        mem_queue_put(&mil->urgent_rxq, que_elem);
+        // Номер слота всегда 0
+        *que_elem = 0;
+        *(que_elem + 1) = 0;
+        // Копируем дескриптор слота
+        memcpy(que_elem + 2, &slot, 4);
+        // Копируем данные слота
+        arm_reg_t *preg = &mil->reg->DATA[slot.subaddr * MIL_SUBADDR_WORDS_COUNT];
+
+
+#if BC_DEBUG
+        uint16_t *que_elem_debug = que_elem + 4; // Область данных
+        int wordscount = wrc;
+#endif
+
+        que_elem += 4;  // Область данных
+        while (wrc) {
+            *que_elem++ = *preg++;
+            wrc--;
+        }
+
+#if BC_DEBUG
+
+        int i;
+        debug_printf("\n");
+        debug_printf("wc=%d\n", wordscount);
+        for (i=0;i<wordscount;i++) {
+            debug_printf("%04x\n", *que_elem_debug++);
         }
         debug_printf("\n");
 #endif
@@ -439,12 +485,12 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
         if (mil->urgent_desc.reserve) {
             // Была передача вне очереди
             if (mil->pool && mil->urgent_desc.transmit_mode == MIL_SLOT_RT_BC)
-                copy_to_rxq(mil, mil->urgent_desc);
+                copy_to_urgent_rxq(mil, mil->urgent_desc);
         } else {
             if (mil->cur_slot != 0) {
                 mil_slot_desc_t slot = mil->cur_slot->desc;
                 if (mil->pool && slot.transmit_mode == MIL_SLOT_RT_BC) {
-                    copy_to_rxq(mil, slot);
+                    copy_to_cyclogram_rxq(mil, slot);
                 }
             }
         }
@@ -613,11 +659,17 @@ static int mil_stop(mil1553if_t *_mil)
         mil->tim_reg->TIM_CNTRL = 0;
     }
     
-    while (!mem_queue_is_empty(&mil->rxq)) {
+    while (!mem_queue_is_empty(&mil->cyclogram_rxq)) {
     	void *que_elem = 0;
-    	mem_queue_get(&mil->rxq, &que_elem);
+    	mem_queue_get(&mil->cyclogram_rxq, &que_elem);
     	mem_free(que_elem);
     }
+
+    while (!mem_queue_is_empty(&mil->urgent_rxq)) {
+            void *que_elem = 0;
+            mem_queue_get(&mil->urgent_rxq, &que_elem);
+            mem_free(que_elem);
+        }
 
     while (!mem_queue_is_empty (&mil->rt_rxq)) {
         	void *que_elem = 0;
@@ -800,7 +852,8 @@ void milandr_mil1553_init(milandr_mil1553_t *_mil, int port, mem_pool_t *pool, u
 
     mil->pool = pool;
     if (nb_rxq_msg) {
-        mem_queue_init(&mil->rxq, pool, nb_rxq_msg);
+        mem_queue_init(&mil->cyclogram_rxq, pool, nb_rxq_msg);
+        mem_queue_init(&mil->urgent_rxq, pool, nb_rxq_msg);
         mem_queue_init(&mil->rt_rxq, pool, nb_rxq_msg);
     }
 
