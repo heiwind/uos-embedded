@@ -1,6 +1,8 @@
 #ifndef __UOS_LIB_ARCH_H_
 #define __UOS_LIB_ARCH_H_
 
+#include <uos-conf.h>
+#include <uos-conf-cpu.h>
 #include <runtime/sys/uosc.h>
 
 

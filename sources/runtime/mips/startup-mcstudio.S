@@ -19,6 +19,13 @@
 #
 #include <runtime/mips/io.h>
 
+//* MIPS_VEC_SECTIONS declares that vectors are plased on their position by linker
+//	so verctor-handles places in it`s own sections:
+//		.init.pagefault, .init.exception, .init.irq,
+//		.init.* - other common stuff
+//#define  MIPS_VEC_SECTIONS
+
+
 #ifndef RAM_HI
 #define RAM_HI  0xb800
 #endif
@@ -148,12 +155,15 @@ _reset_vector_: .globl  _reset_vector_
 
 
 #ifndef MIPS_NOBEV
-        .section .init.pagefault
-
 #---------------------------------------
 # TLB refill vector at 0x....0200
 #
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.pagefault
+#else
         .org    0x0200
+#endif
+
 _pagefault_vector_: .globl _pagefault_vector_
         FLUSH_CACHE
         SAVE_REGS                       # Save all registers in stack
@@ -172,14 +182,15 @@ _pagefault_vector_: .globl _pagefault_vector_
 #---------------------------------------
 # Exception vector at 0x....0380
 #
-
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.exception
+#else
 #ifdef MIPS_NOBEV
         .org    0x0180
 #else
         .org    0x0380
 #endif
-
-        .section .init.exception
+#endif
 
 _exception_vector_: .globl _exception_vector_
 
@@ -244,12 +255,15 @@ _exception_vector_: .globl _exception_vector_
 # Interrupt vector at 0x....0400
 #
 
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.irq
+#else
 #ifdef MIPS_NOBEV
         .org    0x0200
 #else
         .org    0x0400
 #endif
-        .section .init.irq
+#endif
 
 _interrupt_vector_: .globl _interrupt_vector_
 
@@ -276,7 +290,10 @@ _interrupt_vector_: .globl _interrupt_vector_
 #---------------------------------------
 # Hangle exceptions
 #
+#ifdef  MIPS_VEC_SECTIONS
         .section .init.exception.handle
+#endif
+
 exception:
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
@@ -292,7 +309,9 @@ exception:
         j       _restore_regs_
         nop
 
+#ifdef  MIPS_VEC_SECTIONS
         .section .init.context
+#endif
 #---------------------------------------
 # Restore CPU state and return from interrupt
 _restore_regs_: .globl _restore_regs_

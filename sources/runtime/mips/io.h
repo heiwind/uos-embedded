@@ -19,7 +19,8 @@
 #ifndef UOS_RUNTIME_MIPS_IO
 #define UOS_RUNTIME_MIPS_IO
 
-#include <uos-conf.h> 
+#include <uos-conf.h>
+#include <uos-conf-cpu.h>
 
 #ifdef ELVEES_NVCOM02T
 #define ELVEES_NVCOM01 1
