@@ -21,7 +21,7 @@ typedef struct _milandr_mil1553_t
     TIMER_t             *tim_reg;
     int                 tim_irq;
     mem_pool_t          *pool;
-    mem_queue_t         rxq;
+    mem_queue_t         cyclogram_rxq;
     mil_slot_t          *cyclogram;
     mil_slot_t          *cur_slot;
     unsigned            nb_slots;
@@ -31,6 +31,7 @@ typedef struct _milandr_mil1553_t
     int                 is_running;
     
     mem_queue_t         rt_rxq;			// только для RT
+    mem_queue_t         urgent_rxq;         // только для BC
 //    uint16_t tx_buf[MIL_DATA_LENGTH];   // только для RT
 
     // Статистика
