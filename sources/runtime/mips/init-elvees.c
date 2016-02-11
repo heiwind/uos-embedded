@@ -17,6 +17,7 @@
  * "COPY-UOS.txt" for details.
  */
 #include <runtime/lib.h>
+#include <uos-conf-platform.h>
 
 
 #ifdef __cplusplus
@@ -46,6 +47,91 @@ void _pagefault_handler_ (unsigned int context[]);
 #define DEBUG_UARTBAUD 115200
 #endif
 
+#if defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+
+#   ifndef UOS_XRAM_BANK_SIZE
+#   define UOS_XRAM_BANK_SIZE  (64UL<<20)
+/* Base address */
+#   define UOS_XRAM_BANK_ORG   0
+/* Sync memory */
+#   define UOS_XRAM_TYPE       MC_CSCON_T
+#   define UOS_XRAM_WS         0
+
+#       ifndef REFRESH_RATE_NS
+#           ifndef XRAM_REFRESH_PERIOD_MS
+#           define XRAM_REFRESH_PERIOD_MS 64
+#           endif
+#       define REFRESH_RATE_NS ((XRAM_REFRESH_PERIOD_MS*1000000ul)/8192)
+#       endif
+
+#       ifndef UOS_SDREFRESH_MODE
+#       define UOS_SDREFRESH_MODE  (MC_SDRCON_PS_512 /* Page size 512 */\
+                | MC_SDRCON_CL_3 /* CAS latency 3 cycles */\
+                | MC_SDRCON_RFR (REFRESH_RATE_NS, MPORT_KHZ)   /* Refresh period */\
+                )
+#       endif
+
+#       ifndef UOS_SDTIMING_MODE
+#       define UOS_SDTIMING_MODE (MC_SDRTMR_TWR(2)      /* Write recovery delay */\
+            | MC_SDRTMR_TRP(2)      /* Минимальный период Precharge */\
+            | MC_SDRTMR_TRCD(2)     /* Между Active и Read/Write */\
+            | MC_SDRTMR_TRAS(5)     /* Между * Active и Precharge */\
+            | MC_SDRTMR_TRFC(15)     /* Интервал между Refresh */\
+            )
+#       endif
+#    endif //!UOS_XRAM_BANK_SIZE
+
+#define SCON0_MASK (~(((unsigned long)UOS_XRAM_BANK_SIZE)-1))
+
+#if defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+inline void _init_sdram(void){
+    /* Configure 128 Mbytes of external 64-bit SDRAM memory at nCS0. */
+    MC_CSCON0 = MC_CSCON_E |        /* Enable nCS0 */
+        MC_CSCON_WS (0) |       /* Wait states  */
+        MC_CSCON_T |            /* Sync memory */
+        MC_CSCON_W64 |          /* 64-bit data width */
+        MC_CSCON_CSBA (0x00000000) |    /* Base address */
+        MC_CSCON_CSMASK (0xF8000000);   /* Address mask */
+
+    MC_SDRCON = MC_SDRCON_INIT |                /* Initialize SDRAM */
+        MC_SDRCON_BL_PAGE |             /* Bursh full page */
+        MC_SDRCON_RFR (64000000/8192, MPORT_KHZ) |  /* Refresh period */
+        MC_SDRCON_PS_512;               /* Page size 512 */
+    udelay (2);
+}
+#else //defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+inline void _init_sdram(void)
+{
+    /* Configure 64 Mbytes of external 32-bit SDRAM memory at nCS0. */
+    MC_CSCON0 = MC_CSCON_E                /* Enable nCS0 */
+              | UOS_XRAM_TYPE
+              | MC_CSCON_CSBA (UOS_XRAM_BANK_ORG)
+              | MC_CSCON_CSMASK (SCON0_MASK)
+              | MC_CSCON_WS (UOS_XRAM_WS)
+              ;   /* Address mask */
+
+#   if UOS_XRAM_TYPE == MC_CSCON_T
+    MC_SDRCON = UOS_SDREFRESH_MODE;
+
+    MC_SDRTMR = UOS_SDTIMING_MODE;
+    MC_SDRCSR = 1;              /* Initialize SDRAM */
+    udelay (2);
+#   endif
+}
+#endif //else defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+
+#else //defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+inline void _init_sdram(void){};
+#endif //defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+
+
+
+//#define UOS_START_MODE_BINARY   0
+//#define UOS_START_MODE_LOADED   1
+#if UOS_START_MODE == 1
+#define DONT_COPY_DATA_SEGS
+#endif
+
 void __attribute ((noreturn))
 #ifdef ELVEES_INIT_SDRAM
 //!!! этот код должен лежать в памяти доступной по вектору сброса=прерываня, ибо положить в СДРАМ до ее настрйки не представляется нормальным
@@ -56,41 +142,7 @@ _init_ (void)
 	unsigned *dest, *limit;
 	unsigned int divisor;
 
-#ifdef ELVEES_INIT_SDRAM
-#if defined(ELVEES_MC24) || defined(ELVEES_MC0226)
-	/* Configure 128 Mbytes of external 64-bit SDRAM memory at nCS0. */
-	MC_CSCON0 = MC_CSCON_E |		/* Enable nCS0 */
-		MC_CSCON_WS (0) |		/* Wait states  */
-		MC_CSCON_T |			/* Sync memory */
-		MC_CSCON_W64 |			/* 64-bit data width */
-		MC_CSCON_CSBA (0x00000000) |	/* Base address */
-		MC_CSCON_CSMASK (0xF8000000);	/* Address mask */
-
-	MC_SDRCON = MC_SDRCON_INIT |				/* Initialize SDRAM */
-		MC_SDRCON_BL_PAGE |				/* Bursh full page */
-		MC_SDRCON_RFR (64000000/8192, MPORT_KHZ) |	/* Refresh period */
-		MC_SDRCON_PS_512;				/* Page size 512 */
-#else
-	/* Configure 64 Mbytes of external 32-bit SDRAM memory at nCS0. */
-	MC_CSCON0 = MC_CSCON_E |		/* Enable nCS0 */
-	MC_CSCON_T |			/* Sync memory */
-	MC_CSCON_CSBA (0x00000000) |	/* Base address */
-	MC_CSCON_CSMASK (0xF8000000);	/* Address mask */
-
-	MC_SDRCON = MC_SDRCON_PS_512 |				/* Page size 512 */
-		MC_SDRCON_CL_3 |				/* CAS latency 3 cycles */
-		MC_SDRCON_RFR (64000000/8192, MPORT_KHZ); 	/* Refresh period */
-
-	MC_SDRTMR = MC_SDRTMR_TWR(2) |		/* Write recovery delay */
-		MC_SDRTMR_TRP(2) |		/* Минимальный период Precharge */
-		MC_SDRTMR_TRCD(2) |		/* Между Active и Read/Write */
-		MC_SDRTMR_TRAS(5) |		/* Между * Active и Precharge */
-		MC_SDRTMR_TRFC(15);		/* Интервал между Refresh */
-
-	MC_SDRCSR = 1;				/* Initialize SDRAM */
-#endif
-	udelay (2);
-#endif
+	_init_sdram();
 
 	/* Clear CAUSE register. Use special irq vector. */
 	mips_write_c0_register (C0_CAUSE, CA_IV);

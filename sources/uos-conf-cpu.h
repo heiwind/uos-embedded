@@ -18,17 +18,50 @@
 /**************************************************************************
  *                              runtime
  ************************************************************************** */
-// делаю стаб для образа во флеши
-//#undef MIPS_NOBEV
+#ifdef FORCE_LIB_FCPU
+#undef KHZ
+#undef DELVEES_CLKIN
+#undef MPORT_KHZ
+#undef RAM_HI
+#undef ARCH_HAVE_FPU
+#undef MIPS_NOBEV
+#undef ELVEES_INIT_SDRAM
+#endif
+
+//* отключает настройку режима процессора при старте уос, полагается на настройку стартера
+//#define EXTERNAL_SETUP
+
+/* отключение плавающей точки может сэкономить код
+ * */
+//#undef ARCH_HAVE_FPU
+//#define ARCH_HAVE_FPU
 
 /* IDLE_TASK_STACKSZ - стек всякой задачи должен справляться исполнением прерывания
- * для ЭЛВИС использование USER_TIMERS добавит накладных на стек 
+ * для ЭЛВИС использование USER_TIMERS добавит накладных на стек
  * */
 #define IDLE_TASK_STACKSZ   (512+512+MIPS_FSPACE)
 
+
+/**************************************************************************
+ *                              ELVEES
+ ************************************************************************** */
 //suspects that commands lw, mtc0, tfc0 are completed after next tackt,
 //      so inserts nop to sure thir value
 //#define ELVEES_SAFE_LW_MXC0
+
+/** форсирует настройку памяти при старте, если происходит запуск под отладчиком или настройка
+ * производится внешним загрузчиком - то этот код необязателен, можно довериться настройкам загрузчика */
+//#define ELVEES_INIT_SDRAM
+
+#ifndef KHZ
+#define KHZ         2400000U
+//# Frequency of installed oscillator, kHz
+#define DELVEES_CLKIN 10000U
+//# Frequency of memory bus, kHz
+#define MPORT_KHZ   900000U
+//#define RAM_HI      0xb840
+#define RAM_HI      0x9801
+#endif
 
 /**************************************************************************
  *                              IRQ
@@ -47,6 +80,9 @@
 //      .init.* - other common stuff
 //* это макро поможет отбросить неиспользуемый вектор irq линкером.
 //#define  MIPS_VEC_SECTIONS
+
+//* размещение векторов прерываний в CRAM
+//#define ELVEES_VECT_CRAM
 
 
 
