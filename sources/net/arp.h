@@ -44,7 +44,7 @@ mac_addr __PURE macadr_4ucs(const unsigned char* x)
     }
 #endif
 #if UOS_FOR_SIZE > 0
-    return (memcpy(res.ucs, x, 6) == 0);
+    memcpy(res.ucs, x, 6);
 #elif defined (__AVR__)
     unsigned char* tmp = res.ucs;
     *tmp++ = *x++;
@@ -89,7 +89,7 @@ unsigned char* macadr_assign_ucs(      unsigned char* __restrict__ dst
     }
 #endif
 #if UOS_FOR_SIZE > 0
-    return (memcpy(dst, src, 6) == 0);
+    memcpy(dst, src, 6);
 #elif defined (__AVR__)
     unsigned char* tmp = res.ucs;
     *dst++ = *src++;
@@ -130,7 +130,7 @@ bool_t __PURE macadr_is_same_ucs( const unsigned char* __restrict__ a
     }
 #endif
 #if UOS_FOR_SIZE > 0
-    return (memcpy(a,b,6) == 0);
+    return (memcmp(a,b,6) == 0);
 #elif defined (__AVR__)
     if (*a++ == *b++)
     if (*a++ == *b++)
