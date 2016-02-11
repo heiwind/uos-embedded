@@ -50,6 +50,8 @@ void uos_debug_dump(){
  * Halt uOS, return to the parent operating system (if any).
  * Optionally print debugging information about the system state.
  */
+#undef uos_halt
+
 #ifndef NDEBUG
 __NORETURN
 #endif

@@ -106,11 +106,18 @@ bool_t uos_valid_memory_address (void*);
  * Halt the system.
  * !! on MIPS cant invoke from exception
  */
-#ifndef NDEBUG
-void uos_halt (int);
-#else
 //* noreturn modifier breaks an stack contents, so debuger cant show call-stack
-void uos_halt (int) __NORETURN;
+#ifdef NDEBUG
+#define DEBUG_NORETURN __NORETURN
+#else
+#define DEBUG_NORETURN
+#endif
+
+void rt_halt (int dump_flag) DEBUG_NORETURN ;
+void uos_halt (int) DEBUG_NORETURN ;
+
+#ifdef RT_HALT
+#define uos_halt(dump_flag) rt_halt(dump_flag)
 #endif
 
 #ifndef __AVR__
