@@ -84,9 +84,11 @@ void task_schedule ()
 #ifdef ARCH_CONTEXT_SIZE
         sp -= ARCH_CONTEXT_SIZE;
 #endif
-#ifdef MIPS32
+#ifdef ARCH_HAVE_FPU
+#   ifdef MIPS32
         if (task_current->fpu_state != ~0)
             sp -= 32*4;
+#   endif
 #endif
         assert2(sp > (unsigned)(task_current->stack), uos_assert_task_name_msg, task_current->name);
 #endif
