@@ -109,6 +109,11 @@ void *operator new (unsigned size) __noexcept
 
 INLINE_STDC
 __NOTHROW
+void *operator new (unsigned size, mem_pool_t& pool) __noexcept
+    { return mem_alloc (&pool, size); }
+
+INLINE_STDC
+__NOTHROW
 void *operator new[] (unsigned size) __noexcept
     { return mem_alloc (POSIX_memory, size); }
 
