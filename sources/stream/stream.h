@@ -28,6 +28,11 @@ typedef struct _stream_interface_t {
 	bool_t (*eof) (stream_t *u);
 	void (*close) (stream_t *u);
 	struct _mutex_t *(*receiver) (stream_t *u);
+#if STREAM_HAVE_ACCEESS > 0
+	//* позволяют потребовать монопольного захвата потока
+	bool_t  (*access_rx)(stream_t *u, bool_t onoff);
+    bool_t  (*access_tx)(stream_t *u, bool_t onoff);
+#endif
 } stream_interface_t;
 
 #define to_stream(x)   ((stream_t*)&((x)->interface))

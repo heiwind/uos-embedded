@@ -11,10 +11,16 @@ stream_gets (stream_t *stream, unsigned char *buf, int len)
 	unsigned char *s;
 
 	s = buf;
-        while (--len > 0) {
+
+#if STREAM_HAVE_ACCEESS > 0
+    if (stream->interface->access_rx != 0)
+        (stream->interface->access_rx(stream, 1));
+#endif
+
+    while (--len > 0) {
 		if (feof (stream)) {
 			if (s == buf)
-				return 0;
+				buf = 0;
 			break;
 		}
 		c = getchar (stream);
@@ -24,5 +30,9 @@ stream_gets (stream_t *stream, unsigned char *buf, int len)
 			break;
 	}
 	*s = '\0';
+#if STREAM_HAVE_ACCEESS > 0
+    if (stream->interface->access_rx != 0)
+        (stream->interface->access_rx(stream, 0));
+#endif
 	return buf;
 }

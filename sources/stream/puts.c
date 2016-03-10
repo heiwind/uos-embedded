@@ -7,6 +7,11 @@ int stream_puts (stream_t *stream, const char *str)
 	unsigned char c;
 	void (*putc) (stream_t *u, short c) = stream->interface->putc;
 
+#if STREAM_HAVE_ACCEESS > 0
+	if (stream->interface->access_tx != 0)
+	    (stream->interface->access_tx(stream, 1));
+#endif
+
 	for (length = 0; ; length++) {
 		c = FETCH_BYTE (str);
 		if (! c)
@@ -15,4 +20,9 @@ int stream_puts (stream_t *stream, const char *str)
 		//putchar (stream, c);
 		++str;
 	}
+
+#if STREAM_HAVE_ACCEESS > 0
+    if (stream->interface->access_tx != 0)
+        (stream->interface->access_tx(stream, 0));
+#endif
 }

@@ -175,10 +175,29 @@ scan_string (stream_t *stream, char *ptr, unsigned char type,
 /*
  * Scan and recognize input according to a format
  */
+#if STREAM_HAVE_ACCEESS > 0
+static
+int stream_vscanf_nomt (stream_t *stream, const char *fmt, va_list argp);
+
+int stream_vscanf(stream_t *stream, const char *fmt, va_list argp){
+    if (stream->interface->access_rx != 0)
+        (stream->interface->access_rx(stream, 1));
+    int res = stream_vscanf_nomt(stream, fmt, argp);
+    if (stream->interface->access_rx != 0)
+        (stream->interface->access_rx(stream, 0));
+    return res;
+}
+
+static
+int stream_vscanf_nomt (stream_t *stream,
+    const char *fmt,        /* Format string for the scanf */
+    va_list argp)           /* Arguments to scanf */
+#else
 int
 stream_vscanf (stream_t *stream,
 	const char *fmt,		/* Format string for the scanf */
 	va_list argp)			/* Arguments to scanf */
+#endif
 {
 	unsigned char ch, size, base;
 	unsigned short len;

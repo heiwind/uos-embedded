@@ -68,8 +68,26 @@ static int cvt (double number, int prec, int sharpflag, unsigned char *negp,
 #endif
 
 
+#if STREAM_HAVE_ACCEESS > 0
+static
+int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap);
+
+int
+stream_vprintf (stream_t *stream, char const *fmt, va_list ap){
+    if (stream->interface->access_tx != 0)
+        (stream->interface->access_tx(stream, 1));
+    int res = stream_vprintf_nomt(stream, fmt, ap);
+    if (stream->interface->access_tx != 0)
+        (stream->interface->access_tx(stream, 0));
+    return res;
+}
+
+static
+int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap)
+#else
 int
 stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
+#endif
 {
 #define PUTC(c) { putchar(stream,(unsigned char)(c)); ++retval; }
 	unsigned char nbuf [MAXNBUF], padding, *q;
