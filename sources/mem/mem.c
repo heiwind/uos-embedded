@@ -28,6 +28,7 @@
  * Выделяется первый сегмент, подходящий по размеру.
  */
 #include <uos-conf.h>
+#include <uos-conf-cpu.h>
 #include <runtime/lib.h>
 #include <mem/mem.h>
 
@@ -48,7 +49,17 @@
  * Align data on pointer-sized boundaries.
  */
 #define SIZEOF_POINTER		sizeof(void*)
-#define MEM_ALIGN(x)		(((x) + SIZEOF_POINTER-1) & -SIZEOF_POINTER)
+#define SIZEOF_DOUBLE       sizeof(double)
+
+#if defined(MIPS32) && defined(ARCH_HAVE_FPU)
+//!!! mips platform requires that all doubles be aligned on 8byte
+//  , so allocate always on this aligns
+#define SIZEOF_ALIGN    SIZEOF_DOUBLE
+#else
+#define SIZEOF_ALIGN    SIZEOF_POINTER
+#endif
+
+#define MEM_ALIGN(x)		(((x) + SIZEOF_ALIGN-1) & -SIZEOF_ALIGN)
 
 /*
  * Every memory block has a header.
