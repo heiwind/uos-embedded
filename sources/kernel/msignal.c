@@ -141,6 +141,8 @@ bool_t mutex_wait_until (mutex_t *m
     if (m->master != task_current) {
         /* We do not keep this lock, so just wait for a signal. */
         task_schedule ();
+        //if (task_current->wait =! 0)
+            task_current->wait = 0;
         bool_t res = 1;
         if (waitfor != NULL)
             res = !(*waitfor)(waitarg);
@@ -164,6 +166,8 @@ bool_t mutex_wait_until (mutex_t *m
     task_schedule ();
 
     bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
+    //if (task_current->wait =! 0)
+        task_current->wait = 0;
 #if RECURSIVE_LOCKS
     m->deep = deep;
 #endif
