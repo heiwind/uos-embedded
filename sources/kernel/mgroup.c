@@ -82,6 +82,17 @@ mutex_group_listen (mutex_group_t *g)
 	arch_intr_restore (x);
 }
 
+void mutex_group_relisten(mutex_group_t* g){
+    arch_state_t x;
+    mutex_slot_t *s;
+
+    arch_intr_disable (&x);
+    for (s = g->slot + g->num; --s >= g->slot; ) {
+            s->active = 0;
+    }
+    arch_intr_restore (x);
+}
+
 /*
  * Stop listening on the group.
  * Detach slots from the lock->groups linked lists.

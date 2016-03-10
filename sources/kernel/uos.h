@@ -137,6 +137,11 @@ void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg);
 mutex_group_t *mutex_group_init (array_t *buf, unsigned buf_size);
 bool_t mutex_group_add (mutex_group_t*, mutex_t*);
 void mutex_group_listen (mutex_group_t*);
+/** \~russian
+ * сбрасывает статус активности с мутехов группы, ожидание активности
+ * ведется с этого момента
+ */
+void mutex_group_relisten(mutex_group_t*);
 void mutex_group_unlisten (mutex_group_t*);
 void mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
 /**\~russian
