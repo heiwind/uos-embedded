@@ -2,7 +2,7 @@ TARGET		= $(CURDIR)
 OS		= $(shell cd ../..; pwd)
 include target.cfg
 
-TEST		= philosophers
+TEST		= test-keyboard
 TESTS		+= test-led.bin
 TESTS		+= test-debug.bin
 TESTS		+= test-task.bin
@@ -10,6 +10,7 @@ TESTS		+= test-timer.bin
 TESTS		+= test-tswitch.bin
 TESTS		+= test-latency.bin
 TESTS		+= philosophers.bin
+TESTS		+= test-keyboard.bin
 OUTS		= $(TESTS:%.bin=%.elf)
 
 all:		$(OUTS) $(TESTS) $(TEST).dis

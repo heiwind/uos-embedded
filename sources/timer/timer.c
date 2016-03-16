@@ -13,6 +13,7 @@
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 #include <timer/timer.h>
+#include <timer/timeout.h>
 
 #if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 extern volatile uint32_t __timer_ticks_uos;
@@ -225,25 +226,29 @@ void timer_update (timer_t *t)
         }
     }
 
-#ifdef USER_TIMERS
-    if (! list_is_empty (&t->user_timers)) {
-        user_timer_t *ut;
-        list_iterate (ut, &t->user_timers) {
+#ifdef TIMER_TIMEOUTS
+    if (! list_is_empty (&t->timeouts)) {
+        timeout_t *to;
+        list_iterate (to, &t->timeouts) {
 #ifdef USEC_TIMER
-            ut->cur_time -= t->usec_per_tick;
+            to->cur_time -= t->usec_per_tick;
 #else
-            ut->cur_time -= t->msec_per_tick;
+            to->cur_time -= t->msec_per_tick;
 #endif
-            if (ut->cur_time <= 0) {
-                if (! list_is_empty (&ut->lock.waiters) ||
-                        ! list_is_empty (&t->decisec.groups)) {
-                    mutex_activate (&ut->lock,
-                        (void*) (size_t) t->milliseconds);
-#ifdef USEC_TIMER
-                    ut->cur_time += ut->usec_per_tick;
-#else
-                    ut->cur_time += ut->msec_per_tick;
-#endif
+            if (to->cur_time <= 0) {
+                if (to->handler)
+                    to->handler(to, to->handler_arg);
+                if (! list_is_empty (&to->mutex->waiters) ||
+                        ! list_is_empty (&to->mutex->groups)) {
+                    mutex_activate (to->mutex, to->signal);
+                    
+                    if (to->autoreload) {
+                        to->cur_time += to->interval;
+                    } else {
+                        timeout_t *prev_to = (timeout_t *) to->item.prev;
+                        list_unlink (&to->item);
+                        to = prev_to;
+                    }
                 }
             }
         }
@@ -416,8 +421,8 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 
 #endif // SW_TIMER
 
-#ifdef USER_TIMERS
-    list_init (&t->user_timers);
+#ifdef TIMER_TIMEOUTS
+    list_init (&t->timeouts);
 #endif
 }
 #else
@@ -567,40 +572,9 @@ timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick)
 
 #endif // SW_TIMER
 
-#ifdef USER_TIMERS
-    list_init (&t->user_timers);
-#endif // USER_TIMERS
+#ifdef TIMER_TIMEOUTS
+    list_init (&t->timeouts);
+#endif
 }
 #endif // USEC_TIMER
-
-#ifdef USER_TIMERS
-
-#ifdef USEC_TIMER
-void user_timer_init_us (user_timer_t *ut, unsigned long usec_per_tick)
-{
-    ut->usec_per_tick = usec_per_tick;
-    ut->cur_time = usec_per_tick;
-    list_init (&ut->item);
-}
-#else
-void user_timer_init (user_timer_t *ut, small_uint_t msec_per_tick)
-{
-    ut->msec_per_tick = msec_per_tick;
-    ut->cur_time = msec_per_tick;
-    list_init (&ut->item);
-}
-#endif // USEC_TIMER
-
-void user_timer_add (timer_t *t, user_timer_t *ut)
-{
-    mutex_lock (&t->lock);
-    list_append (&t->user_timers, &ut->item);
-    mutex_unlock (&t->lock);
-}
-
-void user_timer_wait (user_timer_t *ut)
-{
-    mutex_wait (&ut->lock);
-}
-#endif // USER_TIMERS
 

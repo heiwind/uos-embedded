@@ -840,6 +840,7 @@ typedef struct
 #define SYSCFG_PH(x)                (5 << (((x) & 3) * 4))
 #define SYSCFG_PF(x)                (6 << (((x) & 3) * 4))
 #define SYSCFG_PG(x)                (7 << (((x) & 3) * 4))
+#define SYSCFG_PMASK(x)             (0xF << (((x) & 3) * 4))
 
 
 /////////////////////////////////////////
