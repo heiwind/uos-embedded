@@ -15,7 +15,7 @@ int stream_puts (stream_t *stream, const char *str)
 	for (length = 0; ; length++) {
 		c = FETCH_BYTE (str);
 		if (! c)
-			return length;
+		    break;
 		putc(to_stream(stream), c);
 		//putchar (stream, c);
 		++str;
@@ -25,4 +25,5 @@ int stream_puts (stream_t *stream, const char *str)
     if (stream->interface->access_tx != 0)
         (stream->interface->access_tx(stream, 0));
 #endif
+    return length;
 }
