@@ -58,8 +58,9 @@ crc16_byte (unsigned short sum, unsigned char byte)
  * Do not forget to invert the final checksum value.
  */
 unsigned short 
-crc16 (unsigned short sum, unsigned const char *buf, unsigned len)
+crc16 (unsigned short sum, const void* src, unsigned len)
 {
+    unsigned const char *buf = (unsigned const char *)src;
 	if (len) do
 		sum = crc16_byte (sum, *buf++);
 	while (--len);

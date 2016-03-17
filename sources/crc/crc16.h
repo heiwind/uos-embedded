@@ -13,7 +13,7 @@ extern "C" {
 #define CRC16_INIT	0x0000  /* Initial checksum value */
 #define CRC16_GOOD	0x0000	/* Good final checksum value */
 
-unsigned short crc16 (unsigned short sum, unsigned const char *buf,
+unsigned short crc16 (unsigned short sum, const void *buf,
 	unsigned len);
 
 unsigned short crc16_byte (unsigned short sum, unsigned char byte);
