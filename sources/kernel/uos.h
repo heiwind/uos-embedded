@@ -74,6 +74,7 @@ void task_yield (void);
 struct _stream_t;
 void task_print (struct _stream_t *stream, task_t *t);
 void tasks_print(struct _stream_t *stream);
+void mutex_print (struct _stream_t *stream, mutex_t *m);
 
 #ifndef ARCH_HAVE_FPU
 //__attribute__ ((error ("no float point coprocessor: ARCH_HAVE_FPU required")))
