@@ -52,7 +52,7 @@ void uos_debug_dump(){
  */
 #undef uos_halt
 
-#ifndef NDEBUG
+#ifdef NDEBUG
 __NORETURN
 #endif
 void

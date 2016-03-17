@@ -10,6 +10,8 @@
  *		__builtin_frame_address (1),
  *		__builtin_return_address (0));
  */
+#undef debug_dump_stack
+
 __WEAK
 void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 {
@@ -45,7 +47,8 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 		sp, from, frame, to, callee, __builtin_frame_address (0));
 
 	/* Stack always grows down. */
-	for (p = from, flag = 0, len = 0; ; --p) {
+	for (p = from-1, flag = 0, len = 0; ; ) {
+	    p--;
 		if (len == 0) {
 			if (sizeof (p) == 1)
 				debug_printf ("[%8S.%02X]", caption, (size_t) p);
