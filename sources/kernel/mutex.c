@@ -55,7 +55,9 @@ mutex_lock (mutex_t *m)
 
 	arch_intr_disable (&x);
 	assert (STACK_GUARD (task_current));
+#if !RECURSIVE_LOCKS
 	assert (task_current != m->master);
+#endif
 	if (! m->item.next)
 		mutex_init (m);
 
@@ -71,13 +73,17 @@ mutex_lock (mutex_t *m)
 CODE_FAST 
 bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg)
 {
+#if RECURSIVE_LOCKS
     if (mutex_recurcived_lock(m))
         return 1;
+#endif
 
     arch_state_t x;
     arch_intr_disable (&x);
     assert_task_good_stack(task_current);
+#if !RECURSIVE_LOCKS
     assert (task_current != m->master);
+#endif
     if (! m->item.next)
         mutex_init (m);
 
@@ -97,7 +103,8 @@ bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg
 CODE_FAST 
 void mutex_slave_task(mutex_t *m, task_t* t)
 {
-    assert (task_current->lock == 0);
+    /* Monitor is locked, block the task. */
+    assert2 ((t->lock == 0), uos_assert_mutex_task_name_msg, m, (t)->name);
 #if RECURSIVE_LOCKS
     assert (m->deep > 0);
 #endif
@@ -152,8 +159,10 @@ CODE_FAST
 bool_t 
 mutex_trylock (mutex_t *m)
 {
+#if RECURSIVE_LOCKS
     if (mutex_recurcived_lock(m))
         return 1;
+#endif
 
     if ((m->master != NULL) && (m->master != task_current))
         return 0;

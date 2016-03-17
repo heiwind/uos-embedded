@@ -37,5 +37,6 @@ void __assert_msg(const char *msg, ...)
 }
 
 const char uos_assert_task_name_msg[] = "asserted task:%S\n";
+const char uos_assert_mutex_task_name_msg[] = "asserted mutex:%p task:%S\n";
 
 #endif

@@ -333,6 +333,7 @@ extern task_t *task_yelds;
 
 #ifndef NDEBUG
 extern const char uos_assert_task_name_msg[];
+extern const char uos_assert_mutex_task_name_msg[];
 #define assert_task_good_stack(t) \
     assert2 (STACK_GUARD (t), uos_assert_task_name_msg, (t)->name)
 
