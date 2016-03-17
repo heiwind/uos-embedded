@@ -218,8 +218,11 @@ uart_receiver (void *arg)
 		}
 #endif
 #ifndef TRANSMIT_IRQ
-		if (test_transmitter_enabled (u->port))
-			uart_transmit_start (u);
+		if (test_transmitter_enabled (u->port)){
+		        mutex_lock(&u->transmitter);
+                uart_transmit_start (u);
+                mutex_unlock (&u->transmitter);
+		}
 #endif
 		/* Check that receive data is available,
 		 * and get the received byte. */
