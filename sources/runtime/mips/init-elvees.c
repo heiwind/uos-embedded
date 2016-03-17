@@ -524,7 +524,7 @@ _irq_handler_ ()
 }
 
 #if defined (ELVEES)
-__attribute__((noreturn))
+DEBUG_NORETURN
 static void dump_of_death (unsigned int context[])
 {
 	debug_printf ("                t0 = %8x   s0 = %8x   t8 = %8x   lo = %8x\n",
@@ -558,15 +558,18 @@ static void dump_of_death (unsigned int context[])
     while(1);
 }
 
-__attribute__((noreturn))
+DEBUG_NORETURN
 void _exception_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
 	const char *code = 0;
 
+	badvaddr = mips_read_c0_register (C0_BADVADDR);
+    config = mips_read_c0_register (C0_CONFIG);
+    cause = mips_read_c0_register (C0_CAUSE);
+
 	debug_printf ("\n\n*** 0x%08x: exception ", context [CONTEXT_PC]);
 
-	cause = mips_read_c0_register (C0_CAUSE);
 	switch (cause >> 2 & 31) {
 	case 0:	code = "Interrupt"; break;
 	case 1: code = "TLB Modification"; break;
@@ -588,15 +591,13 @@ void _exception_handler_ (unsigned int context[])
 	else
 		debug_printf ("%d\n", cause >> 2 & 31);
 
-	badvaddr = mips_read_c0_register (C0_BADVADDR);
-	config = mips_read_c0_register (C0_CONFIG);
 	debug_printf ("*** cause=0x%08x, badvaddr=0x%08x, config=0x%08x\n",
 		cause, badvaddr, config);
 
 	dump_of_death (context);
 }
 
-__attribute__((noreturn))
+DEBUG_NORETURN
 void _pagefault_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
