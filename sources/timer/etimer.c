@@ -69,6 +69,7 @@ void etimer_system_init(timer_t* source_clock){
     timeout_clear(timer);
     timeout_set_mutex(timer, &(self->os_timer_signal), self);
     timeout_set_handler(timer, &(ETimer_Handle), 0);
+    timeout_set_autoreload(timer, tsLoadOnce);
     timeout_add(source_clock, timer);
 }
 
