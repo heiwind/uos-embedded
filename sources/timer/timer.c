@@ -29,6 +29,10 @@ extern volatile uint32_t __timer_ticks_uos;
 #define CODE_TIMER
 #endif
 
+#ifndef UOS_ON_TIMER
+#define UOS_ON_TIMER(t);
+#endif
+
 #if I386
 #   include <runtime/i386/i8253.h>
 #   define TIMER_IRQ        0   /* IRQ0 */

@@ -46,7 +46,7 @@
 #include <timer/timeout.h>
 #include <stddef.h>
 
-#ifndef USER_TIMERS
+#ifndef TIMER_TIMEOUTS
 #   error "etimer requres USER_TIMERS be allowed!"
 #endif
 

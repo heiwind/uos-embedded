@@ -41,6 +41,10 @@ void timeout_start (timeout_t *to)
 
 void timeout_remove (timeout_t *ut){
     timer_t* t = ut->timer;
+    if (t == 0)
+        return;
+    if (list_is_empty(&ut->item))
+        return;
     mutex_lock (&t->lock);
     list_unlink (&ut->item);
     mutex_unlock (&t->lock);

@@ -21,6 +21,10 @@
 #define __deprecated
 #endif
 
+#ifndef INLINE
+#define INLINE static inline
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

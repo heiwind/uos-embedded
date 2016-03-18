@@ -84,7 +84,8 @@ void timeout_restart (timeout_t *to)
 
 /**\~russian
  * останавливает активность таймера.
- * этот функционал не отключает таймаут от таймера, он не расчитан на работу с режимом tsLoadRemove
+ * этот функционал не отключает таймаут от таймера.
+ * в режимом tsLoadRemove таймер отключает прерваный таймаут в ближайший отсчет.
  * */
 INLINE
 void timeout_break (timeout_t *to)
@@ -164,6 +165,7 @@ void timeout_arm (timeout_t *to, unsigned long interval_msec){
 //  можно вызывать из прерываиий, если заведомо нет конкуренции
 INLINE
 void timeout_arm_us_nomt (timeout_t *ut, timeout_time_t interval){
+    ut->interval = interval;
     ut->cur_time = interval;
     //ut->autoreload = tsLoadOnce;
 }
@@ -187,6 +189,7 @@ bool_t timeout_rearm (timeout_t *to, unsigned long interval_msec){
 
 INLINE
 bool_t timeout_rearm_us_nomt (timeout_t *ut, timeout_time_t interval){
+    ut->interval = interval;
     ut->cur_time += interval;
     //ut->autoreload = tsLoadOnce;
     return ut->cur_time <=0;

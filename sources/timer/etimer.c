@@ -30,7 +30,7 @@
 #include <kernel/internal.h>
 #include <stddef.h>
 
-#ifdef USER_TIMERS
+#ifdef TIMER_TIMEOUTS
 
 #include <timer/etimer.h>
 
