@@ -53,6 +53,7 @@ void tasks_list(list_t* x);
 #endif
 
 bool_t ETimer_ISR (void* data);
+void ETimer_Handle (timeout_t *to, void *arg);
 
 void etimer_system_init(timer_t* source_clock){
     etimer_device* self = &system_etimer;
@@ -64,11 +65,11 @@ void etimer_system_init(timer_t* source_clock){
         list_unlink(t);
     }
     */
-    user_timer_t* timer = &self->os_timer;
-    mutex_lock_swi(&(timer->lock), &(self->timer_irq), &(ETimer_ISR), NULL);
-    user_timer_init(timer, 0);
-    mutex_unlock(&(timer->lock));
-    user_timer_add(source_clock, timer);
+    timeout_t* timer = &self->os_timer;
+    timeout_clear(timer);
+    timeout_set_mutex(timer, &(self->os_timer_signal), self);
+    timeout_set_handler(timer, &(ETimer_Handle), 0);
+    timeout_add(source_clock, timer);
 }
 
 
@@ -84,15 +85,17 @@ inline etimer_device* etimer_dev_of(etimer *t){
 
 bool_t
 ETimer_ISR (void* data){
+    ETimer_Handle (0, data);
+    return ETIMER_SIGNALING;
+}
+
+void ETimer_Handle (timeout_t *to, void *data){
+
     etimer* event = (etimer*)data;
     etimer_device* self = etimer_dev_of(event);
     list_t* pended_timers = &(self->timerlist);
-    user_timer_t* timer = &(self->os_timer);
-#ifdef USEC_TIMER
-    etimer_time_t timeover = timer->usec_per_tick - timer->cur_time;
-#else
-    etimer_time_t timeover = timer->msec_per_tick - timer->cur_time;
-#endif
+    timeout_t *timer      = &(self->os_timer);
+    timeout_time_t timeover = timer->interval - timer->cur_time;
 
     do { 
         event->cur_time = -timeover;
@@ -122,12 +125,8 @@ ETimer_ISR (void* data){
         etimer_time_t elapsed = newtime->cur_time;
         if ( timeover < elapsed ) {
             timer->cur_time      = elapsed - timeover;
-#ifdef USEC_TIMER
-            timer->usec_per_tick = newtime->interval;
-#else
-            timer->msec_per_tick = newtime->interval;
-#endif
-            self->timer_irq.arg = (void*)newtime;
+            timer->interval = newtime->interval;
+            timer->handler_arg = (void*)newtime;
             break;
         }
         //else
@@ -139,8 +138,6 @@ ETimer_ISR (void* data){
             event = newtime;
             ETIMER_putchar('/');
     } while (!list_is_empty(pended_timers));
-
-    return ETIMER_SIGNALING;
 }
 
 void tasks_list(list_t* l){
@@ -173,7 +170,7 @@ add_timer(etimer *timer)
     assert(self->clock != NULL);
 
     etimer_seq_aqure(self);
-    mutex_t* clock_lock = &(self->os_timer.lock);
+    mutex_t* clock_lock = self->os_timer.mutex;
     mutex_lock(clock_lock);
         if (list_is_empty(&self->timerlist)){
             timer->cur_time = timeout;
@@ -181,19 +178,15 @@ add_timer(etimer *timer)
             
             // требуется на него настроить текущее  событие
             // assign next event time expiration
-            user_timer_t* enow = &(self->os_timer);
+            etimer_event_t* enow = &(self->os_timer);
             enow->cur_time      = timeout;
-#ifdef USEC_TIMER
-            enow->usec_per_tick = timer->interval;
-#else
-            enow->msec_per_tick = timer->interval;
-#endif
-            self->timer_irq.arg = (void*)timer;
+            enow->interval = timer->interval;
+            enow->handler_arg = (void*)timer;
             mutex_unlock(clock_lock);
             ETIMER_printf("\n@et(%x).%d\n", (unsigned)(timer), timeout );
         }
         else {
-            user_timer_t* enow = &(self->os_timer);
+            etimer_event_t* enow = &(self->os_timer);
             t = (etimer*)list_first(&self->timerlist);
             etimer_time_t spent1 = enow->cur_time;
             if (spent1 > timeout){
@@ -205,12 +198,8 @@ add_timer(etimer *timer)
                 // требуется на него настроить текущее  событие
                 // assign next event time expiration
                 enow->cur_time      = timeout;
-#ifdef USEC_TIMER
-                enow->usec_per_tick = timer->interval;
-#else
-                enow->msec_per_tick = timer->interval;
-#endif
-                self->timer_irq.arg = (void*)timer;
+                enow->interval = timer->interval;
+                enow->handler_arg = (void*)timer;
                 mutex_unlock(clock_lock);
                 ETIMER_printf("\n{%d}^et(%x)->(%x).%d\n"
                         , timeout
@@ -259,7 +248,7 @@ add_timer(etimer *timer)
 
 /*---------------------------------------------------------------------------*/
 void
-etimer_set(etimer *et, clock_time_t interval)
+etimer_set(etimer *et, etimer_time_t interval)
 {
     etimer_stop(et);
     et->interval = interval;
@@ -325,7 +314,7 @@ etimer_expiration_time(etimer *et)
     assert(self->clock != NULL);
 
     etimer_seq_aqure(self);
-    mutex_t* clock_lock = &(self->os_timer.lock);
+    mutex_t* clock_lock = self->os_timer.mutex;
     mutex_lock(clock_lock);
 #ifdef USEC_TIMER
         etimer_time_t safe_time = self->clock->usec_per_tick*2;
@@ -355,7 +344,7 @@ etimer_expiration_time(etimer *et)
     return elapse;
 }
 /*---------------------------------------------------------------------------*/
-clock_time_t
+etimer_time_t
 etimer_start_time(etimer *et)
 {
   return etimer_expiration_time(et) - et->interval;
@@ -369,7 +358,7 @@ etimer_stop(etimer *et)
 
     etimer_device* self = etimer_dev_of(et);
     etimer *t;
-    mutex_t* clock_lock = &(self->os_timer.lock);
+    mutex_t* clock_lock = self->os_timer.mutex;
 
     assert(self->clock != NULL);
 
@@ -378,24 +367,20 @@ etimer_stop(etimer *et)
         t = (etimer*)list_first(&self->timerlist);
         if (et == t){
             //надо удалить текущий таймер
-            user_timer_t* enow = &(self->os_timer);
+            etimer_event_t* enow = &(self->os_timer);
             et->cur_time = enow->cur_time;
             list_unlink(&t->item);
 
             if (list_is_empty(&self->timerlist)) {
-                user_timer_stop(enow);
+                timeout_stop(enow);
             }
             else {
                 t = (etimer*)list_first(&self->timerlist);
                 // требуется на него настроить текущее  событие
                 // assign next event time expiration
                 enow->cur_time      += t->cur_time;
-#ifdef USEC_TIMER
-                enow->usec_per_tick = t->interval;
-#else
-                enow->msec_per_tick = t->interval;
-#endif
-                self->timer_irq.arg = (void*)t;
+                enow->interval = t->interval;
+                enow->handler_arg = (void*)t;
             }
         }
         else {

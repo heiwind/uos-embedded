@@ -562,11 +562,13 @@ DEBUG_NORETURN
 void _exception_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
+	unsigned int errEPC;
 	const char *code = 0;
 
 	badvaddr = mips_read_c0_register (C0_BADVADDR);
     config = mips_read_c0_register (C0_CONFIG);
     cause = mips_read_c0_register (C0_CAUSE);
+    errEPC  = mips_read_c0_register (C0_ERROREPC);
 
 	debug_printf ("\n\n*** 0x%08x: exception ", context [CONTEXT_PC]);
 
@@ -591,8 +593,8 @@ void _exception_handler_ (unsigned int context[])
 	else
 		debug_printf ("%d\n", cause >> 2 & 31);
 
-	debug_printf ("*** cause=0x%08x, badvaddr=0x%08x, config=0x%08x\n",
-		cause, badvaddr, config);
+	debug_printf ("*** cause=0x%08x, badvaddr=0x%08x, config=0x%08x, errEPC=%p\n",
+		cause, badvaddr, config, errEPC);
 
 	dump_of_death (context);
 }

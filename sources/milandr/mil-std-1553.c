@@ -82,8 +82,8 @@ static void copy_to_urgent_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
             return;
         }
         mem_queue_put(&mil->urgent_rxq, que_elem);
-        // Номер слота всегда 0
-        *que_elem = 0;
+        // Первый байт номера слота всегда 1
+        *que_elem = 1;
         *(que_elem + 1) = 0;
         // Копируем дескриптор слота
         memcpy(que_elem + 2, &slot, 4);
@@ -756,8 +756,10 @@ static int mil_bc_urgent_send(mil1553if_t *_mil, mil_slot_desc_t descr, void *da
     mil_lock(_mil);
     mil->urgent_desc = descr;
     mil->urgent_desc.reserve = 0;
-    int wc = (descr.words_count == 0 ? 32 : descr.words_count);
-    memcpy(mil->urgent_data, data, 2*wc);
+    if (descr.transmit_mode == MIL_SLOT_BC_RT) {
+        int wc = (descr.words_count == 0 ? 32 : descr.words_count);
+        memcpy(mil->urgent_data, data, 2*wc);
+    }
     mil_unlock(_mil);
     return MIL_ERR_OK;
 }

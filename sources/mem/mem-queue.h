@@ -22,8 +22,12 @@ void mem_queue_init (mem_queue_t *q, mem_pool_t *pool, int msg_num)
 	q->count = 0;
 }
 
+/*
+ * Clear queue.
+ * The queue is usable after this operation.
+ */
 static inline __attribute__((always_inline))
-void mem_queue_free (mem_queue_t *q)
+void mem_queue_clear (mem_queue_t *q)
 {
 	while (q->count) {
 		mem_free (*q->tail);
@@ -31,6 +35,17 @@ void mem_queue_free (mem_queue_t *q)
 			q->tail += q->msg_num;
 		--q->count;
 	}
+}
+
+/*
+ * Free (dispose) queue.
+ * The function clears all the memory that is taken for the queue.
+ * The queue is unusable after this operation.
+ */
+static inline __attribute__((always_inline))
+void mem_queue_free (mem_queue_t *q)
+{
+    mem_queue_clear (q);
 	if (q->queue) {
 		mem_free (*q->queue);
 		q->queue = 0;
@@ -110,6 +125,5 @@ bool_t mem_queue_is_empty (mem_queue_t *q)
 {
 	return (q->count == 0);
 }
-
 
 #endif

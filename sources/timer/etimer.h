@@ -43,6 +43,7 @@
 #define UOS_ETIMER_H_
 
 #include <timer/timer.h>
+#include <timer/timeout.h>
 #include <stddef.h>
 
 #ifndef USER_TIMERS
@@ -63,7 +64,7 @@ extern "C" {
  * в отличие о user_timer_t, поле cur_time - используется в качестве start_time
  * \hideinitializer
  */
-typedef usertimer_time_t etimer_time_t;
+typedef timeout_time_t etimer_time_t;
 
 typedef struct {
     list_t  item;
@@ -99,10 +100,11 @@ INLINE void etimer_init (etimer *t){
 }
 
 
+typedef timeout_t etimer_event_t;
 struct _etimer_device {
     timer_t*     clock;
-    user_timer_t os_timer;
-    mutex_irq_t  timer_irq;
+    etimer_event_t  os_timer;
+    mutex_t         os_timer_signal;
     list_t       timerlist;
     mutex_t      list_access;
 };
@@ -189,7 +191,7 @@ void etimer_restart(etimer *et);
  *
  *             This function returns the expiration time for an event timer.
  */
-clock_time_t etimer_expiration_time(etimer *et);
+etimer_time_t etimer_expiration_time(etimer *et);
 
 /**
  * \brief      Get the start time for the event timer.
@@ -199,7 +201,7 @@ clock_time_t etimer_expiration_time(etimer *et);
  *             This function returns the start time (when the timer
  *             was last set) for an event timer.
  */
-clock_time_t etimer_start_time(etimer *et);
+etimer_time_t etimer_start_time(etimer *et);
 
 /**
  * \brief      Check if an event timer has expired.
@@ -263,7 +265,7 @@ INLINE
 int etimer_pending(void)
 {
     etimer_device* self = &system_etimer;
-    return (self->os_timer.cur_time > 0);
+    return (!timeout_expired(&self->os_timer));
 }
 
 /**
@@ -279,7 +281,7 @@ INLINE
 etimer_time_t etimer_next_expiration_time(void)
 {
     etimer_device* self = &system_etimer;
-    return self->os_timer.cur_time;
+    return timeout_expiration_timeout(&self->os_timer);
 }
 
 
