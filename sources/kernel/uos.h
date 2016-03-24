@@ -133,6 +133,7 @@ void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);
 void mutex_lock_swi (mutex_t*, mutex_irq_t* swi, handler_t func, void *arg);
 void mutex_unlock_irq (mutex_t*);
 void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg);
+void mutex_attach_swi (mutex_t *m, mutex_irq_t* swi, handler_t func, void *arg);
 
 /* Group management. */
 mutex_group_t *mutex_group_init (array_t *buf, unsigned buf_size);
