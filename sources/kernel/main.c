@@ -37,6 +37,7 @@ mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 static ARRAY (task_idle_data, sizeof(task_t) + ALIGNED_IDLE_TASK_STACKSZ - UOS_STACK_ALIGN);
 
 //если надо пропустить (yeld) текущую задачу - то этот параметр = task_current
+//!!! задача task_current включается в список активных ниток
 unsigned task_need_schedule;
 
 /*
@@ -48,7 +49,6 @@ void task_schedule ()
 	task_t *new_task;
 
 	if (task_need_schedule != (unsigned)task_current){
-	    task_need_schedule  = 0;
 	    task_yelds          = 0;
 	}
 	else {
@@ -76,6 +76,7 @@ void task_schedule ()
             task_yelds = 0;
         }
 	}
+    task_need_schedule  = 0;
 
 	if (new_task != task_current) {
 		new_task->ticks++;

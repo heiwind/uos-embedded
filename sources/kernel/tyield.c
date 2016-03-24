@@ -20,6 +20,7 @@
 
 /*
  * Suspend the current task so that other tasks can run.
+//!!! задача task_current включается в список активных ниток
  */
 void
 task_yield ()
