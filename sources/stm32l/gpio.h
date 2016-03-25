@@ -3,14 +3,31 @@
 
 #include <gpio/gpio-interface.h>
 
-struct _stm32l_gpio_t {
+typedef struct _stm32l_gpio_t stm32l_gpio_t;
+typedef struct _stm32l_gpio_hndl_list_item_t stm32l_gpio_hndl_list_item_t;
+
+struct _stm32l_gpio_hndl_list_item_t
+{
+    list_t              item;
+    
+    stm32l_gpio_t       *pin;
+    gpio_handler_t      handler;
+    void                *handler_arg;
+};
+
+struct _stm32l_gpio_t
+{
     gpioif_t            gpioif;
     
     GPIO_t              *reg;
     unsigned            pin_n;
-    int                 irq;
+    
+    int                 irq_handler_idx;
+    int                 int_pending;
+    
+    stm32l_gpio_hndl_list_item_t hndl_item;
 };
-typedef struct _stm32l_gpio_t stm32l_gpio_t;
+
 
 enum
 {

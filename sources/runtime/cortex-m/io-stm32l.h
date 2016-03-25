@@ -146,9 +146,7 @@ typedef enum
     IRQ_USB_FS_WKUP,
     IRQ_TIM6,
     IRQ_TIM7,
-#if defined(STM32L_CAT4) || defined(STM32L_CAT5) || defined(STM32L_CAT6)
-    IRQ_SDIO,
-#endif
+#if defined(STM32L_CAT3)
     IRQ_TIM5,
     IRQ_SPI3,
     IRQ_DMA2_CHAN1,
@@ -158,6 +156,21 @@ typedef enum
     IRQ_DMA2_CHAN5,
     IRQ_AES,
     IRQ_COMP_ACQ,
+#endif
+#if defined(STM32L_CAT4) || defined(STM32L_CAT5) || defined(STM32L_CAT6)
+    IRQ_SDIO,
+    IRQ_TIM5,
+    IRQ_SPI3,
+    IRQ_UART4,
+    IRQ_UART5,
+    IRQ_DMA2_CHAN1,
+    IRQ_DMA2_CHAN2,
+    IRQ_DMA2_CHAN3,
+    IRQ_DMA2_CHAN4,
+    IRQ_DMA2_CHAN5,
+    IRQ_AES,
+    IRQ_COMP_ACQ,
+#endif
     ARCH_TIMER_IRQ,
     ARCH_INTERRUPTS
 } IRQn_t;
