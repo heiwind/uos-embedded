@@ -63,6 +63,7 @@ void timer_delay (timer_t *t, unsigned long msec);
 
 /* Query real time. */
 unsigned long timer_milliseconds (timer_t *t);
+uint64_t timer_microseconds (timer_t *t);
 unsigned int timer_days (timer_t *t, unsigned long *milliseconds);
 bool_t timer_passed (timer_t *t, unsigned long t0, unsigned int msec);
 bool_t interval_greater_or_equal (long interval, long msec);

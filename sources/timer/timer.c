@@ -321,6 +321,20 @@ timer_milliseconds (timer_t *t)
     return val;
 }
 
+uint64_t
+timer_microseconds (timer_t *t)
+{
+    uint64_t val;
+
+    mutex_lock (&t->lock);
+    val = t->milliseconds * 1000;
+#ifdef USEC_TIMER
+    val += t->usec_in_msec;
+#endif
+    mutex_unlock (&t->lock);
+    return val;
+}
+
 /**\~english
  * Return the (real) time in days and milliseconds since uOS start.
  *
