@@ -1751,6 +1751,7 @@ typedef struct
 #define USART_STOP_05       (1 << 12)
 #define USART_STOP_2        (2 << 12)
 #define USART_STOP_15       (3 << 12)
+#define USART_STOP_MASK     (3 << 12)
 #define USART_CLKEN         (1 << 11)
 #define USART_CPOL          (1 << 10)
 #define USART_CPHA          (1 << 9)
