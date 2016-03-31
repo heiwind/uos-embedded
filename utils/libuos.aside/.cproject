@@ -4,8 +4,8 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.1348377265">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.debug.archiver.uOS.1348377265" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Debug">
 				<macros>
+					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="${ProjDirPath}/../.."/>
 					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
-					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="${workspace_loc:uosdev}/.."/>
 					<stringMacro name="CROSS_DSP" type="VALUE_TEXT" value="c:/elvees/ToolsDSP"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>
@@ -150,8 +150,8 @@
 		<cconfiguration id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.275300665">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.elvees.mcs4.projmanager.configuration.release.archiver.uOS.275300665" moduleId="org.eclipse.cdt.core.settings" name="MultiCore_Configuration_Release">
 				<macros>
-					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
 					<stringMacro name="uOS_ROOT" type="VALUE_TEXT" value="c:\Projects\uOS.hg"/>
+					<stringMacro name="CROSS_TOOL" type="VALUE_TEXT" value="c:/elvees/ToolsMGCC"/>
 					<stringMacro name="CROSS_DSP" type="VALUE_TEXT" value="c:/elvees/ToolsDSP"/>
 					<stringMacro name="uOS_SRC" type="VALUE_TEXT" value="${uOS_ROOT}/sources"/>
 				</macros>

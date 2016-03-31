@@ -33,12 +33,6 @@ typedef void (* gpio_handler_t) (gpioif_t *pin, void *arg);
 //
 struct _gpioif_t
 {
-    // Мьютекс для синхронизации
-    mutex_t         lock;
-    
-    gpio_handler_t  handler;
-    void            *handler_arg;
-    
     void (* to_input)(gpioif_t *pin);
     
     void (* to_output)(gpioif_t *pin);
@@ -51,6 +45,12 @@ struct _gpioif_t
         gpio_handler_t handler, void *arg);
     
     void (* detach_interrupt)(gpioif_t *pin);
+    
+    int (* interrupt_pending)(gpioif_t *pin);
+    
+    void (* clear_interrupt)(gpioif_t *pin);
+    
+    mutex_t * (* get_mutex)(gpioif_t *pin);
 };
 
 #define to_gpioif(x)   ((gpioif_t*)&(x)->gpioif)
@@ -98,9 +98,27 @@ void gpio_detach_interrupt(gpioif_t *pin)
 }
 
 static inline __attribute__((always_inline)) 
+mutex_t *gpio_get_mutex(gpioif_t *pin)
+{
+    return pin->get_mutex(pin);
+}
+
+static inline __attribute__((always_inline)) 
+int gpio_interrupt_pending(gpioif_t *pin)
+{
+    return pin->interrupt_pending(pin);
+}
+
+static inline __attribute__((always_inline)) 
+void gpio_clear_interrupt(gpioif_t *pin)
+{
+    pin->clear_interrupt(pin);
+}
+
+static inline __attribute__((always_inline)) 
 void gpio_wait_irq(gpioif_t *pin)
 {
-    mutex_wait(&pin->lock);
+    mutex_wait(gpio_get_mutex(pin));
 }
 
 

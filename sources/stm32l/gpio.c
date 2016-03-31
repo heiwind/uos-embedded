@@ -3,27 +3,39 @@
 #include <stm32l/gpio.h>
 #include <kernel/internal.h>
 
+enum {
+    HANDLER_EXTI0,
+    HANDLER_EXTI1,
+    HANDLER_EXTI2,
+    HANDLER_EXTI3,
+    HANDLER_EXTI4,
+    HANDLER_EXTI9_5,
+    HANDLER_EXTI15_10,
+    HANDLER_MAX_NB
+};
+
+#define EXTI_HNDL_INIT  (1 << 30)
+
+static int handler_state;
+static list_t exti_hndl[HANDLER_MAX_NB];
+static mutex_t exti_mutex[HANDLER_MAX_NB];
+static const int irq_n[HANDLER_MAX_NB] = {
+    IRQ_EXTI0, IRQ_EXTI1, IRQ_EXTI2, IRQ_EXTI3, IRQ_EXTI4, 
+    IRQ_EXTI9_5, IRQ_EXTI15_10
+};
+
+
 static void stm32l_to_input(gpioif_t *pin)
 {
     stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
-    
-    mutex_lock(&pin->lock);
-    
     stm_pin->reg->MODER &= ~GPIO_MODE_MASK(stm_pin->pin_n);
-    
-    mutex_unlock(&pin->lock);
 }
     
 static void stm32l_to_output(gpioif_t *pin)
 {
     stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
-    
-    mutex_lock(&pin->lock);
-    
     stm_pin->reg->MODER = (stm_pin->reg->MODER & 
         ~GPIO_MODE_MASK(stm_pin->pin_n)) | GPIO_OUT(stm_pin->pin_n);
-        
-    mutex_unlock(&pin->lock);
 }
     
 static void stm32l_set_value(gpioif_t *pin, int v)
@@ -45,15 +57,20 @@ static int stm32l_value(gpioif_t *pin)
 
 static bool_t stm32l_gpio_irq_handler(void *arg)
 {
-    gpioif_t *pin = (gpioif_t *)arg;
-    stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)arg;
+    int handler_idx = (int)arg;
+    stm32l_gpio_hndl_list_item_t *item;
     
-    if (pin->handler)
-        pin->handler(pin, pin->handler_arg);
+    list_iterate(item, &exti_hndl[handler_idx]) {
+        if (EXTI->PR & EXTI_GPIO(item->pin->pin_n)) {
+            item->pin->int_pending = 1;
+            if (item->handler)
+                item->handler(&item->pin->gpioif, item->handler_arg);
+            EXTI->PR = EXTI_GPIO(item->pin->pin_n);
+        }        
+//debug_printf("handler_idx = %d, EXTI->PR = %08X\n", handler_idx, EXTI->PR);
+    }
     
-    EXTI->PR = EXTI_GPIO(stm_pin->pin_n);
-    
-    arch_intr_allow(stm_pin->irq);
+    arch_intr_allow(irq_n[handler_idx]);
     
     return 0;
 }
@@ -63,80 +80,80 @@ static void stm32l_attach_interrupt(gpioif_t *pin, unsigned event,
 {
     stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
     arm_reg_t *exticr;
-    
-    pin->handler = handler;
-    pin->handler_arg = arg;
-    
-    RCC->APB2ENR |= RCC_SYSCFGEN;
+    int handler_idx = HANDLER_MAX_NB;
     
     switch (stm_pin->pin_n) {
     case 0:
-        stm_pin->irq = IRQ_EXTI0;
         exticr = &SYSCFG->EXTICR1;
+        handler_idx = HANDLER_EXTI0;
         break;
     case 1:
-        stm_pin->irq = IRQ_EXTI1;
         exticr = &SYSCFG->EXTICR1;
+        handler_idx = HANDLER_EXTI1;
         break;
     case 2:
-        stm_pin->irq = IRQ_EXTI2;
         exticr = &SYSCFG->EXTICR1;
+        handler_idx = HANDLER_EXTI2;
         break;
     case 3:
-        stm_pin->irq = IRQ_EXTI3;
         exticr = &SYSCFG->EXTICR1;
+        handler_idx = HANDLER_EXTI3;
         break;
     case 4:
-        stm_pin->irq = IRQ_EXTI4;
         exticr = &SYSCFG->EXTICR2;
+        handler_idx = HANDLER_EXTI4;
         break;
     case 5:
-        stm_pin->irq = IRQ_EXTI9_5;
         exticr = &SYSCFG->EXTICR2;
+        handler_idx = HANDLER_EXTI9_5;
         break;
     case 6:
-        stm_pin->irq = IRQ_EXTI9_5;
         exticr = &SYSCFG->EXTICR2;
+        handler_idx = HANDLER_EXTI9_5;
         break;
     case 7:
-        stm_pin->irq = IRQ_EXTI9_5;
         exticr = &SYSCFG->EXTICR2;
+        handler_idx = HANDLER_EXTI9_5;
         break;
     case 8:
-        stm_pin->irq = IRQ_EXTI9_5;
         exticr = &SYSCFG->EXTICR3;
+        handler_idx = HANDLER_EXTI9_5;
         break;
     case 9:
-        stm_pin->irq = IRQ_EXTI9_5;
         exticr = &SYSCFG->EXTICR3;
+        handler_idx = HANDLER_EXTI9_5;
         break;
     case 10:
-        stm_pin->irq = IRQ_EXTI15_10;
         exticr = &SYSCFG->EXTICR3;
+        handler_idx = HANDLER_EXTI15_10;
         break;
     case 11:
-        stm_pin->irq = IRQ_EXTI15_10;
         exticr = &SYSCFG->EXTICR3;
+        handler_idx = HANDLER_EXTI15_10;
         break;
     case 12:
-        stm_pin->irq = IRQ_EXTI15_10;
         exticr = &SYSCFG->EXTICR4;
+        handler_idx = HANDLER_EXTI15_10;
         break;
     case 13:
-        stm_pin->irq = IRQ_EXTI15_10;
         exticr = &SYSCFG->EXTICR4;
+        handler_idx = HANDLER_EXTI15_10;
         break;
     case 14:
-        stm_pin->irq = IRQ_EXTI15_10;
         exticr = &SYSCFG->EXTICR4;
+        handler_idx = HANDLER_EXTI15_10;
         break;
     case 15:
-        stm_pin->irq = IRQ_EXTI15_10;
         exticr = &SYSCFG->EXTICR4;
+        handler_idx = HANDLER_EXTI15_10;
         break;
     default:
         return;
     }
+    
+    assert(handler_idx < HANDLER_MAX_NB);
+    
+    RCC->APB2ENR |= RCC_SYSCFGEN;
 
     if (stm_pin->reg == GPIOA)
         *exticr = (*exticr & ~SYSCFG_PMASK(stm_pin->pin_n)) | SYSCFG_PA(stm_pin->pin_n);
@@ -157,19 +174,65 @@ static void stm32l_attach_interrupt(gpioif_t *pin, unsigned event,
     else
         return;
         
+    list_init(&stm_pin->hndl_item.item);
+    stm_pin->hndl_item.pin = stm_pin;
+    stm_pin->hndl_item.handler = handler;
+    stm_pin->hndl_item.handler_arg = arg;
+    stm_pin->irq_handler_idx = handler_idx;
+        
     EXTI->IMR |= EXTI_GPIO(stm_pin->pin_n);
     if (event & GPIO_EVENT_RISING_EDGE)
         EXTI->RTSR |= EXTI_GPIO(stm_pin->pin_n);
     if (event & GPIO_EVENT_FALLING_EDGE)
         EXTI->FTSR |= EXTI_GPIO(stm_pin->pin_n);
         
-    mutex_attach_irq(&pin->lock, stm_pin->irq, stm32l_gpio_irq_handler, pin);
+    arch_state_t x;
+    arch_intr_disable(&x);
+    
+    list_append(&exti_hndl[handler_idx], &stm_pin->hndl_item.item);
+    
+    if (! (handler_state & (1 << handler_idx))) {
+        mutex_attach_irq(&exti_mutex[handler_idx], irq_n[handler_idx], 
+            stm32l_gpio_irq_handler, (void *)handler_idx);
+        handler_state |= (1 << handler_idx);
+    }
+    
+    arch_intr_restore(x);
 }
 
 static void stm32l_detach_interrupt(gpioif_t *pin)
 {
-    mutex_lock(&pin->lock);
-    mutex_unlock_irq(&pin->lock);
+    stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
+    
+    arch_state_t x;
+    arch_intr_disable(&x);
+    
+    list_unlink(&stm_pin->hndl_item.item);
+    
+    if (list_is_empty(&exti_hndl[stm_pin->irq_handler_idx])) {
+        mutex_lock(&exti_mutex[stm_pin->irq_handler_idx]);
+        mutex_unlock_irq(&exti_mutex[stm_pin->irq_handler_idx]);
+    }
+    
+    arch_intr_restore(x);
+}
+
+static int stm32l_interrupt_pending(gpioif_t *pin)
+{
+    stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
+    return stm_pin->int_pending;
+}
+
+static void stm32l_clear_interrupt(gpioif_t *pin)
+{
+    stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
+    stm_pin->int_pending = 0;
+}
+
+static mutex_t *stm32l_get_mutex(gpioif_t *pin)
+{
+    stm32l_gpio_t *stm_pin = (stm32l_gpio_t *)pin;
+    return &exti_mutex[stm_pin->irq_handler_idx];
 }
 
 void stm32l_gpio_init(stm32l_gpio_t *gpio, unsigned port, unsigned pin_n, 
@@ -242,4 +305,14 @@ void stm32l_gpio_init(stm32l_gpio_t *gpio, unsigned port, unsigned pin_n,
     gpioif->value = stm32l_value;
     gpioif->attach_interrupt = stm32l_attach_interrupt;
     gpioif->detach_interrupt = stm32l_detach_interrupt;
+    gpioif->interrupt_pending = stm32l_interrupt_pending;
+    gpioif->clear_interrupt = stm32l_clear_interrupt;
+    gpioif->get_mutex = stm32l_get_mutex;
+    
+    if (! (handler_state & EXTI_HNDL_INIT)) {
+        int i;
+        for (i = 0; i < HANDLER_MAX_NB; ++i)
+            list_init(&exti_hndl[i]);
+        handler_state |= EXTI_HNDL_INIT;
+    }
 }

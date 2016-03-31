@@ -146,9 +146,7 @@ typedef enum
     IRQ_USB_FS_WKUP,
     IRQ_TIM6,
     IRQ_TIM7,
-#if defined(STM32L_CAT4) || defined(STM32L_CAT5) || defined(STM32L_CAT6)
-    IRQ_SDIO,
-#endif
+#if defined(STM32L_CAT3)
     IRQ_TIM5,
     IRQ_SPI3,
     IRQ_DMA2_CHAN1,
@@ -158,6 +156,21 @@ typedef enum
     IRQ_DMA2_CHAN5,
     IRQ_AES,
     IRQ_COMP_ACQ,
+#endif
+#if defined(STM32L_CAT4) || defined(STM32L_CAT5) || defined(STM32L_CAT6)
+    IRQ_SDIO,
+    IRQ_TIM5,
+    IRQ_SPI3,
+    IRQ_UART4,
+    IRQ_UART5,
+    IRQ_DMA2_CHAN1,
+    IRQ_DMA2_CHAN2,
+    IRQ_DMA2_CHAN3,
+    IRQ_DMA2_CHAN4,
+    IRQ_DMA2_CHAN5,
+    IRQ_AES,
+    IRQ_COMP_ACQ,
+#endif
     ARCH_TIMER_IRQ,
     ARCH_INTERRUPTS
 } IRQn_t;
@@ -1126,6 +1139,7 @@ typedef struct
 #define COMP_INSEL_1_4_VREFINT      (5 << 18)
 #define COMP_INSEL_DAC_OUT1         (6 << 18)
 #define COMP_INSEL_DAC_OUT2         (7 << 18)
+#define COMP_INSEL_MASK			        (7 << 18)
 #define COMP_WNDWE                  (1 << 17)
 #define COMP_VREFOUTEN              (1 << 16)
 #define COMP_CMP2OUT                (1 << 13)
@@ -1138,6 +1152,212 @@ typedef struct
 #define COMP_400KPU                 (1 << 1)
 #define COMP_10KPU                  (1 << 0)
 
+/////////////////////////////////////////
+// Routing Interface (RI)
+/////////////////////////////////////////
+typedef struct
+{
+  arm_reg_t ICR;       // input capture register,                           Address offset: 0x04
+  arm_reg_t ASCR1;     // analog switches control register,                 Address offset: 0x08
+  arm_reg_t ASCR2;     // analog switch control register 2,                 Address offset: 0x0C
+  arm_reg_t HYSCR1;    // hysteresis control register 1,                    Address offset: 0x10
+  arm_reg_t HYSCR2;    // Hysteresis control register 2,                    Address offset: 0x14
+  arm_reg_t HYSCR3;    // Hysteresis control register 3,                    Address offset: 0x18
+  arm_reg_t HYSCR4;    // Hysteresis control register 4,                    Address offset: 0x1C
+  arm_reg_t ASMR1;     // Analog switch mode register 1,                    Address offset: 0x20
+  arm_reg_t CMR1;      // Channel mask register 1,                          Address offset: 0x24
+  arm_reg_t CICR1;     // Channel identification for capture register 1,    Address offset: 0x28
+  arm_reg_t ASMR2;     // Analog switch mode register 2,                    Address offset: 0x2C
+  arm_reg_t CMR2;      // Channel mask register 2,                          Address offset: 0x30
+  arm_reg_t CICR2;     // Channel identification for capture register 2,    Address offset: 0x34
+  arm_reg_t ASMR3;     // Analog switch mode register 3,                    Address offset: 0x38
+  arm_reg_t CMR3;      // Channel mask register 3,                          Address offset: 0x3C
+  arm_reg_t CICR3;     // Channel identification for capture register3 ,    Address offset: 0x40
+  arm_reg_t ASMR4;     // Analog switch mode register 4,                    Address offset: 0x44
+  arm_reg_t CMR4;      // Channel mask register 4,                          Address offset: 0x48
+  arm_reg_t CICR4;     // Channel identification for capture register 4,    Address offset: 0x4C
+  arm_reg_t ASMR5;     // Analog switch mode register 5,                    Address offset: 0x50
+  arm_reg_t CMR5;      // Channel mask register 5,                          Address offset: 0x54
+  arm_reg_t CICR5;     // Channel identification for capture register 5,    Address offset: 0x58
+} RI_t;
+
+#define   RI      ((RI_t *) STM_RI_BASE)
+
+//RI_ICR
+#define   RI_IC4                            (1 << 21)
+#define   RI_IC3                            (1 << 20)
+#define   RI_IC2                            (1 << 19)
+#define   RI_IC1                            (1 << 18)
+
+#define   RI_TIM_NONE                       (0 << 16)
+#define   RI_TIM2                           (1 << 16)
+#define   RI_TIM3                           (2 << 16)
+#define   RI_TIM4                           (3 << 16)
+#define   RI_TIM_MASK                       (3 << 16)
+
+#define   RI_IC4IOS_PA3                     (0 << 12)
+#define   RI_IC4IOS_PA7                     (1 << 12)
+#define   RI_IC4IOS_PA11                    (2 << 12)
+#define   RI_IC4IOS_PA15                    (3 << 12)
+#define   RI_IC4IOS_PC3                     (4 << 12)
+#define   RI_IC4IOS_PC7                     (5 << 12)
+#define   RI_IC4IOS_PC11                    (6 << 12)
+#define   RI_IC4IOS_PC15                    (7 << 12)
+#define   RI_IC4IOS_PD3                     (8 << 12)
+#define   RI_IC4IOS_PD7                     (9 << 12)
+#define   RI_IC4IOS_PD11                    (10 << 12)
+#define   RI_IC4IOS_PD15                    (11 << 12)
+#define   RI_IC4IOS_PE3                     (12 << 12)
+#define   RI_IC4IOS_PE7                     (13 << 12)
+#define   RI_IC4IOS_PE11                    (14 << 12)
+#define   RI_IC4IOS_PE15                    (15 << 12)
+#define   RI_IC4IOS_MASK                    (15 << 12)
+
+#define   RI_IC3IOS_PA2                     (0 << 8)
+#define   RI_IC3IOS_PA6                     (1 << 8)
+#define   RI_IC3IOS_PA10                    (2 << 8)
+#define   RI_IC3IOS_PA14                    (3 << 8)
+#define   RI_IC3IOS_PC2                     (4 << 8)
+#define   RI_IC3IOS_PC6                     (5 << 8)
+#define   RI_IC3IOS_PC10                    (6 << 8)
+#define   RI_IC3IOS_PC14                    (7 << 8)
+#define   RI_IC3IOS_PD2                     (8 << 8)
+#define   RI_IC3IOS_PD6                     (9 << 8)
+#define   RI_IC3IOS_PD10                    (10 << 8)
+#define   RI_IC3IOS_PD14                    (11 << 8)
+#define   RI_IC3IOS_PE2                     (12 << 8)
+#define   RI_IC3IOS_PE6                     (13 << 8)
+#define   RI_IC3IOS_PE10                    (14 << 8)
+#define   RI_IC3IOS_PE14                    (15 << 8)
+#define   RI_IC3IOS_MASK                    (15 << 8)
+
+#define   RI_IC2IOS_PA1                     (0 << 4)
+#define   RI_IC2IOS_PA5                     (1 << 4)
+#define   RI_IC2IOS_PA9                     (2 << 4)
+#define   RI_IC2IOS_PA13                    (3 << 4)
+#define   RI_IC2IOS_PC1                     (4 << 4)
+#define   RI_IC2IOS_PC5                     (5 << 4)
+#define   RI_IC2IOS_PC9                     (6 << 4)
+#define   RI_IC2IOS_PC13                    (7 << 4)
+#define   RI_IC2IOS_PD1                     (8 << 4)
+#define   RI_IC2IOS_PD5                     (9 << 4)
+#define   RI_IC2IOS_PD9                     (10 << 4)
+#define   RI_IC2IOS_PD13                    (11 << 4)
+#define   RI_IC2IOS_PE1                     (12 << 4)
+#define   RI_IC2IOS_PE5                     (13 << 4)
+#define   RI_IC2IOS_PE9                     (14 << 4)
+#define   RI_IC2IOS_PE13                    (15 << 4)
+#define   RI_IC2IOS_MASK                    (15 << 4)
+
+#define   RI_IC1IOS_PA0                     (0 << 0)
+#define   RI_IC1IOS_PA4                     (1 << 0)
+#define   RI_IC1IOS_PA8                     (2 << 0)
+#define   RI_IC1IOS_PA12                    (3 << 0)
+#define   RI_IC1IOS_PC0                     (4 << 0)
+#define   RI_IC1IOS_PC4                     (5 << 0)
+#define   RI_IC1IOS_PC8                     (6 << 0)
+#define   RI_IC1IOS_PC12                    (7 << 0)
+#define   RI_IC1IOS_PD0                     (8 << 0)
+#define   RI_IC1IOS_PD4                     (9 << 0)
+#define   RI_IC1IOS_PD8                     (10 << 0)
+#define   RI_IC1IOS_PD12                    (11 << 0)
+#define   RI_IC1IOS_PE0                     (12 << 0)
+#define   RI_IC1IOS_PE4                     (13 << 0)
+#define   RI_IC1IOS_PE8                     (14 << 0)
+#define   RI_IC1IOS_PE12                    (15 << 0)
+#define   RI_IC1IOS_MASK                    (15 << 0)
+
+//RI_ASCR1
+#define   RI_SCM                            (1 << 31)
+#define   RI_CH(n)                          (1 << n)
+#define   RI_VCOMP                          (1 << 26)
+
+//RI_ASCR2
+#define   RI_GR64                           (1 << 28)
+#define   RI_GR63                           (1 << 27)
+#define   RI_GR77                           (1 << 26)
+#define   RI_GR76                           (1 << 25)
+#define   RI_GR75                           (1 << 24)
+#define   RI_GR25                           (1 << 23)
+#define   RI_GR24                           (1 << 22)
+#define   RI_GR23                           (1 << 21)
+#define   RI_GR94                           (1 << 20)
+#define   RI_GR93                           (1 << 19)
+#define   RI_GR35                           (1 << 18)
+#define   RI_GR34                           (1 << 17)
+#define   RI_GR33                           (1 << 16)
+#define   RI_GR43                           (1 << 11)
+#define   RI_GR42                           (1 << 10)
+#define   RI_GR41                           (1 << 9)
+#define   RI_GR53                           (1 << 8)
+#define   RI_GR52                           (1 << 7)
+#define   RI_GR51                           (1 << 6)
+#define   RI_GR62                           (1 << 5)
+#define   RI_GR61                           (1 << 4)
+#define   RI_GR104                          (1 << 3)
+#define   RI_GR103                          (1 << 2)
+#define   RI_GR102                          (1 << 1)
+#define   RI_GR101                          (1 << 0)
+
+//RI_HYSCR1
+#define   RI_HYST_PB(n)                     (1 << (16+n))
+#define   RI_HYST_PA(n)                     (1 << n)
+
+//RI_HYSCR2
+#define   RI_HYST_PD(n)                     (1 << (16+n))
+#define   RI_HYST_PC(n)                     (1 << n)
+
+//RI_HYSCR3
+#define   RI_HYST_PF(n)                     (1 << (16+n))
+#define   RI_HYST_PE(n)                     (1 << n)
+
+//RI_HYSCR4
+#define   RI_HYST_PG(n)                     (1 << n)
+
+//RI_ASMR1
+#define   RI_ASM_PA(n)                      (1 << n)
+
+//RI_CMR1
+#define   RI_CMR_PA(n)                      (1 << n)
+
+//RI_CICR1
+#define   RI_CICR_PA(n)                     (1 << n)
+
+//RI_ASMR2
+#define   RI_ASM_PB(n)                      (1 << n)
+
+//RI_CMR2
+#define   RI_CMR_PB(n)                      (1 << n)
+
+//RI_CICR2
+#define   RI_CICR_PB(n)                     (1 << n)
+
+//RI_ASMR3
+#define   RI_ASM_PC(n)                      (1 << n)
+
+//RI_CMR3
+#define   RI_CMR_PC(n)                      (1 << n)
+
+//RI_CICR3
+#define   RI_CICR_PC(n)                     (1 << n)
+
+//RI_ASMR4
+#define   RI_ASM_PF(n)                      (1 << n)
+
+//RI_CMR4
+#define   RI_CMR_PF(n)                      (1 << n)
+
+//RI_CICR4
+#define   RI_CICR_PF(n)                     (1 << n)
+
+//RI_ASMR5
+#define   RI_ASM_PG(n)                      (1 << n)
+
+//RI_CMR5
+#define   RI_CMR_PG(n)                      (1 << n)
+
+//RI_CICR5
+#define   RI_CICR_PG(n)                     (1 << n)
 
 /////////////////////////////////////////
 // RTC
@@ -1531,6 +1751,7 @@ typedef struct
 #define USART_STOP_05       (1 << 12)
 #define USART_STOP_2        (2 << 12)
 #define USART_STOP_15       (3 << 12)
+#define USART_STOP_MASK     (3 << 12)
 #define USART_CLKEN         (1 << 11)
 #define USART_CPOL          (1 << 10)
 #define USART_CPHA          (1 << 9)

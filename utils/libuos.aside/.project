@@ -184,7 +184,7 @@
 	<variableList>
 		<variable>
 			<name>uOS_ROOT</name>
-			<value>$%7BWORKSPACE_LOC%7D/uosdev</value>
+			<value>$%7BPARENT-2-PROJECT_LOC%7D</value>
 		</variable>
 		<variable>
 			<name>uOS_SRC</name>

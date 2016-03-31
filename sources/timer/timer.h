@@ -124,7 +124,8 @@ typedef struct _timer_t timer_t;
 
 
 #ifdef USEC_TIMER
-// Микросекудный таймер. Поддерживается пока только для миландровских контроллеров
+// Микросекудный таймер. Поддерживается пока только для контроллеров
+//  миландровских, MIPS32
 void timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick);
 INLINE 
 void timer_init (timer_t *t, unsigned long khz, small_uint_t msec_per_tick){
@@ -150,6 +151,15 @@ void timer_delay (timer_t *t, unsigned long msec);
 INLINE unsigned long timer_milliseconds (timer_t *t){
     return t->milliseconds;
 };
+
+#ifdef USEC_TIMER
+uint64_t timer_microseconds (timer_t *t);
+#else
+INLINE
+uint64_t timer_microseconds (timer_t *t){
+    return t->milliseconds*1000ULL;
+}
+#endif
 
 unsigned long timer_seconds (timer_t *t);
 

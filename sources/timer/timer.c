@@ -369,6 +369,20 @@ timer_handler (timer_t *t)
 }
 
 /**\~english
+uint64_t
+timer_microseconds (timer_t *t)
+{
+    uint64_t val;
+
+    mutex_lock (&t->lock);
+    val = t->milliseconds * 1000;
+#ifdef USEC_TIMER
+    val += t->usec_in_msec;
+#endif
+    mutex_unlock (&t->lock);
+    return val;
+}
+
  * Return the (real) time in days and milliseconds since uOS start.
  *
  * \~russian
@@ -436,8 +450,6 @@ timer_passed (timer_t *t, unsigned long t0, unsigned int msec)
     return interval_greater_or_equal (now - t0, msec);
 }
 
-#ifdef USEC_TIMER
-
 static inline unsigned long umuldiv1000(unsigned long khz, unsigned long usec_per_tick){
     //res = khz*usec_per_tick /1000
     unsigned long long res = khz>>3;
@@ -449,10 +461,6 @@ static inline unsigned long umuldiv1000(unsigned long khz, unsigned long usec_pe
     return res;
 } 
 
-static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
-    return umuldiv1000(khz, usec_per_tick);
-}
-
 unsigned long timer_seconds (timer_t *t){
     unsigned long ms;
     unsigned long days = 0;
@@ -463,6 +471,29 @@ unsigned long timer_seconds (timer_t *t){
 #endif
     unsigned long secs = umuldiv1000(TIMER_MSEC_PER_DAY, days) + umuldiv1000(ms, 1);
     return secs;
+}
+
+#ifdef USEC_TIMER
+
+uint64_t
+timer_microseconds (timer_t *t)
+{
+    uint64_t val;
+
+    unsigned long ms;
+    unsigned long us;
+
+    do {
+    ms = t->milliseconds;
+    us = t->usec_in_msec;
+    } while (ms != t->milliseconds);
+    val = ms * 1000;
+    val += us;
+    return val;
+}
+
+static inline unsigned long timer_period_byus(unsigned long khz, unsigned long usec_per_tick){
+    return umuldiv1000(khz, usec_per_tick);
 }
 
 /**\~english
