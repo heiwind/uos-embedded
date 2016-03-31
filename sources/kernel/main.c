@@ -163,6 +163,11 @@ uos_post_init ()
 {
 }
 
+
+
+void _init_ctors(void);
+void __uos_init_array();
+
 /*
  * Call user initialization routine uos_init(),
  * then create the idle task, and run the OS.
@@ -176,7 +181,7 @@ main (void)
 	task_idle = (task_t*) task_idle_data;
 	memset (task_idle->stack, STACK_MAGIC, ALIGNED_IDLE_TASK_STACKSZ);
 	assert_task_good_stack (task_idle);
-	
+
 	/* Move stack pointer to task_idle stack area */
     unsigned sp = (unsigned)(&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
     /* stack pointer should align to doubles */
@@ -195,9 +200,12 @@ main (void)
 	task_current = task_idle;
 	task_activate (task_idle);
 
+    __uos_init_array();
+    _init_ctors();
+
 	/* Create user tasks. */
 	uos_init ();
-	
+
 	/* Additional machine-dependent initialization */
 	uos_post_init ();
 
@@ -214,3 +222,103 @@ main (void)
 		arch_idle ();
 	}
 }
+
+
+
+//**********************************************************************************
+//          Global Statics Initialization
+//* crti.c for ARM - BPABI - use -std=c99
+
+//***************************          ctor/dtor            ************************
+typedef void (*func_ptr)(void);
+
+#ifdef UOS_HAVE_CTORS
+extern func_ptr __CTOR_LIST__[] __attribute__((weak));
+extern func_ptr __DTOR_LIST__[] __attribute__((weak));
+/*  you should place such code to linkes script to provide initialisers table
+     __CTOR_LIST__ = .;
+      LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
+      KEEP(*(.ctors))
+      LONG(0)
+      __CTOR_END__ = .;
+      __DTOR_LIST__ = .;
+      LONG((__DTOR_END__ - __DTOR_LIST__) / 4 - 2)
+      KEEP(*(.dtors))
+      LONG(0)
+      __DTOR_END__ = .;
+ * */
+
+void _init_ctors(void)
+{
+    func_ptr* func;
+    unsigned len = (unsigned)__CTOR_LIST__[0];
+    for ( func = &__CTOR_LIST__[1]; (func != 0) && (len > 0); func++, len-- )
+        (*func)();
+}
+#else
+inline void _init_ctors(void){};
+#endif
+
+
+/*
+ * code import from uC clibrary
+ * ELF .init , .init_array/.fini_aray handling need for ARM targets,
+ *      and for C++, libc code compatibility
+ *      you should place such code to linkes script to provide initialisers table
+   .preinit_array     :
+  {
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array*))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+  } >FLASH
+  .init_array :
+  {
+    PROVIDE_HIDDEN (__init_array_start = .);
+    KEEP (*(SORT(.init_array.*)))
+    KEEP (*(.init_array*))
+    PROVIDE_HIDDEN (__init_array_end = .);
+  } >FLASH
+ *
+ * */
+
+#ifdef UOS_HAVE_INITFINI
+extern func_ptr __preinit_array_start[] __attribute__((weak));
+extern func_ptr __preinit_array_end []  __attribute__((weak));
+extern func_ptr __init_array_start []   __attribute__((weak));
+extern func_ptr __init_array_end []     __attribute__((weak));
+extern func_ptr __fini_array_start []   __attribute__((weak));
+extern func_ptr __fini_array_end []     __attribute__((weak));
+
+__attribute__((noinline, weak))
+void _init(){};
+
+__attribute__((noinline, weak))
+void _fini(){};
+
+
+void __uos_init_array() {
+    size_t count, i;
+
+    count = __preinit_array_end - __preinit_array_start;
+    for (i = 0; i < count; i++)
+        __preinit_array_start[i]();
+
+    _init();
+
+    count = __init_array_end - __init_array_start;
+    for (i = 0; i < count; i++)
+        __init_array_start[i]();
+}
+
+void __uos_fini_array() {
+    size_t count, i;
+
+    count = __preinit_array_end - __preinit_array_start;
+    for (i = count - 1; i >= 0; i--)
+        __fini_array_start[i]();
+
+    _fini();
+}
+#else
+inline void __uos_init_array(){};
+#endif

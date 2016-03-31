@@ -213,4 +213,52 @@
 
 
 
+ /**************************************************************************
+ *                  global static initializer support
+ ************************************************************************** */
+//* gcc c++ use it for static class init.
+/*  you should place such code to linkes script to provide initialisers table
+     __CTOR_LIST__ = .;
+      LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
+      KEEP(*(.ctors))
+      LONG(0)
+      __CTOR_END__ = .;
+      __DTOR_LIST__ = .;
+      LONG((__DTOR_END__ - __DTOR_LIST__) / 4 - 2)
+      KEEP(*(.dtors))
+      LONG(0)
+      __DTOR_END__ = .;
+ * */
+#define UOS_HAVE_CTORS
+
+//* gcc ARM target use it for static initialise.
+/** you should place such code to linkes script to provide initialisers table
+   .preinit_array     :
+  {
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array*))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+  } >FLASH
+  .init_array :
+  {
+    PROVIDE_HIDDEN (__init_array_start = .);
+    KEEP (*(SORT(.init_array.*)))
+    KEEP (*(.init_array*))
+    PROVIDE_HIDDEN (__init_array_end = .);
+  } >FLASH
+*/
+#if defined (__arm__) || defined (__thumb__) \
+    || defined(I386) || defined(LINUX386)
+#define UOS_HAVE_INITFINI
+#endif
+
+
+#if !defined(UOS_HAVE_CTORS) && !defined(UOS_HAVE_INITFINI)
+#ifdef UOS_WITH_NEWLIB
+#define UOS_HAVE_CTORS
+#endif
+#endif
+
+
+
 #endif /* UOS_CONF_H_ */

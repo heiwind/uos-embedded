@@ -64,13 +64,15 @@ SECTIONS
 
   .text           :
   {
-    *(.init)
+    KEEP(*(.init))
+    *(.text.hot .text.hot.*)
     *(.text .stub .text.* .gnu.linkonce.t.*)
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
     *(.glue_7t) *(.glue_7)
     __rodata_start = . ;
     *(.rodata .rodata.* .gnu.linkonce.r.*)
+INCLUDE code-text-cpp.xl
     /* Align here to ensure that the .text section ends on word boundary. */
     . = ALIGN (64 / 8);
     _etext = .;
@@ -86,7 +88,6 @@ SECTIONS
        can access them all, and initialized data all before uninitialized, so
        we can shorten the on-disk segment size.  */
     *(.sdata .sdata.* .gnu.linkonce.s.*)
-    *(.eh_frame)
     _edata = .;
   } > sdram_d
 
