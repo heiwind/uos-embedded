@@ -11,10 +11,6 @@
 #include <kernel/uos.h>
 #include <timer/timer.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 
 
 //                              Таймауты таймера
