@@ -307,7 +307,8 @@ int tcp_read_poll (tcp_socket_t *s, void *dataptr, unsigned short len, int nonbl
 int tcp_read_until (tcp_socket_t *s, void *dataptr, unsigned short len
                 , scheduless_condition waitfor, void* waitarg);
 
-/* reads 1 received socket buffer - vs tcp_read_until do not internal to user buffer copy
+/* reads 1 received socket buffer - vs tcp_read_until do not internal copy to user buffer
+ * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
  * */
 buf_t* tcp_read_buf_until (tcp_socket_t *s
                 , scheduless_condition waitfor, void* waitarg);

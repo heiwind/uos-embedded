@@ -87,13 +87,6 @@ bool_t mutex_lock_until (mutex_t *m, scheduless_condition waitfor, void* waitarg
     if (! m->item.next)
         mutex_init (m);
 
-#if FASTER_LOCKS
-    if (mutex_trylock_in(m)){
-        arch_intr_restore (x);
-        return 1;
-    }
-#endif
-
     bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
     arch_intr_restore (x);
     return res;
@@ -276,6 +269,7 @@ mutex_unlock (mutex_t *m)
 		return;
 	}
 #endif
+
 	mutex_do_unlock(m);
 	if (task_need_schedule)
 		task_schedule ();

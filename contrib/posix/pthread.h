@@ -60,7 +60,7 @@ typedef int pthread_attr_t;
 	char *stack = (char *)calloc (1, stacksz);	  \
 	if (stack) \
 	    *taskp = task_create ((void(*)(void*)) &(func), \
-		arg, "task", PTHREAD_PRIO, (array_t*)stack, stacksz); }
+		arg, "taskpthread", PTHREAD_PRIO, (array_t*)stack, stacksz);}
 
 /* Set thread name visible in the kernel and its interfaces.  */
 INLINE  
