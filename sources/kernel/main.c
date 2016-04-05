@@ -200,11 +200,11 @@ main (void)
 	task_current = task_idle;
 	task_activate (task_idle);
 
-    __uos_init_array();
-    _init_ctors();
-
 	/* Create user tasks. */
 	uos_init ();
+
+    __uos_init_array();
+    _init_ctors();
 
 	/* Additional machine-dependent initialization */
 	uos_post_init ();
@@ -234,7 +234,9 @@ typedef void (*func_ptr)(void);
 
 #ifdef UOS_HAVE_CTORS
 extern func_ptr __CTOR_LIST__[] __attribute__((weak));
+extern func_ptr __CTOR_END__[] __attribute__((weak));
 extern func_ptr __DTOR_LIST__[] __attribute__((weak));
+extern func_ptr __DTOR_END__[] __attribute__((weak));
 /*  you should place such code to linkes script to provide initialisers table
      __CTOR_LIST__ = .;
       LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
@@ -251,7 +253,12 @@ extern func_ptr __DTOR_LIST__[] __attribute__((weak));
 void _init_ctors(void)
 {
     func_ptr* func;
-    unsigned len = (unsigned)__CTOR_LIST__[0];
+    unsigned len = (__CTOR_END__ - __CTOR_LIST__);
+    if (len <= 2)
+        return;
+    len -= 2;
+    if (len != (unsigned)__CTOR_LIST__[0])
+        return;
     for ( func = &__CTOR_LIST__[1]; (func != 0) && (len > 0); func++, len-- )
         (*func)();
 }
