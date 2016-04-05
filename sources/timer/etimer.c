@@ -67,8 +67,9 @@ void etimer_system_init(timer_t* source_clock){
     */
     timeout_t* timer = &self->os_timer;
     timeout_clear(timer);
+    mutex_attach_swi(&(self->os_timer_signal), &(self->os_timer_isr), ETimer_ISR, 0);
     timeout_set_mutex(timer, &(self->os_timer_signal), self);
-    timeout_set_handler(timer, &(ETimer_Handle), 0);
+    //timeout_set_handler(timer, &(ETimer_Handle), 0);
     timeout_set_autoreload(timer, tsLoadOnce);
     timeout_add(source_clock, timer);
 }
@@ -76,6 +77,18 @@ void etimer_system_init(timer_t* source_clock){
 
 inline etimer_device* etimer_dev_of(etimer *t){
     return &system_etimer;
+}
+
+inline
+void signal_new_etime(etimer_device* self
+        , long  timeout, timeout_time_t interval
+        , etimer* event)
+{
+    timeout_t *now = &self->os_timer;
+    now->cur_time   = timeout;
+    now->interval   = interval;
+    now->signal     = event;
+    self->os_timer_isr.arg = event;
 }
 
 /** \~russian
@@ -94,6 +107,8 @@ void ETimer_Handle (timeout_t *to, void *data){
 
     etimer* event = (etimer*)data;
     etimer_device* self = etimer_dev_of(event);
+    if (self == 0)
+        return;
     list_t* pended_timers = &(self->timerlist);
     timeout_t *timer      = &(self->os_timer);
     timeout_time_t timeover = timer->interval - timer->cur_time;
@@ -102,18 +117,18 @@ void ETimer_Handle (timeout_t *to, void *data){
         event->cur_time = -timeover;
         list_unlink(&event->item);
         if (event->lock != NULL){
-            ETIMER_printf("\n!et(%x){+%d}\n", (unsigned)(event), timeover );
+            ETIMER_printf("\n!et(%x){+%d}", (unsigned)(event), timeover );
             mutex_awake(event->lock, event->handle.lock_message);
         }
         else {
-            ETIMER_printf("\n!et(%x){+%d} go*->t(%x)\n"
+            ETIMER_printf("\n!et(%x){+%d} go*->t(%x:%s)"
                     , (unsigned)(event)
                     , timeover
-                    , (unsigned)(event->handle.activate_task)
+                    , (unsigned)(event->handle.activate_task), task_name(event->handle.activate_task)
                     );
             task_awake(event->handle.activate_task);
         }
-        ETIMER_print_tasks(&task_active);
+        //ETIMER_print_tasks(&task_active);
     
         if (list_is_empty(pended_timers)) {
             timer->cur_time = 0;
@@ -125,9 +140,7 @@ void ETimer_Handle (timeout_t *to, void *data){
         //assign next event time to etimer expiration
         etimer_time_t elapsed = newtime->cur_time;
         if ( timeover < elapsed ) {
-            timer->cur_time      = elapsed - timeover;
-            timer->interval = newtime->interval;
-            timer->handler_arg = (void*)newtime;
+            signal_new_etime(self, (elapsed - timeover), newtime->interval, newtime);
             break;
         }
         //else
@@ -151,7 +164,9 @@ void tasks_list(list_t* l){
 }
 
 /*---------------------------------------------------------------------------*/
-#define ETIMER_SOFT_LOCK 1
+// TODO нужно углубленое тестирование этой фичи - на предмет конфликта с прерыванием
+//      или конкуренции
+//#define ETIMER_SOFT_LOCK 1
 
 inline void etimer_seq_aqure(etimer_device* self){
     mutex_lock(&(self->list_access));
@@ -180,16 +195,15 @@ add_timer(etimer *timer)
             // требуется на него настроить текущее  событие
             // assign next event time expiration
             etimer_event_t* enow = &(self->os_timer);
-            enow->cur_time      = timeout;
-            enow->interval = timer->interval;
-            enow->handler_arg = (void*)timer;
+            signal_new_etime(self, timeout, timer->interval, timer);
             mutex_unlock(clock_lock);
-            ETIMER_printf("\n@et(%x).%d\n", (unsigned)(timer), timeout );
+            ETIMER_printf("\n@et(%x:%s).%d\n", (unsigned)(timer), task_name(task_current), timeout );
         }
         else {
             etimer_event_t* enow = &(self->os_timer);
             t = (etimer*)list_first(&self->timerlist);
             etimer_time_t spent1 = enow->cur_time;
+            assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time);
             if (spent1 > timeout){
                 //новый таймер  - наиболее скорый, и его вставим в начало списка событий
                 t->cur_time     = spent1 - timeout;
@@ -198,19 +212,17 @@ add_timer(etimer *timer)
     
                 // требуется на него настроить текущее  событие
                 // assign next event time expiration
-                enow->cur_time      = timeout;
-                enow->interval = timer->interval;
-                enow->handler_arg = (void*)timer;
+                signal_new_etime(self, timeout, timer->interval, timer);
                 mutex_unlock(clock_lock);
-                ETIMER_printf("\n{%d}^et(%x)->(%x).%d\n"
+                ETIMER_printf("\n{%d}^et(%x:%s)->(%x).%d\n"
                         , timeout
-                        , (unsigned)(timer)
+                        , (unsigned)(timer), task_name(task_current)
                         , (unsigned)(t), t->cur_time
                         );
             }
             else {
                 //внесу поправку на прошедшее время текущего таймера
-                ETIMER_printf("\n{%d}(%x).%d ->", timeout, (unsigned)t, spent1);
+                ETIMER_printf("\n{%d}(%x).%d->", timeout, (unsigned)t, spent1);
                 timeout -= spent1;
 
                 etimer_time_t safe_timeout = t->cur_time;
@@ -220,16 +232,20 @@ add_timer(etimer *timer)
                 safe_timeout += self->clock->msec_per_tick*2;
 #endif
                 list_iterate_from(t, t->item.next, &self->timerlist){
+                    assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time);
                     etimer_time_t elapsed = t->cur_time;
                     if (timeout < elapsed)
                         break;
                     timeout -= elapsed;
-                    ETIMER_printf("(%x).%d ->", (unsigned)t, t->cur_time);
+                    ETIMER_printf("(%x).%d->", (unsigned)t, t->cur_time);
                     if (ETIMER_SOFT_LOCK)
                     if (safe_timeout > 0) {
-                        safe_timeout -= elapsed;
-                        if (safe_timeout <= 0)
+                        if (safe_timeout >= elapsed)
+                            safe_timeout -= elapsed;
+                        else {
+                            safe_timeout = 0;
                             mutex_unlock(clock_lock);
+                        }
                     }
                 }
                 timer->cur_time = timeout;
@@ -239,8 +255,15 @@ add_timer(etimer *timer)
                 }
                 if ( (safe_timeout > 0) || (!ETIMER_SOFT_LOCK) )
                     mutex_unlock(clock_lock);
-                ETIMER_printf("+et(%x).%d\n"
-                        , (unsigned)(timer), timer->cur_time
+                if ( (&t->item) != (&self->timerlist) )
+                    ETIMER_printf("+et(%x:%s).%d->(%x).%d\n"
+                            , (unsigned)(timer), task_name(task_current)
+                            , timeout, t, t->cur_time
+                            );
+                else
+                ETIMER_printf("+et(%x:%s).%d\n"
+                        , (unsigned)(timer), task_name(task_current)
+                        , timeout
                         );
             }
         }// else if (list_empty(self->timerlist))
@@ -367,6 +390,7 @@ etimer_stop(etimer *et)
     mutex_lock(clock_lock);
         t = (etimer*)list_first(&self->timerlist);
         if (et == t){
+            ETIMER_printf("#et(%x:%s)\n", (unsigned)(et), task_name(task_current) );
             //надо удалить текущий таймер
             etimer_event_t* enow = &(self->os_timer);
             et->cur_time = enow->cur_time;
@@ -379,14 +403,13 @@ etimer_stop(etimer *et)
                 t = (etimer*)list_first(&self->timerlist);
                 // требуется на него настроить текущее  событие
                 // assign next event time expiration
-                enow->cur_time      += t->cur_time;
-                enow->interval = t->interval;
-                enow->handler_arg = (void*)t;
+                signal_new_etime(self, (enow->cur_time+t->cur_time),  t->interval, t);
             }
         }
         else {
             //!!! стоилобы проверить что требуемый таймер именно в списке своих
             //  событий self->timerlist
+            ETIMER_printf("#et(%x:%s).%d\n", (unsigned)(et), task_name(task_current), et->cur_time);
             t = (etimer*)et->item.next;
             list_unlink(&et->item);
             if ( &(t->item) != &self->timerlist )

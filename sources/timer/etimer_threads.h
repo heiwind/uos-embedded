@@ -44,7 +44,17 @@ INLINE bool_t etimer_mutex_wait(mutex_t* m, etimer* t){
 bool_t etimer_mutex_timedwait(mutex_t* m, etimer* t, etimer_time_t timeout);
 bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout);
 
-int etimer_usleep(unsigned usec);
+//* выполняет ожидание таймаута usec
+//* \arg sanity == 0 - ожидает до завершения таймаута
+//*      sanity != 0 - ожидает до ближайшего просыпания нитки
+//* \return = 0  - таймаут завершен
+//* \return = -1 - таймаут незавершен
+int etimer_uswait(unsigned usec, bool_t sanity);
+
+INLINE
+void etimer_usleep(unsigned usec){
+    etimer_uswait(usec, 0);
+};
 
 #ifdef __cplusplus
 }

@@ -50,7 +50,12 @@ bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout){
     return etimer_mutex_timedwait(m, &t, timeout);
 }
 
-int etimer_usleep(unsigned usec){
+//* выполняет ожидание таймаута usec
+//* \arg sanity == 0 - ожидает до завершения таймаута
+//*      sanity != 0 - ожидает до ближайшего просыпания нитки
+//* \return = 0 - таймаут завершен
+int etimer_uswait(unsigned usec, bool_t sanity)
+{
     if (usec == 0){
         task_yield();
         return 0; 
@@ -64,11 +69,20 @@ int etimer_usleep(unsigned usec){
     arch_intr_disable (&x);
 
     etimer_set(&t, usec);
+    bool_t ok = 0;
+    do {
     /* Suspend the task. */
     list_unlink (&task_current->item);
     task_schedule ();
+    ok = !etimer_is_wait(&t);
+    if (ok)
+        break;
+    } while (sanity == 0);
+    if (!ok)
+        etimer_stop(&t);
+
     arch_intr_restore (x);
-    return etimer_is_timeout(&t)? 0: -1;
+    return (ok)? 0: -1;
 }
 
 #endif //USER_TIMERS

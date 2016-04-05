@@ -105,6 +105,7 @@ struct _etimer_device {
     timer_t*     clock;
     etimer_event_t  os_timer;
     mutex_t         os_timer_signal;
+    mutex_irq_t     os_timer_isr;
     list_t       timerlist;
     mutex_t      list_access;
 };
