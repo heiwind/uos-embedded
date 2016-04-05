@@ -64,6 +64,8 @@ void task_exit (void *status) __attribute__ ((__noreturn__));
 void task_delete (task_t *task, void *status);
 void *task_wait (task_t *task);
 int task_stack_avail (task_t *task);
+//* return safe-checked task name.
+//* return (damaged) on suspicious string
 const char *task_name (task_t *task);
 int task_priority (task_t *task);
 void task_set_priority (task_t *task, int priority);
@@ -82,6 +84,9 @@ void mutex_print (struct _stream_t *stream, mutex_t *m);
 unsigned int task_fpu_control (task_t *t, unsigned int mode, unsigned int mask);
 
 //****************************************************************************
+/* Initialize a data structure of the lock. */
+void mutex_init (mutex_t *);
+
 /* Lock management. */
 void mutex_lock (mutex_t *lock);
 void mutex_unlock (mutex_t *lock);

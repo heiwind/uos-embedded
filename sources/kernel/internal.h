@@ -138,9 +138,6 @@ extern list_t task_active;
 /* Switch to most priority task. */
 void task_schedule (void);
 
-/* Initialize a data structure of the lock. */
-void mutex_init (mutex_t *);
-
 /* Activate all waiters of the lock. */
 void mutex_activate (mutex_t *m, void *message);
 
@@ -165,7 +162,6 @@ bool_t mutex_wanted_task(task_t* t);
 // assign current task to m->master
 INLINE void mutex_do_lock(mutex_t *m)
 {
-    assert (list_is_empty (&m->slaves));
 #if RECURSIVE_LOCKS
     assert (m->deep == 0);
 #endif
@@ -185,8 +181,10 @@ INLINE void mutex_do_lock(mutex_t *m)
 INLINE 
 __attribute__ ((always_inline))
 bool_t mutex_trylock_in (mutex_t *m){
-    if (! m->master)
+    if (! m->master){
+        assert (list_is_empty (&m->slaves));
         mutex_do_lock(m);
+    }
     if (m->master == task_current){
 #if RECURSIVE_LOCKS
     ++m->deep;

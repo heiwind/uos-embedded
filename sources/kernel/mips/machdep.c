@@ -143,7 +143,10 @@ _arch_task_switch_ ()
 	task_current->stack_context = mips_get_stack_pointer ();
 
 	unsigned sp = (unsigned)(target->stack_context);
-	assert(sp > (unsigned)(target->stack));
+	assert2(sp > (unsigned)(target->stack)
+	        , "fail on switch to %s:%p[stack=%p, sp=%p]\n"
+	        , task_name(target), target, target->stack, sp
+	        );
 	
 	task_current = target;
 
