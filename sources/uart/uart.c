@@ -282,6 +282,9 @@ uart_init (uart_t *u, small_uint_t port, int prio, unsigned int khz,
 	u->port = port;
 #endif
 
+	mutex_init(&u->transmitter);
+    mutex_init(&u->receiver);
+
 	/* Setup baud rate generator. */
 	setup_baud_rate (u->port, u->khz, baud);
 
