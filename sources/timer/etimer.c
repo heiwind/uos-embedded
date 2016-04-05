@@ -166,7 +166,9 @@ void tasks_list(list_t* l){
 /*---------------------------------------------------------------------------*/
 // TODO нужно углубленое тестирование этой фичи - на предмет конфликта с прерыванием
 //      или конкуренции
-//#define ETIMER_SOFT_LOCK 1
+#ifndef ETIMER_SOFT_LOCK
+#define ETIMER_SOFT_LOCK 0
+#endif
 
 inline void etimer_seq_aqure(etimer_device* self){
     mutex_lock(&(self->list_access));
@@ -194,7 +196,6 @@ add_timer(etimer *timer)
             
             // требуется на него настроить текущее  событие
             // assign next event time expiration
-            etimer_event_t* enow = &(self->os_timer);
             signal_new_etime(self, timeout, timer->interval, timer);
             mutex_unlock(clock_lock);
             ETIMER_printf("\n@et(%x:%s).%d\n", (unsigned)(timer), task_name(task_current), timeout );
