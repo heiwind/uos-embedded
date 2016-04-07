@@ -54,21 +54,21 @@
 extern "C" {
 #endif
 
+
+
+#define ETIMER_MS TIMEOUT_TIMER_MS
+
 /**
  * A timer.
  *
  * This structure is used for declaring a timer. The timer must be set
  * with etimer_set() before it can be used.
- *
- * \~russian
- * в отличие о user_timer_t, поле cur_time - используется в качестве start_time
- * \hideinitializer
  */
 typedef timeout_time_t etimer_time_t;
 
 typedef struct {
     list_t  item;
-    volatile etimer_time_t   cur_time;//least timeout
+    volatile long   cur_time;//least timeout
     etimer_time_t   interval;
     mutex_t*        lock;
     union {

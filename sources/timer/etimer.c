@@ -111,7 +111,7 @@ void ETimer_Handle (timeout_t *to, void *data){
         return;
     list_t* pended_timers = &(self->timerlist);
     timeout_t *timer      = &(self->os_timer);
-    timeout_time_t timeover = timer->interval - timer->cur_time;
+    /*etimer_time_t*/long timeover = -timer->cur_time;
 
     do { 
         event->cur_time = -timeover;
