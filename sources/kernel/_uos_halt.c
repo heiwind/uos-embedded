@@ -21,11 +21,14 @@
 void tasks_print(struct _stream_t *stream){
     unsigned char n;
     task_t *t;
+    bool_t have_current = 0;
 
     task_print (stream, 0);
     n = 0;
     list_iterate (t, &task_active) {
-        if (t != task_idle && t != task_current)
+        if (t == task_current)
+            have_current = 1;
+        if ((t != task_idle) && (t != task_current))
             task_print (stream, t);
         if (! uos_valid_memory_address (t))
             break;
@@ -34,8 +37,11 @@ void tasks_print(struct _stream_t *stream){
             break;
         }
     }
-    if (task_current && task_current != task_idle)
+    if ((task_current != 0) && (task_current != task_idle)){
+        if (have_current == 0)
+            debug_putchar(0, '*');
         task_print (stream, task_current);
+    }
 }
 
 void uos_debug_dump(){
