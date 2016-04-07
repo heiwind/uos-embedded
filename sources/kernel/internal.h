@@ -281,7 +281,7 @@ INLINE bool_t task_is_waiting (task_t *task) {
  */
 CODE_ISR 
 INLINE void task_awake (task_t *task) {
-	list_append (&task_active, &task->item);
+    list_prepend(&task_active, &task->item); //list_append
 	if (task_current->prio < task->prio)
 		task_need_schedule = 1;
 }
