@@ -47,8 +47,13 @@ typedef int pthread_key_t;
 #define pthread_getspecific(key)		task_current->privatep
 #define pthread_setspecific(key,val)		task_set_private (task_current, val)
 
+#ifndef PTHREAD_STACK_SIZE
 #define PTHREAD_STACK_SIZE			0x4000	/* 16 kilobytes */
+#endif
+
+#ifndef PTHREAD_PRIO
 #define PTHREAD_PRIO				0x4000	/* 16 kilobytes */
+#endif
 
 typedef int pthread_attr_t;
 #define pthread_attr_init(x)
@@ -59,7 +64,7 @@ typedef int pthread_attr_t;
 	int stacksz = PTHREAD_STACK_SIZE;	  \
 	char *stack = (char *)calloc (1, stacksz);	  \
 	if (stack) \
-	    *taskp = task_create ((void(*)(void*)) &(func), \
+	    *(taskp) = task_create ((void(*)(void*)) &(func), \
 		arg, "taskpthread", PTHREAD_PRIO, (array_t*)stack, stacksz);}
 
 /* Set thread name visible in the kernel and its interfaces.  */
