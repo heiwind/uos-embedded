@@ -126,9 +126,8 @@ bool_t mutex_wait_until (mutex_t *m
     if (mutex_check_pended_irq(m)){
         if (task_need_schedule)
             task_schedule ();
-        arch_intr_restore (x);
-        return 1;
     }
+
     if (m->irq){
         //для ожидания на прерывании, форсирую разрешение прерывания
         mutex_irq_t *   irq = m->irq;
@@ -140,12 +139,14 @@ bool_t mutex_wait_until (mutex_t *m
     list_append (&m->waiters, &task_current->item);
     if (m->master != task_current) {
         /* We do not keep this lock, so just wait for a signal. */
-        task_schedule ();
-        //if (task_current->wait =! 0)
-            task_current->wait = 0;
         bool_t res = 1;
-        if (waitfor != NULL)
-            res = !(*waitfor)(waitarg);
+        do {
+            task_schedule ();
+            if (task_current->wait == 0)
+                break;
+            if (waitfor != NULL)
+                res = !(*waitfor)(waitarg);
+        } while (res);
         arch_intr_restore (x);
         return res;
     }

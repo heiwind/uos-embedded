@@ -117,8 +117,11 @@ bool_t mutex_lock_until (mutex_t *lock, scheduless_condition waitfor, void* wait
 void mutex_signal (mutex_t *lock, void *message);
 void *mutex_wait (mutex_t *lock);
 /*
+ * for owned mutex:
  * \return true - if signaled and therefore valid task_current->message
  *          false - if timeout
+ * for not owned mutex - just wait for thread activate and returns waitfor state
+ *
  * */
 bool_t mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
 
