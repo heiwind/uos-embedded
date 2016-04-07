@@ -176,8 +176,12 @@ int tcp_lock_avail(tcp_socket_t *s, unsigned allow_states
             ;
         else if( __glibc_unlikely( ((1 << s->state) & allow_states) == 0) )
             res = SENOTCONN;
-        else if (mutex_wait_until (&s->lock, waitfor, waitarg))
+        else {
+            if (mutex_wait_until (&s->lock, waitfor, waitarg))
                 continue;
+            if (!mutex_is_my(&s->lock))
+                break;
+        }
         //else
         //    res = -1; //SETIMEDOUT;
 

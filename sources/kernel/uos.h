@@ -119,7 +119,8 @@ void *mutex_wait (mutex_t *lock);
 /*
  * for owned mutex:
  * \return true - if signaled and therefore valid task_current->message
- *          false - if timeout
+ *          false - if timeout. !!! this case can loose mutex owning.
+ *                      should check that lock is locked there
  * for not owned mutex - just wait for thread activate and returns waitfor state
  *
  * */

@@ -135,6 +135,11 @@ extern task_t *task_idle;
 /* List of tasks ready to run. */
 extern list_t task_active;
 
+extern const char uos_assert_task_name_msg[];
+extern const char uos_assert_mutex_task_name_msg[];
+
+
+
 /* Switch to most priority task. */
 void task_schedule (void);
 
@@ -198,6 +203,7 @@ bool_t mutex_trylock_in (mutex_t *m){
 //wait mutex free and lock
 INLINE bool_t mutex_lock_yiedling(mutex_t *m)
 {
+    assert2 ((task_current->lock == 0), uos_assert_mutex_task_name_msg, m, (task_current->name));
     while (m->master && m->master != task_current) {
         /* Monitor is locked, block the task. */
         mutex_slaved_yield(m);
@@ -206,13 +212,17 @@ INLINE bool_t mutex_lock_yiedling(mutex_t *m)
 }
 
 //wait mutex free and lock
+//* \return 1 - lock ok
+//*         0 - lock break by waitfor
 INLINE bool_t mutex_lock_yiedling_until(mutex_t *m
         , scheduless_condition waitfor, void* waitarg
         )
 {
+    assert2 ((task_current->lock == 0), uos_assert_mutex_task_name_msg, m, (task_current->name));
     while (m->master && m->master != task_current) {
         if (waitfor != 0)
         if ((*waitfor)(waitarg)) {
+            task_current->lock = 0;
             return 0;
         }
         /* Monitor is locked, block the task. */
@@ -330,8 +340,6 @@ extern task_t *task_yelds;
 #define STACK_GUARD(x)		((x)->stack[0] == STACK_MAGIC)
 
 #ifndef NDEBUG
-extern const char uos_assert_task_name_msg[];
-extern const char uos_assert_mutex_task_name_msg[];
 #define assert_task_good_stack(t) \
     assert2 (STACK_GUARD (t), uos_assert_task_name_msg, (t)->name)
 

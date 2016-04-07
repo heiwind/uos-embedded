@@ -97,7 +97,6 @@ CODE_FAST
 void mutex_slave_task(mutex_t *m, task_t* t)
 {
     /* Monitor is locked, block the task. */
-    assert2 ((t->lock == 0), uos_assert_mutex_task_name_msg, m, (t)->name);
 #if RECURSIVE_LOCKS
     assert (m->deep > 0);
 #endif

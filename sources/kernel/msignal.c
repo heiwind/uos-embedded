@@ -146,7 +146,7 @@ bool_t mutex_wait_until (mutex_t *m
                 break;
             if (waitfor != NULL)
                 res = !(*waitfor)(waitarg);
-        } while (res);
+        } while (res >= 0);
         arch_intr_restore (x);
         return res;
     }
@@ -166,11 +166,16 @@ bool_t mutex_wait_until (mutex_t *m
 
     task_schedule ();
 
+#if UOS_SIGNAL_SMART > 0
+    task_current->MUTEX_WANT = 0;
+#endif
+
     bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
     //if (task_current->wait =! 0)
         task_current->wait = 0;
 #if RECURSIVE_LOCKS
-    m->deep = deep;
+    if (res > 0)
+        m->deep = deep;
 #endif
     arch_intr_restore (x);
     return res;
