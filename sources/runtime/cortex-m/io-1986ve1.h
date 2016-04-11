@@ -183,6 +183,10 @@ typedef struct
 {
     arm_reg_t NAND_CYCLES;
     arm_reg_t CONTROL;
+    arm_reg_t RAM_Cycles1;	/* 0х10000000-0х1FFFFFFF */
+    arm_reg_t RAM_Cycles2;	/* 0х50000000-0х5FFFFFFF */
+    arm_reg_t RAM_Cycles3;	/* 0х60000000-0х6FFFFFFF */
+    arm_reg_t RAM_Cycles4;	/* 0х70000000-0хDFFFFFFF */
 } EXTBUS_t;
 
 #define ARM_EXTBUS      ((EXTBUS_t*) ARM_EXT_BUS_BASE)
@@ -196,6 +200,14 @@ typedef struct
 #define ARM_EXTBUS_CPOL     (1 << 3)    /* Отрицательная полярность CLOCK */
 #define ARM_EXTBUS_DONE     (1 << 7)    /* Операция памяти NAND завершена */
 #define ARM_EXTBUS_WS(x)    ((x) << 12) /* Длительность цикла = ws+3 */
+
+/* Регистр RAM_Cycles1 */
+#define ARM_EXTBUS_CYCLES_ENABLE_TUNE	(1 << 0)	/* Разрешение настройки параметров обмена соответствующего
+														диапазона адресов */
+#define ARM_EXTBUS_CYCLES_WS_ACTIVE(x)	((x) << 1)	/* Длительность низкого уровня сигналов nWR/nRD */
+#define ARM_EXTBUS_CYCLES_WS_SETUP(x)	((x) << 8)	/* Время предустановки сигналов nWR/nRD */
+#define ARM_EXTBUS_CYCLES_WS_HOLD(x)	((x) << 11)	/* Время удержания сигналов nWR/nRD */
+#define ARM_EXTBUS_CYCLES_USE_READY		(1 << 14)
 
 /*------------------------------------------------------
  * Clock management
