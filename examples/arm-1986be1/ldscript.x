@@ -9,12 +9,13 @@ ENTRY(_start_)
 MEMORY
 {
   text   (rx)   : ORIGIN = 0x00000000,	LENGTH = 128k
-  data   (rw!x) : ORIGIN = 0x20000000,	LENGTH = 32k
-  data_hi(rw!x) : ORIGIN = 0x20100000,	LENGTH = 16k
+  data   (rwx) : ORIGIN = 0x20000000,	LENGTH = 32k
+  data_hi(rwx) : ORIGIN = 0x20100000,	LENGTH = 16k
 }
 
 /* higher address of the user mode stack */
 _estack = ORIGIN(data) + LENGTH(data);
+_hstack = ORIGIN(data_hi) + LENGTH(data_hi);
 
 SECTIONS
 {
@@ -98,15 +99,20 @@ SECTIONS
    /* Align here to ensure that the .bss section occupies space up to
       _end.  Align after .bss to ensure correct alignment even if the
       .bss section disappears because there are no input sections.  */
-   . = ALIGN (32 / 8);
+   . = ALIGN (4);
   } > data
   __bss_end = . ;
-  
-  .data_hi      : 
+
+  .data_hi      :
          AT (ADDR (.text) + SIZEOF (.text) + SIZEOF (.data))
   {
     *(.dma_struct)
+    *(.data_hi_data)
+	. = ALIGN (32 / 8);
+    __start_ram_func = .;
+    *(.ramf)
   } > data_hi
+  __hi_data_end = .;
   _end = .;
 
   /* Stabs debugging sections.  */
