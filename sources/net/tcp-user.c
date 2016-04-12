@@ -180,7 +180,7 @@ int tcp_lock_avail(tcp_socket_t *s, unsigned allow_states
             if (mutex_wait_until (&s->lock, waitfor, waitarg))
                 continue;
             if (!mutex_is_my(&s->lock))
-                break;
+                return res;
         }
         //else
         //    res = -1; //SETIMEDOUT;
@@ -195,7 +195,7 @@ int tcp_wait_avail(tcp_socket_t *s
                     , scheduless_condition waitfor, void* waitarg)
 {
     int res = tcp_lock_avail(s, TCP_STATES_ONLINE, waitfor, waitarg);
-    if (res != 0)
+    if (res == 0)
         mutex_unlock (&s->lock);
     return res;
 }
