@@ -37,6 +37,9 @@
 etimer_device system_etimer = {NULL};
 
 //#define DEBUG_ETIMER 1
+#ifndef ETIMER_SAFE
+#define ETIMER_SAFE     1
+#endif
 
 #if DEBUG_ETIMER
 #include <runtime/lib.h>
@@ -115,6 +118,11 @@ void ETimer_Handle (timeout_t *to, void *data){
 
     do { 
         event->cur_time = -timeover;
+#if ETIMER_SAFE > 0
+        assert( event->item.prev == pended_timers);
+        assert( pended_timers->next == &event->item);
+        assert( &event->item == event->item.next->prev);
+#endif
         list_unlink(&event->item);
         if (event->lock != NULL){
             ETIMER_printf("\n!et(%x){+%d}", (unsigned)(event), timeover );
