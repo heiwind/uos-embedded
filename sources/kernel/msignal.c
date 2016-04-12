@@ -170,7 +170,17 @@ bool_t mutex_wait_until (mutex_t *m
     task_current->MUTEX_WANT = 0;
 #endif
 
-    bool_t res = mutex_lock_yiedling_until(m, waitfor, waitarg);
+    bool_t res = 1;
+    if (waitfor == 0)
+        res = mutex_lock_yiedling(m);
+    else {
+        res = !(*waitfor)(waitarg);
+        if (res)
+            res = mutex_lock_yiedling_until(m, waitfor, waitarg);
+        else
+            mutex_trylock_in(m);
+    }
+
     //if (task_current->wait =! 0)
         task_current->wait = 0;
 #if RECURSIVE_LOCKS
