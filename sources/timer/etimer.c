@@ -197,6 +197,8 @@ add_timer(etimer *timer)
             // требуется на него настроить текущее  событие
             // assign next event time expiration
             signal_new_etime(self, timeout, timer->interval, timer);
+            if (list_is_empty(&self->os_timer.item))
+                list_append (&self->clock->timeouts, &self->os_timer.item);
             mutex_unlock(clock_lock);
             ETIMER_printf("\n@et(%x:%s).%d\n", (unsigned)(timer), task_name(task_current), timeout );
         }
@@ -398,7 +400,7 @@ etimer_stop(etimer *et)
             list_unlink(&t->item);
 
             if (list_is_empty(&self->timerlist)) {
-                timeout_stop(enow);
+                timeout_break(enow);//stop
             }
             else {
                 t = (etimer*)list_first(&self->timerlist);
