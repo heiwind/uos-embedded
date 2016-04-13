@@ -345,6 +345,12 @@ _arch_interrupt_ (void)
 		sp[CONTEXT_PC+4] = epc;
 	}
 #endif
+	{
+	    //* разрешу исключения чтобы иметь актуальный краш-дамп если возникнет исключение в обработчике прерывания
+	    //* и запрещу прерывания на время обработки
+	    unsigned status = mips_read_c0_register (C0_STATUS);
+	    mips_write_c0_register(C0_STATUS, status & ~(ST_EXL | ST_IE) );
+	}
 	for (;;) {
 		/* Get the current irq number */
 #ifdef PIC32MX
