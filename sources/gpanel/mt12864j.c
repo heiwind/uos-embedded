@@ -11,41 +11,51 @@ enum {
         ONOFF = 5,
         RESET = 4,
 };
+#ifdef ARM_1986BE9
+#define PORTC_WE		2
+#define PORTC_CLOCK		7
+#define PORTC_LCD_RST	9
 
-#define TEMP 2
-#define PORTC_WE	0
-#define PORTC_CLOCK	2
-//#define PORTC_LCD_RST	9
-//#define PORTF_LCD_RST	0
+#define PORTE_E1		4	/* E1 */
+#define PORTE_E2		5	/* E2 */
+#define PORTE_A0		11	/* A0 */
 
-// Data PA0..PA7
+#define LCD_CMD1		0x10100000
+#define LCD_CMD2		0x10200000
 
-#define PORTE_ADDR27	13		/* E1  для ВЕ1Т  PE13 */
-#define PORTE_ADDR28	14		/* E2  для ВЕ1Т  PE14 */
-#define PORTE_ADDR26	12		/* CMD/DATA  для ВЕ91Т  PE12*/
+#define LCD_DATA1		0x18100000
+#define LCD_DATA2		0x18200000
 
-//#define PORTE_ADDR20	4		/* E1  для ВЕ91Т */
-//#define PORTE_ADDR21	5		/* E2  для ВЕ91Т */
-//#define PORTE_ADDR27	11		/* CMD/DATA  для ВЕ91Т */
-#define LCD_CMD1	0x68000000
-#define LCD_CMD2	0x70000000
+#endif
 
-#define LCD_DATA1	0x6C000000
-#define LCD_DATA2	0x74000000
+#ifdef ARM_1986BE1
+#define PORTC_WE		0
+#define PORTC_CLOCK		2
+
+#define PORTE_E1		13	/* PE13 - E1 */
+#define PORTE_E2		14	/* PE14 - E2 */
+#define PORTE_A0		12	/* PE12 - A0 */
+
+#define LCD_CMD1		0x68000000
+#define LCD_CMD2		0x70000000
+
+#define LCD_DATA1		0x6C000000
+#define LCD_DATA2		0x74000000
+#endif
 
 static void set_crystal(gpanel_t *gp, int num) {
 	if (num & 64) {
 		/* Кристалл #2. */
-		gp->DATA = (unsigned*) LCD_DATA2;		//0x18200000;
-		gp->CMD = (unsigned*) LCD_CMD2;		//0x10200000;
-		ARM_GPIOE->CLRTX = (1 << PORTE_ADDR27 | 1 << PORTE_ADDR26);
-		ARM_GPIOE->SETTX = 1 << PORTE_ADDR28;
+		gp->DATA = (unsigned*) LCD_DATA2;
+		gp->CMD = (unsigned*) LCD_CMD2;
+		ARM_GPIOE->CLRTX = (1 << PORTE_E1 | 1 << PORTE_A0);
+		ARM_GPIOE->SETTX = 1 << PORTE_E2;
 	} else {
 		/* Кристалл #1. */
-		gp->DATA = (unsigned*) LCD_DATA1;		//0x18100000;
-		gp->CMD = (unsigned*) LCD_CMD1;		//0x10100000;
-		ARM_GPIOE->CLRTX = (1 << PORTE_ADDR28 | 1 << PORTE_ADDR26);
-		ARM_GPIOE->SETTX = 1 << PORTE_ADDR27;
+		gp->DATA = (unsigned*) LCD_DATA1;
+		gp->CMD = (unsigned*) LCD_CMD1;
+		ARM_GPIOE->CLRTX = (1 << PORTE_E2 | 1 << PORTE_A0);
+		ARM_GPIOE->SETTX = 1 << PORTE_E1;
 	}
 	udelay(8);
 }
@@ -115,86 +125,74 @@ void gpanel_init(gpanel_t *gp, const gpanel_font_t *font) {
 			ARM_PWR_FAST(4) | ARM_PWR_FAST(5) |
 			ARM_PWR_FAST(6) | ARM_PWR_FAST(7);
 
-	ARM_GPIOC->FUNC = (ARM_GPIOC->FUNC & /* Main Function для WE, CLOCK */
-	~(ARM_FUNC_MASK (PORTC_WE) | ARM_FUNC_MASK(PORTC_CLOCK)))
-			| ARM_FUNC_MAIN(PORTC_WE) |
-			ARM_FUNC_ALT(PORTC_CLOCK);
-	ARM_GPIOC->ANALOG |= (1 << PORTC_WE) | /* Digital */
-	(1 << PORTC_CLOCK);
-	ARM_GPIOC->PWR = (ARM_GPIOC->PWR & /* Fast */
-	~(ARM_PWR_MASK (PORTC_WE) | ARM_PWR_MASK(PORTC_CLOCK)))
-			| ARM_PWR_SLOW(PORTC_WE) |
-			ARM_PWR_FASTEST (PORTC_CLOCK);
-
-	/* Alternate Function для ADDR[20,21,27] */
+	/* Alternate Function для E1, E2, A0 */
 	ARM_GPIOE->FUNC = (ARM_GPIOE->FUNC
-			& ~(ARM_FUNC_MASK(PORTE_ADDR26) | ARM_FUNC_MASK(PORTE_ADDR27)
-					| ARM_FUNC_MASK(PORTE_ADDR28)))
-			| ARM_FUNC_ALT(PORTE_ADDR26) |
-			 ARM_FUNC_PORT (PORTE_ADDR27) |
-			 ARM_FUNC_PORT (PORTE_ADDR28);
+			& ~(ARM_FUNC_MASK(PORTE_A0) | ARM_FUNC_MASK(PORTE_E1)
+					| ARM_FUNC_MASK(PORTE_E2))) | ARM_FUNC_ALT(PORTE_A0) |
+	ARM_FUNC_PORT (PORTE_E1) |
+	ARM_FUNC_PORT (PORTE_E2);
 	/* Digital */
-	ARM_GPIOE->ANALOG |= (1 << PORTE_ADDR26) | (1 << PORTE_ADDR27)
-			| (1 << PORTE_ADDR28);
+	ARM_GPIOE->ANALOG |= (1 << PORTE_A0) | (1 << PORTE_E1) | (1 << PORTE_E2);
 	/* Fast */
 	ARM_GPIOE->PWR = (ARM_GPIOE->PWR
-			& ~(ARM_PWR_MASK(PORTE_ADDR26) | ARM_PWR_MASK(PORTE_ADDR27)
-					| ARM_PWR_MASK(PORTE_ADDR28)))
-			| ARM_PWR_FAST(PORTE_ADDR26) |
-			ARM_PWR_FAST (PORTE_ADDR27) |
-			ARM_PWR_FAST (PORTE_ADDR28);
+			& ~(ARM_PWR_MASK(PORTE_A0) | ARM_PWR_MASK(PORTE_E1)
+					| ARM_PWR_MASK(PORTE_E2))) | ARM_PWR_FAST(PORTE_A0) |
+	ARM_PWR_FAST (PORTE_E1) | ARM_PWR_FAST (PORTE_E2);
 
-//	ARM_GPIOA->FUNC &= 0xFFFF0000;//PORTA[7:0] - основная функция (шина данных)
-//	ARM_GPIOA->FUNC |= 0x00005555;//PORTA[7:0] - основная функция (шина данных)
-//	ARM_GPIOA->ANALOG |= 0x00FF;	//PORTA[7:0] - digital
-//	ARM_GPIOA->PWR |= 0x0000FFFF;	// faster
+	ARM_GPIOC->FUNC = (ARM_GPIOC->FUNC & /* Main Function для WE, CLOCK */
+	~(ARM_FUNC_MASK (PORTC_WE) | ARM_FUNC_MASK(PORTC_CLOCK)
+#ifdef ARM_1986BE9
+			| ARM_FUNC_MASK (PORTC_LCD_RST)
+#endif
+			)) | ARM_FUNC_MAIN(PORTC_WE) | ARM_FUNC_ALT(PORTC_CLOCK)
+#ifdef ARM_1986BE9
+			| ARM_FUNC_PORT (PORTC_LCD_RST)
+#endif
+			;
+	ARM_GPIOC->ANALOG |= (1 << PORTC_WE) | /* Digital */
+	(1 << PORTC_CLOCK)
+#ifdef ARM_1986BE9
+			| (1 << PORTC_LCD_RST)
+#endif
+			;
+	ARM_GPIOC->PWR = (ARM_GPIOC->PWR & /* Fast */
+	~(ARM_PWR_MASK (PORTC_WE) | ARM_PWR_MASK(PORTC_CLOCK)
+#ifdef ARM_1986BE9
+			| ARM_PWR_MASK(PORTC_LCD_RST)
+#endif
+			)) | ARM_PWR_SLOW(PORTC_WE) | ARM_PWR_FASTEST(PORTC_CLOCK)
+#ifdef ARM_1986BE9
+			| ARM_PWR_FASTEST(PORTC_LCD_RST)
+#endif
+			;
 
-//	ARM_GPIOC->FUNC &= 0xFFFFFFCC;	//PORTC 0 - основная функция
-//	ARM_GPIOC->FUNC |= 0x00000021;	//PORTC 2 - альтернативная функция
-//	ARM_GPIOC->ANALOG |= 0x0005;	// PC0, PC2 - digital
-//	ARM_GPIOC->PWR |= 0x00000031;// PC0 - медленный фронт, РС2 - самый быстрый
-
-//	ARM_GPIOE->FUNC &= 0xC0FFFFFF;// PE12, PE13, PE14 - основная функция (шина адреса)
-//	ARM_GPIOE->FUNC |= 0x2A000000;// PE12, PE13, PE14  - альтернативная (шина адреса)
-//	ARM_GPIOE->ANALOG |= 0x7000;	// PE12, PE14, PE15 - digital
-//	ARM_GPIOE->PWR |= 0x3F000000;	// PE12, PE13, PE14 -faster
-
-	/*ARM_GPIOF->FUNC = 0;	//PORTE 12, 13, 14 - основная функция (шина адреса)
-	 ARM_GPIOF->DATA = 0;
-	 ARM_GPIOF->OE |= 0x0001;
-	 ARM_GPIOF->ANALOG = 0x0001;
-	 ARM_GPIOF->PWR |= 0x00000003;*/
-
-	ARM_EXTBUS->CONTROL = ARM_EXTBUS_RAM | ARM_EXTBUS_WS(15); //0xF002
+	/* Включение внешней шины адрес/данные в режиме ROM.
+	 * Длительность цикла на шине равна 18 тактам (15 wait states). */
+	if (ARM_EXTBUS->CONTROL & ARM_EXTBUS_RAM)
+		ARM_EXTBUS->CONTROL |= ARM_EXTBUS_WS(15);
+	else
+		ARM_EXTBUS->CONTROL = ARM_EXTBUS_ROM | ARM_EXTBUS_WS(15);
+#ifdef ARM_1986BE1
 	ARM_EXTBUS->RAM_Cycles3 =
 			ARM_EXTBUS_CYCLES_ENABLE_TUNE
 					| ARM_EXTBUS_CYCLES_WS_ACTIVE(
 							255) | ARM_EXTBUS_CYCLES_WS_SETUP(7) | ARM_EXTBUS_CYCLES_WS_HOLD(7);
-	ARM_EXTBUS->RAM_Cycles4 = 1 | (255 << 1) | (7 << 8) | (7 << 11);
-
+	ARM_EXTBUS->RAM_Cycles4 =
+			ARM_EXTBUS_CYCLES_ENABLE_TUNE
+					| ARM_EXTBUS_CYCLES_WS_ACTIVE(
+							255) | ARM_EXTBUS_CYCLES_WS_SETUP(7) | ARM_EXTBUS_CYCLES_WS_HOLD(7);
+#endif
+#ifdef ARM_1986BE9
 	/* Программный сброс экрана. */
-	/*	ARM_GPIOC->CLRTX = 1 << PORTF_LCD_RST;
-	 udelay(8);
-	 ARM_GPIOF->SETTX = 1 << PORTF_LCD_RST;
-	 udelay(8);*/
+	ARM_GPIOC->DATA |= 1 << PORTC_LCD_RST;
+	ARM_GPIOC->OE |= 1 << PORTC_LCD_RST;
+	for (x = 0; x < 255; x++)
+		ARM_GPIOC->DATA &= ~(1 << PORTC_LCD_RST);
+	ARM_GPIOC->DATA |= 1 << PORTC_LCD_RST;
+#endif
 
-	//gpanel_clear(gp, 1);
-	/*	set_crystal(gp, 0);
-	 *(gp->CMD) = 0x3F;
-	 udelay(8);
-	 *(gp->CMD) = 0xC0;
-	 udelay(8);
-	 set_crystal(gp, 65);
-	 *(gp->CMD) = 0x3F;
-	 udelay(8);
-	 *(gp->CMD) = 0xC0;
-	 udelay(8);
-
-	 ClearLCD(gp);
-	 mdelay(500);
-	 */
 	/* Инициализация всех кристаллов. */
-	ARM_GPIOE->OE |= 1 << PORTE_ADDR27 | 1 << PORTE_ADDR28;
+	ARM_GPIOE->OE |= 1 << PORTE_E1 | 1 << PORTE_E2;
 	for (x = 0; x < gp->ncol; x += 64) {
 		set_crystal(gp, x);
 		wait_status(gp, BUSY);
@@ -209,7 +207,7 @@ void gpanel_init(gpanel_t *gp, const gpanel_font_t *font) {
 		udelay(8);
 		//}
 	}
-	ARM_GPIOE->SETTX = (1 << PORTE_ADDR28) | (1 << PORTE_ADDR27);
+	ARM_GPIOE->SETTX = (1 << PORTE_E2) | (1 << PORTE_E1);
 	/*	gpanel_clear(gp, 1);*/
 }
 
@@ -230,36 +228,26 @@ void gpanel_clear(gpanel_t *gp, unsigned color) {
 		wait_status(gp, BUSY);
 		udelay(8);
 
-		//for (j = 0; j < TEMP; j++) {
 		*gp->CMD = 0x3E;		// LCD off
 		udelay(8);
-		//}
 
 		for (i = 0; i < 8; i++) {
-			//for (j = 0; j < TEMP; j++) {
 			*gp->CMD = 0xB8 + i;	// set page
 			udelay(8);
-			//}
 
-			//for (j = 0; j < TEMP; j++) {
 			*gp->CMD = 0x40;	// set address 0
 			udelay(8);
-			//}
 
 			for (j = 0; j < 64; j++) {
-				//for (j = 0; j < TEMP; j++) {
 				*gp->DATA = color;
 				udelay(8);
-				//}
 			}
 		}
-		//for (j = 0; j < TEMP; j++) {
 		*gp->CMD = 0x3F;		// LCD on
 		udelay(8);
-		///}
 		wait_status(gp, ONOFF);
 	}
-	ARM_GPIOE->SETTX = (1 << PORTE_ADDR28) | (1 << PORTE_ADDR27);
+	ARM_GPIOE->SETTX = (1 << PORTE_E2) | (1 << PORTE_E1);
 	gp->row = 0;
 	gp->col = 0;
 }
@@ -276,22 +264,16 @@ void gpanel_pixel(gpanel_t *gp, int x, int y, int color) {
 	set_crystal(gp, x);
 	x &= 63;
 
-	//for (j = 0; j < TEMP; j++) {
 	*gp->CMD = 0xB8 + (y >> 3);	// set page
 	udelay(8);
-	//}
 
-	//for (j = 0; j < TEMP; j++) {
 	*gp->CMD = 0x40 + x;		// set address
 	udelay(8);
-	//}
 
 	/* Первое чтение - необходимо для получения корректных данных */
 	*(gp->DATA);
-	//*(gp->DATA);
 	udelay(8);
 	data = *gp->DATA;
-	//data = *gp->DATA;
 	udelay(8);
 
 	if (color)
@@ -299,16 +281,12 @@ void gpanel_pixel(gpanel_t *gp, int x, int y, int color) {
 	else
 		data &= ~(1 << (y & 7));
 
-	//for (j = 0; j < TEMP; j++) {
 	*gp->CMD = 0x40 + x;		// set address
 	udelay(8);
-	//}
 
-	//for (j = 0; j < TEMP; j++) {
 	*gp->DATA = (unsigned char) data;
 	udelay(8);
-	ARM_GPIOE->SETTX = (1 << PORTE_ADDR28) | (1 << PORTE_ADDR27);
-	//}
+	ARM_GPIOE->SETTX = (1 << PORTE_E2) | (1 << PORTE_E1);
 }
 
 /*
@@ -332,19 +310,14 @@ static void graw_glyph8(gpanel_t *gp, unsigned width, unsigned height,
 				crystal = (x & 64);
 				set_crystal(gp, crystal);
 
-				//for (j = 0; j < TEMP; j++) {
 				*gp->CMD = 0xB8 + ypage;	// set page
 				udelay(8);
-				//}
 
-				//for (j = 0; j < TEMP; j++) {
 				*gp->CMD = 0x40 + (x & 63);	// set address
 				udelay(8);
-				//}
 
 				/* Первое чтение - необходимо для получения корректных данных */
 				*(gp->DATA);
-				//*(gp->DATA);
 				udelay(8);
 			}
 			data[i] = *gp->DATA;
@@ -376,30 +349,21 @@ static void graw_glyph8(gpanel_t *gp, unsigned width, unsigned height,
 			crystal = (x & 64);
 			set_crystal(gp, crystal);
 
-			//for (j = 0; j < TEMP; j++) {
 			*gp->CMD = 0xB8 + ypage;	// set page
 			udelay(8);
-			//}
 
-			//for (j = 0; j < TEMP; j++) {
 			*gp->CMD = 0x40 + (x & 63);	// set address
 			udelay(8);
-			//}
 
 		} else if (i == 0) {
-			//for (j = 0; j < TEMP; j++) {
 			*gp->CMD = 0x40 + (x & 63);	// set address
 			udelay(8);
-			//}
 		}
 
-		//for (j = 0; j < TEMP; j++) {
 		*gp->DATA = data[i];
 		udelay(8);
-
-		//}
 	}
-	ARM_GPIOE->SETTX = (1 << PORTE_ADDR28) | (1 << PORTE_ADDR27);
+	ARM_GPIOE->SETTX = (1 << PORTE_E2) | (1 << PORTE_E1);
 }
 
 /*
