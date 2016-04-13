@@ -7,9 +7,9 @@
 
 /* Флаги состояния LCD */
 enum {
-	BUSY = 7,
-        ONOFF = 5,
-        RESET = 4,
+	BUSY	= 7,
+	ONOFF	= 5,
+	RESET	= 4,
 };
 #ifdef ARM_1986BE9
 #define PORTC_WE		2
@@ -187,7 +187,7 @@ void gpanel_init(gpanel_t *gp, const gpanel_font_t *font) {
 	ARM_GPIOC->DATA |= 1 << PORTC_LCD_RST;
 	ARM_GPIOC->OE |= 1 << PORTC_LCD_RST;
 	for (x = 0; x < 255; x++)
-		ARM_GPIOC->DATA &= ~(1 << PORTC_LCD_RST);
+	ARM_GPIOC->DATA &= ~(1 << PORTC_LCD_RST);
 	ARM_GPIOC->DATA |= 1 << PORTC_LCD_RST;
 #endif
 
