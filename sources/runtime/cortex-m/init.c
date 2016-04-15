@@ -177,7 +177,30 @@ _init_ (void)
 	/* Enable JTAG A and B debug ports. */
 //	ARM_BACKUP->BKP_REG_0E |= ARM_BKP_REG_0E_JTAG_A | ARM_BKP_REG_0E_JTAG_B;
 //	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOB;
-
+#ifdef ARM_1986BE1
+        ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_EEPROM | ARM_PER_CLOCK_BKP;
+        /* В зависимости от частоты изменим устанавливаем
+        * значение режима работы регулятора 1,8 В
+        * и задержку памяти программ при чтении
+        */
+	if (KHZ > 132000){
+		ARM_EEPROM->CMD = (6 << 3);
+		ARM_BACKUP->BKP_REG_0E |= 5;
+	} else if (KHZ > 125000){
+		ARM_EEPROM->CMD = (5 << 3);
+		ARM_BACKUP->BKP_REG_0E |= 5;
+	} else if (KHZ > 100000) {
+		ARM_EEPROM->CMD = (4 << 3);
+		ARM_BACKUP->BKP_REG_0E |= 5;
+	} else if (KHZ > 80000){
+		ARM_EEPROM->CMD = (3 << 3);
+		ARM_BACKUP->BKP_REG_0E |= 5;
+	} else {
+		ARM_EEPROM->CMD = (3 << 3);
+		ARM_BACKUP->BKP_REG_0E |= 3;
+	}
+	ARM_RSTCLK->PER_CLOCK &= ~ARM_PER_CLOCK_EEPROM;
+#endif
 #ifndef SETUP_HCLK_HSI
 	/* Enable HSE generator. */
 #ifdef ARM_EXT_GEN

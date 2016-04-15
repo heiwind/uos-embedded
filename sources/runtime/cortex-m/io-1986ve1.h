@@ -183,6 +183,10 @@ typedef struct
 {
     arm_reg_t NAND_CYCLES;
     arm_reg_t CONTROL;
+    arm_reg_t RAM_Cycles1;	/* 0х10000000-0х1FFFFFFF */
+    arm_reg_t RAM_Cycles2;	/* 0х50000000-0х5FFFFFFF */
+    arm_reg_t RAM_Cycles3;	/* 0х60000000-0х6FFFFFFF */
+    arm_reg_t RAM_Cycles4;	/* 0х70000000-0хDFFFFFFF */
 } EXTBUS_t;
 
 #define ARM_EXTBUS      ((EXTBUS_t*) ARM_EXT_BUS_BASE)
@@ -196,6 +200,14 @@ typedef struct
 #define ARM_EXTBUS_CPOL     (1 << 3)    /* Отрицательная полярность CLOCK */
 #define ARM_EXTBUS_DONE     (1 << 7)    /* Операция памяти NAND завершена */
 #define ARM_EXTBUS_WS(x)    ((x) << 12) /* Длительность цикла = ws+3 */
+
+/* Регистр RAM_Cycles1 */
+#define ARM_EXTBUS_CYCLES_ENABLE_TUNE	(1 << 0)	/* Разрешение настройки параметров обмена соответствующего
+														диапазона адресов */
+#define ARM_EXTBUS_CYCLES_WS_ACTIVE(x)	((x) << 1)	/* Длительность низкого уровня сигналов nWR/nRD */
+#define ARM_EXTBUS_CYCLES_WS_SETUP(x)	((x) << 8)	/* Время предустановки сигналов nWR/nRD */
+#define ARM_EXTBUS_CYCLES_WS_HOLD(x)	((x) << 11)	/* Время удержания сигналов nWR/nRD */
+#define ARM_EXTBUS_CYCLES_USE_READY		(1 << 14)
 
 /*------------------------------------------------------
  * Clock management
@@ -1922,7 +1934,7 @@ typedef struct
 {
     volatile uint16_t    DELIMITER;
     volatile uint8_t     MAC_ADDR[6];
-    volatile uint8_t     HASH[8];
+    volatile uint16_t    HASH[4];
     volatile uint16_t    IPG;
     volatile uint16_t    PSC;
     volatile uint16_t    BAG;
@@ -1946,6 +1958,7 @@ typedef struct
 } __attribute__ ((packed)) ETH_t;
 
 #define ARM_ETH             ((volatile ETH_t *) ARM_ETH_REG_BASE)
+#define ARM_ETH_BUF		    *((arm_reg_t *) ARM_ETH_BUF_BASE)
 #define ARM_ETH_RX_FIFO     *((arm_reg_t *) ARM_ETH_BUF_BASE)
 #define ARM_ETH_TX_FIFO     *((arm_reg_t *) (ARM_ETH_BUF_BASE + 0x4))
 
@@ -1953,172 +1966,210 @@ typedef struct
 /*
  * G_CFG
  */
-#define ARM_ETH_COLWND(x)       (x)
-#define ARM_ETH_PAUSE_EN        (1 << 8)
-#define ARM_ETH_DTRM_EN         (1 << 9)
-#define ARM_ETH_HD_EN           (1 << 10)
-#define ARM_ETH_EXT_EN          (1 << 11)
-#define ARM_ETH_BUFF_MODE(x)    ((x) << 12)
-#define ARM_ETH_RCLR_EN         (1 << 14)
+/* LOW */
+#define ARM_ETH_COLWND(x)       (x)			/* Размер «окна коллизий». */
+#define ARM_ETH_PAUSE_EN        (1 << 8)	/* Режим автоматической обработки пакета PAUSE. */
+#define ARM_ETH_DTRM_EN         (1 << 9)	/* Режим детерминированного времени доставки. */
+#define ARM_ETH_HD_EN           (1 << 10)	/* Полудуплексный режим работы. */
+#define ARM_ETH_EXT_EN          (1 << 11)	/* Включение режима дополнения коротких пакетов */
+#define ARM_ETH_BUFF_MODE(x)    ((x) << 12)	/* Режим работы буфера. */
+#define ARM_ETH_RCLR_EN         (1 << 14)	/* Сброс регистров статуса(IFR) */
 
-#define ARM_ETH_XRST            (1 << 0)
-#define ARM_ETH_RRST            (1 << 1)
-#define ARM_ETH_DLB             (1 << 2)
-#define ARM_ETH_DBG_RF_EN       (1 << 12)
-#define ARM_ETH_DBG_XF_EN       (1 << 13)
-#define ARM_ETH_DBG_MODE(x)     ((x) << 14)
+/* Hi */
+#define ARM_ETH_XRST            (1 << 0)	/* Сброс передатчика. */
+#define ARM_ETH_RRST            (1 << 1)	/* Сброс приемника. */
+#define ARM_ETH_DLB             (1 << 2)	/* Режим КЗ. */
+#define ARM_ETH_DBG_RF_EN       (1 << 12)	/* Разрешение автоматического изменения указателей FIFO приемника в режиме отладки. */
+#define ARM_ETH_DBG_XF_EN       (1 << 13)	/* Разрешение автоматического изменения указателей FIFO передатчика. */
+#define ARM_ETH_DBG_MODE(x)     ((x) << 14)	/* Режим работы в режиме отладки. */
 
-#define ARM_ETH_BUFF_LINEAL     0
-#define ARM_ETH_BUFF_AUTO       1
-#define ARM_ETH_BUFF_FIFO       2
+/* Режим работы в режиме отладки. */
+#define ARM_ETH_DBG_FREERUN		0
+#define ARM_ETH_DBG_HALT		1
+#define ARM_ETH_DBG_STOP		2
+
+/* Режим работы буфера. */
+#define ARM_ETH_BUFF_LINEAL     0	/* линейный режим; */
+#define ARM_ETH_BUFF_AUTO       1	/* режим с автоматическим изменением указателей; */
+#define ARM_ETH_BUFF_FIFO       2	/* режим FIFO; */
 
 /*
  * X_CFG
  */
-#define ARM_ETH_RTRYCNT(x)      (x)
-#define ARM_ETH_IPG_EN          (1 << 4)
-#define ARM_ETH_CRC_EN          (1 << 5)
-#define ARM_ETH_PRE_EN          (1 << 6)
-#define ARM_ETH_PAD_EN          (1 << 7)
-#define ARM_ETH_EVNT_MODE(x)    ((x) << 8)
-#define ARM_ETH_MSB1ST          (1 << 12)
-#define ARM_ETH_BE              (1 << 13)
-#define ARM_ETH_EN              (1 << 15)
+#define ARM_ETH_RTRYCNT(x)      (x)			/* Максимальное кол-во попыток отправки пакета */
+#define ARM_ETH_IPG_EN          (1 << 4)	/* Режим выдержки паузы между отправкой пакетов. включен. */
+#define ARM_ETH_CRC_EN          (1 << 5)	/* Дополнение пакета автоматически вычисленным CRC. */
+#define ARM_ETH_PRE_EN          (1 << 6)	/* Дополнение пакета преамбулой. */
+#define ARM_ETH_PAD_EN          (1 << 7)	/* Дополнение пакета до минимальной длины PAD-ами. */
+#define ARM_ETH_EVNT_MODE(x)    ((x) << 8)	/* Выбор режима работы вывода EVNT[1]. */
+#define ARM_ETH_MSB1ST          (1 << 12)	/* Порядок следования бит при приеме байтов данных. 1 – первым принимается MSB. */
+#define ARM_ETH_BE              (1 << 13)	/* Порядок следования байт в слове. 1 – BigEndian. */
+#define ARM_ETH_EN              (1 << 15)	/* Разрешение работы приемника/передатчика. */
 
-#define ARM_ETH_EVNT_XFIFO_EMPTY        0
-#define ARM_ETH_EVNT_XFIFO_AEMPTY       1
-#define ARM_ETH_EVNT_XFIFO_HALF         2
-#define ARM_ETH_EVNT_XFIFO_AFULL        3
-#define ARM_ETH_EVNT_XFIFO_FULL         4
-#define ARM_ETH_EVNT_TX_DONE            5
-#define ARM_ETH_EVNT_TX_READ_WORD       6
-#define ARM_ETH_EVNT_TX_NEXT_TRY        7
+#define ARM_ETH_EVNT_XFIFO_EMPTY        0	/* RFIFO пуст; */
+#define ARM_ETH_EVNT_XFIFO_AEMPTY       1	/* RFIFO почти пуст; */
+#define ARM_ETH_EVNT_XFIFO_HALF         2	/* RFIFO наполовину полон; */
+#define ARM_ETH_EVNT_XFIFO_AFULL        3	/* RFIFO почти полон; */
+#define ARM_ETH_EVNT_XFIFO_FULL         4	/* RFIFO полон; */
+#define ARM_ETH_EVNT_TX_DONE            5	/* Отправка пакета завершена */
+#define ARM_ETH_EVNT_TX_READ_WORD       6	/* передатчик считал слово данных из буфера */
+#define ARM_ETH_EVNT_TX_NEXT_TRY        7 	/* Передатчик начал очередную попытку передачи пакета. */
+
 
 /*
  * R_CFG
  */
-#define ARM_ETH_MCA_EN          (1 << 0)
-#define ARM_ETH_BCA_EN          (1 << 1)
-#define ARM_ETH_UCA_EN          (1 << 2)
-#define ARM_ETH_CA_EN           (1 << 3)
-#define ARM_ETH_EF_EN           (1 << 4)
-#define ARM_ETH_CF_EN           (1 << 5)
-#define ARM_ETH_LF_EN           (1 << 6)
-#define ARM_ETH_SF_EN           (1 << 7)
+#define ARM_ETH_MCA_EN          (1 << 0)	/* Прием пакетов с групповым MAC-адресом с фильтрацией по HAS-таблице.
+												0 – выключен;
+												1 – включен. */
+#define ARM_ETH_BCA_EN          (1 << 1)	/* Прием пакетов с широковещательным MAC-адресом. */
+#define ARM_ETH_UCA_EN          (1 << 2)	/* Прием пакетов с MAC-адресом, указанным в регистре MAC_Address. */
+#define ARM_ETH_AC_EN           (1 << 3)	/* Прием пакетов без фильтрации MAC-адреса. */
+#define ARM_ETH_EF_EN           (1 << 4)	/* Разрешение приема пакетов с ошибками. */
+#define ARM_ETH_CF_EN           (1 << 5)	/* Разрешение приема управляющих пакетов. */
+#define ARM_ETH_LF_EN           (1 << 6)	/* Разрешение приема пакетов длиной больше максимальной. */
+#define ARM_ETH_SF_EN           (1 << 7)	/* Разрешение приема пакетов длиной меньше минимальной. */
 /* ARM_ETH_EVNT_MODE(x)     - так же, как в X_CFG */
 /* ARM_ETH_MSB1ST           - так же, как в X_CFG */
 /* ARM_ETH_BE               - так же, как в X_CFG */
 /* ARM_ETH_EN               - так же, как в X_CFG */
 
-#define ARM_ETH_EVNT_RFIFO_NOT_EMPTY    0
-#define ARM_ETH_EVNT_RFIFO_NOT_AEMPTY   1
-#define ARM_ETH_EVNT_RFIFO_HALF         2
-#define ARM_ETH_EVNT_RFIFO_NOT_AFULL    3
-#define ARM_ETH_EVNT_RFIFO_NOT_FULL     4
-#define ARM_ETH_EVNT_RX_DONE            5
-#define ARM_ETH_EVNT_RX_WRITE_WORD      6
-#define ARM_ETH_EVNT_RX_FAILED          7
+#define ARM_ETH_EVNT_RFIFO_NOT_EMPTY    0	/* RFIFO не пуст; */
+#define ARM_ETH_EVNT_RFIFO_NOT_AEMPTY   1	/* RFIFO почти не пуст; */
+#define ARM_ETH_EVNT_RFIFO_HALF         2	/* RFIFO наполовину пуст; */
+#define ARM_ETH_EVNT_RFIFO_NOT_AFULL    3	/* RFIFO почти не полон; */
+#define ARM_ETH_EVNT_RFIFO_NOT_FULL     4	/* RFIFO не полон; */
+#define ARM_ETH_EVNT_RX_DONE            5	/* прием пакета завершен; */
+#define ARM_ETH_EVNT_RX_WRITE_WORD      6	/* приемник положил данные в буфер; */
+#define ARM_ETH_EVNT_RX_FAILED          7	/* приемник отбросил пакет. */
 
 /*
  * IMR/IFR
  */
-#define ARM_ETH_RF_OK           (1 << 0)
-#define ARM_ETH_MISSED_F        (1 << 1)
-#define ARM_ETH_OVF             (1 << 2)
-#define ARM_ETH_SMB_ERR         (1 << 3)
-#define ARM_ETH_CRC_ERR         (1 << 4)
-#define ARM_ETH_CF              (1 << 5)
-#define ARM_ETH_LF              (1 << 6)
-#define ARM_ETH_SF              (1 << 7)
-#define ARM_ETH_XF_OK           (1 << 8)
-#define ARM_ETH_XF_ERR          (1 << 9)
-#define ARM_ETH_XF_UNDF         (1 << 10)
-#define ARM_ETH_LC              (1 << 11)
-#define ARM_ETH_CRS_LOST        (1 << 12)
-#define ARM_ETH_MDIO_INT        (1 << 14)
-#define ARM_ETH_MII_RDY         (1 << 15)
+#define ARM_ETH_RF_OK           (1 << 0)	/* Индикатор успешно принятого пакета */
+#define ARM_ETH_MISSED_F        (1 << 1)	/* Индикатор потери пакета из-за отсутствия места в буфере
+приемника */
+#define ARM_ETH_OVF             (1 << 2)	/* Индикатор переполнения буфера приемника */
+#define ARM_ETH_SMB_ERR         (1 << 3)	/* Индикатор наличия ошибок в данных при приеме пакета */
+#define ARM_ETH_CRC_ERR         (1 << 4)	/* Индикатор наличия несовпадения CRC пакета принятых данных с
+CRC пакета */
+#define ARM_ETH_CF              (1 << 5)	/* Индикатор приема управляющих пакетов */
+#define ARM_ETH_LF              (1 << 6)	/* Индикатор приема пакета длинной больше максимальной */
+#define ARM_ETH_SF              (1 << 7)	/* Индикатор приема пакета длинной меньше минимальной */
+#define ARM_ETH_XF_OK           (1 << 8)	/* Индикатор успешной отправки пакета */
+#define ARM_ETH_XF_ERR          (1 << 9)	/* Индикатор наличия ошибок при передаче пакета */
+#define ARM_ETH_XF_UNDF         (1 << 10)	/* Индикатор опустошения буфера передатчика */
+#define ARM_ETH_LC              (1 << 11)	/* Индикатор наличия LateCollision в линии */
+#define ARM_ETH_CRS_LOST        (1 << 12)	/* Индикатор потери несущей во время передачи в полудуплексном
+режиме работы */
+#define ARM_ETH_MDIO_INT        (1 << 14)	/* Индикатор наличия прерывания по MDIO интерфейсу */
+#define ARM_ETH_MII_RDY         (1 << 15)	/* Индикатор завершения текущей команды обмена по MDIO
+интерфейсу */
 
 /*
  * STAT
  */
-#define ARM_ETH_R_EMPTY         (1 << 0)
-#define ARM_ETH_R_AEMPTY        (1 << 1)
-#define ARM_ETH_R_HALF          (1 << 2)
-#define ARM_ETH_R_AFULL         (1 << 3)
-#define ARM_ETH_R_FULL          (1 << 4)
-#define ARM_ETH_R_COUNT(x)      ((x) << 5)
-#define ARM_ETH_X_EMPTY         (1 << 8)
-#define ARM_ETH_X_AEMPTY        (1 << 9)
-#define ARM_ETH_X_HALF          (1 << 10)
-#define ARM_ETH_X_AFULL         (1 << 11)
-#define ARM_ETH_X_FULL          (1 << 12)
+#define ARM_ETH_R_EMPTY         (1 << 0)	/* буфер приемника пуст */
+#define ARM_ETH_R_AEMPTY        (1 << 1)	/* буфер приемника почти пуст */
+#define ARM_ETH_R_HALF          (1 << 2)	/* буфер приемника полуполон */
+#define ARM_ETH_R_AFULL         (1 << 3)	/* буфер приемника почти полон */
+#define ARM_ETH_R_FULL          (1 << 4)	/* буфер приемника полон */
+#define ARM_ETH_R_COUNT(x)      ((x) << 5)	/* Кол-во принятых, но не считанных пакетов */
+#define ARM_ETH_X_EMPTY         (1 << 8)	/* буфер передатчика пуст */
+#define ARM_ETH_X_AEMPTY        (1 << 9)	/* буфер передатчика почти пуст */
+#define ARM_ETH_X_HALF          (1 << 10)	/* буфер передатчика полуполон */
+#define ARM_ETH_X_AFULL         (1 << 11)	/* буфер передатчика почти полон */
+#define ARM_ETH_X_FULL          (1 << 12)	/* буфер передатчика полон */
 
 /*
  * MDIO_CTRL
  */
-#define ARM_ETH_MDIO_RG_A(x)         (x)
-#define ARM_ETH_MDIO_DIV(x)          ((x) << 5)
-#define ARM_ETH_MDIO_PHY_A(x)        ((x) << 8)
-#define ARM_ETH_MDIO_OP              (1 << 13)
-#define ARM_ETH_MDIO_PRE_EN          (1 << 14)
-#define ARM_ETH_MDIO_RDY             (1 << 15)
+#define ARM_ETH_MDIO_RG_A(x)         (x)		/* Номер регистра PHY */
+#define ARM_ETH_MDIO_DIV(x)          ((x) << 5)	/* Коэффициент деления основной частоты для работы MDIO интерфейса MDC= ETH_CLK / [(DIV+1)*16] */
+#define ARM_ETH_MDIO_PHY_A(x)        ((x) << 8)	/* Адрес модуля PHY */
+#define ARM_ETH_MDIO_OP              (1 << 13)	/* Операция. 1 – чтение; 0 – запись. */
+#define ARM_ETH_MDIO_PRE_EN          (1 << 14)	/* ежим передачи. 1 – с передачей преамбулы (32 бита «1»); */
+#define ARM_ETH_MDIO_RDY             (1 << 15)	/* Управление/индикатор обмена по MDIO */
 
 /*
  * PHY_CTRL
  */
-#define ARM_ETH_PHY_NRST        (1 << 0)
-#define ARM_ETH_PHY_MODE(x)     ((x) << 1)
-#define ARM_ETH_PHY_FX_EN       (1 << 7)
-#define ARM_ETH_PHY_MDI         (1 << 8)
-#define ARM_ETH_PHY_MDIO_SEL    (1 << 9)
-#define ARM_ETH_PHY_MDC         (1 << 10)
-#define ARM_ETH_PHY_ADDR(x)     ((x) << 11)
+#define ARM_ETH_PHY_NRST        (1 << 0)	/* Разрешение работы блока PHY. 1 – блок PHY в штатном режиме. */
+#define ARM_ETH_PHY_MODE(x)     ((x) << 1)	/* Режим работы блока PHY. */
+#define ARM_ETH_PHY_FX_EN       (1 << 7)	/* Выбор режима работы блока PHY 100BaseFX. 1 – включен режим 100BaseFX; 0 – режим 100BaseFX выключен. */
+#define ARM_ETH_PHY_MDI         (1 << 8)	/* Состояние входа данных MII блока PHY (для ручного управления работой через MII) */
+#define ARM_ETH_PHY_MDIO_SEL    (1 << 9)	/* Тактовый сигнал обмена через MII блока PHY (для ручного управления работой через MII) */
+#define ARM_ETH_PHY_MDC         (1 << 10)	/* Тактовый сигнал обмена через MII блока PHY (для ручного управления работой через MII) */
+#define ARM_ETH_PHY_ADDR(x)     ((x) << 11)	/* Адрес PHY, используемый для MII интерфейса и для инициализации скрамблера */
 
-#define ARM_ETH_PHY_10BASET_HD_NOAUTO   0
-#define ARM_ETH_PHY_10BASET_FD_NOAUTO   1
-#define ARM_ETH_PHY_100BASET_HD_NOAUTO  2
-#define ARM_ETH_PHY_100BASET_FD_NOAUTO  3
-#define ARM_ETH_PHY_100BASET_HD_AUTO    4
-#define ARM_ETH_PHY_REPEATER            5
-#define ARM_ETH_PHY_LOW_POWER           6
-#define ARM_ETH_PHY_FULL_AUTO           7
+#define ARM_ETH_PHY_10BASET_HD_NOAUTO   0	/* 10BaseT HD без автоподстройки; */
+#define ARM_ETH_PHY_10BASET_FD_NOAUTO   1	/* 10BaseT FD без автоподстройки; */
+#define ARM_ETH_PHY_100BASET_HD_NOAUTO  2	/* 100BaseT HD без автоподстройки; */
+#define ARM_ETH_PHY_100BASET_FD_NOAUTO  3	/* 100BaseT FD без автоподстройки; */
+#define ARM_ETH_PHY_100BASET_HD_AUTO    4	/* 100BaseT HD c автоподстройкой; */
+#define ARM_ETH_PHY_REPEATER            5	/* режим повторителя; */
+#define ARM_ETH_PHY_LOW_POWER           6	/* режим пониженного потребления; */
+#define ARM_ETH_PHY_FULL_AUTO           7	/* Полностью автоматический режим. */
 
 /*
  * PHY_STAT
  */
-#define ARM_ETH_PHY_LED_SPEED   (1 << 0)
-#define ARM_ETH_PHY_LED_LINK    (1 << 1)
-#define ARM_ETH_PHY_LED_CRS     (1 << 2)
-#define ARM_ETH_PHY_LED_HD      (1 << 3)
-#define ARM_ETH_PHY_READY       (1 << 4)
-#define ARM_ETH_PHY_CRS         (1 << 5)
-#define ARM_ETH_PHY_COL         (1 << 6)
-#define ARM_ETH_PHY_FX_VALID    (1 << 8)
-#define ARM_ETH_PHY_MDO         (1 << 9)
-#define ARM_ETH_PHY_MDINT       (1 << 10)
+#define ARM_ETH_PHY_LED_SPEED   (1 << 0)	/* 	Индикация выбранной скорости обмена данными.
+												0 – выбрана скорость 100 Мбит;
+												1 – выбрана скорость 10 Мбит. */
+#define ARM_ETH_PHY_LED_LINK    (1 << 1)	/*	Индикация наличия Link сигнала.
+												0 – сигнал Link включён;
+												1 – сигнал Link выключен. */
+#define ARM_ETH_PHY_LED_CRS     (1 << 2)	/* Индикация наличия Carrier sense.
+												0 – наличие Carrier sense (CRS);
+												1 – отсутствие Carrier sense (CRS). */
+#define ARM_ETH_PHY_LED_HD      (1 << 3)	/* Индикация режима работы блока PHY.
+												0 – режим работы full-duplex;
+												1 – режим работы half-duplex. */
+#define ARM_ETH_PHY_READY       (1 << 4)	/* Флаг готовности к работе блока PHY.
+												1 – блок PHY вышел в рабочий режим после аппаратного сброса/отключения;
+												0 – блок PHY не в рабочем режиме. */
+#define ARM_ETH_PHY_CRS         (1 << 5)	/* Флаг наличия обмена данными по витой паре.
+												1 – в линии идет обмен данными;
+												0 – линия в исходном состоянии. */
+#define ARM_ETH_PHY_COL         (1 << 6)	/* Флаг наличия коллизии в линии.
+												1 – в линии присутствует коллизия;
+												0 – в линии коллизия отсутствует. */
+#define ARM_ETH_PHY_FX_VALID    (1 << 8)	/* Флаг наличия обмена данными в оптоволоконной линии.
+												1 – присутствует обмен в линии FX;
+												0 – линия FX в исходном состоянии. */
+#define ARM_ETH_PHY_MDO         (1 << 9)	/* Состояние выхода данных MII блока PHY
+												(для ручного управления работой через MII) */
+#define ARM_ETH_PHY_MDINT       (1 << 10)	/* Флаг запроса прерывания от блока PHY.
+												1 – имеется прерывание от блока PHY;
+												0 – от блока PHY прерывания отсутствуют
+												(дублируется в регистре прерываний блока МАС). */
 
 
  /* Поле управления передачи пакета - 32-разрядное целое - длина пакета в байтах */
 
  /* Поле состояния передачи пакета - 32-разрядное целое */
- #define ARM_ETH_PKT_RCOUNT(x)      ((x) << 16)
- #define ARM_ETH_PKT_RL             (1 << 20)
- #define ARM_ETH_PKT_LC             (1 << 21)
- #define ARM_ETH_PKT_UR             (1 << 22)
+ #define ARM_ETH_PKT_RCOUNT(x)		((x) << 16)
+ #define ARM_ETH_PKT_RL				(1 << 20)
+ #define ARM_ETH_PKT_LC				(1 << 21)
+ #define ARM_ETH_PKT_UR				(1 << 22)
 
  /* Поле состояния приёма пакета - 32-разрядное целое */
- #define ARM_ETH_PKT_LENGTH(x)      ((x) & 0xFFFF)
- #define ARM_ETH_PKT_PF_ERR         (1 << 16)
- #define ARM_ETH_PKT_CF_ERR         (1 << 17)
- #define ARM_ETH_PKT_LF_ERR         (1 << 18)
- #define ARM_ETH_PKT_SF_ERR         (1 << 19)
- #define ARM_ETH_PKT_LEN_ERR        (1 << 20)
- #define ARM_ETH_PKT_DN_ERR         (1 << 21)
- #define ARM_ETH_PKT_CRC_ERR        (1 << 22)
- #define ARM_ETH_PKT_SMB_ERR        (1 << 23)
- #define ARM_ETH_PKT_MCA_ERR        (1 << 24)
- #define ARM_ETH_PKT_BCA_ERR        (1 << 25)
- #define ARM_ETH_PKT_UCA_ERR        (1 << 24)
+ #define ARM_ETH_PKT_LENGTH(x)		((x) & 0xFFFF)	/* Длинна пакета */
+ #define ARM_ETH_PKT_PF_ERR			(1 << 16)		/* Признак пакета PAUSE */
+ #define ARM_ETH_PKT_CF_ERR			(1 << 17)		/* Признак пакета управления (фильтрация по специальным MAC и
+													тэгам в поле длины – 13,14 – октеты) */
+ #define ARM_ETH_PKT_LF_ERR			(1 << 18)		/* Признак превышение длины пакета 1518 октетов */
+ #define ARM_ETH_PKT_SF_ERR			(1 << 19)		/* Признак недостаточной длины пакета 64 октетов */
+ #define ARM_ETH_PKT_LEN_ERR		(1 << 20)		/* Признак несоответствия между реальной длиной и длинной
+													указанной в поле длины – 13,14 октеты */
+ #define ARM_ETH_PKT_DN_ERR			(1 << 21)		/* Количество бит в пакете не кратно 8 */
+ #define ARM_ETH_PKT_CRC_ERR		(1 << 22)		/* Признак несоответствия CRC пакета */
+ #define ARM_ETH_PKT_SMB_ERR		(1 << 23)		/* Признак наличия в пакете ошибочных nibbles */
+ #define ARM_ETH_PKT_MCA			(1 << 24)		/* Признак группового пакета (MAC соответствует HASH) */
+ #define ARM_ETH_PKT_BCA			(1 << 25)		/* Признак широковещательного пакета (MAC = FF_FF_FF) */
+ #define ARM_ETH_PKT_UCA			(1 << 26)		/* Признак индивидуального пакета (MAC-адрес соответствует
+													установленному) */
 
 /*------------------------------------------------------------------------
  * Макроопределения для возможности указания привязки сигналов к контактам

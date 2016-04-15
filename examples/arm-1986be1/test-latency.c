@@ -11,7 +11,7 @@
 #define MSEC_PER_TICK	100	/* Период таймера в миллисекундах */
 
 ARRAY (task, 1000);
-#define display debug
+gpanel_t display;
 mutex_t timer_lock;
 
 volatile unsigned nirqs;
@@ -35,9 +35,9 @@ void console (void *arg)
 {
 	for (;;) {
 		mutex_wait (&timer_lock);
-		
-		printf (&display, "\33[H");
+		gpanel_move (&display, 0, 0);
 		printf (&display, "CPU: %u MHz\n\n", KHZ / 1000);
+
 		printf (&display, "Interrupts: %u\n\n", nirqs);
 
 		if (nirqs > 10) {
@@ -71,6 +71,13 @@ static bool_t timer_handler (void *arg)
 
 void uos_init (void)
 {
+
+	extern gpanel_font_t font_fixed6x8;
+
+	/* Стираем экран. */
+	gpanel_init (&display, &font_fixed6x8);
+	gpanel_clear (&display, 0);
+
 	/* Устанавливаем быстрый обработчик прерывания. */
 	mutex_attach_irq (&timer_lock, TIMER_IRQ, timer_handler, 0);
 
