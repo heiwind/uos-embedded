@@ -120,6 +120,8 @@ struct _task_t {
 		__attribute__((aligned(UOS_STACK_ALIGN)));
 };
 
+#define PRIO_MAX ( (1ul<<(INT_SIZE*8-1))-1 )
+
 /* The table of interrupt handlers. */
 extern mutex_irq_t mutex_irq [];
 

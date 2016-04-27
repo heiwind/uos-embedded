@@ -198,6 +198,7 @@ main (void)
 	/* Make list of active tasks. */
 	list_init (&task_active);
 	task_current = task_idle;
+	task_current->prio = task_current->base_prio = PRIO_MAX;
 	task_activate (task_idle);
 
 	/* Create user tasks. */
@@ -212,6 +213,7 @@ main (void)
 	/* Switch to the most priority task. */
 	assert (task_current == task_idle);
 
+    task_current->prio = task_current->base_prio = 0;
     arch_state_t x;
     arch_intr_disable (&x);
 	task_schedule ();
