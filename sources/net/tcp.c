@@ -363,7 +363,7 @@ tcp_state_name (tcp_state_t state)
 }
 
 void
-tcp_debug_print_flags (unsigned char flags)
+tcp_debug_print_flags (tcph_flag_set flags)
 {
 	if (flags & TCP_FIN) debug_printf (" FIN");
 	if (flags & TCP_SYN) debug_printf (" SYN");

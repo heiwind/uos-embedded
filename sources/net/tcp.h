@@ -91,6 +91,18 @@ typedef enum _tcp_state_t {
 /*
  * TCP header.
  */
+typedef enum{
+      TCP_FIN         = 0x01
+    , TCP_SYN         = 0x02
+    , TCP_RST         = 0x04
+    , TCP_PSH         = 0x08
+    , TCP_ACK         = 0x10
+    , TCP_URG         = 0x20
+
+    , TCP_FLAGS       = 0x3f
+} tcph_flags;
+typedef unsigned char tcph_flags_byte;
+
 struct _tcp_hdr {
 	unsigned short src;
 	unsigned short dest;
@@ -102,15 +114,7 @@ struct _tcp_hdr {
 #define TCP_SEQ_GEQ(a,b)	((long)((a)-(b)) >= 0)
 
 	unsigned char offset;
-	unsigned char flags;
-#define TCP_FIN			0x01
-#define TCP_SYN			0x02
-#define TCP_RST			0x04
-#define TCP_PSH			0x08
-#define TCP_ACK			0x10
-#define TCP_URG			0x20
-
-#define TCP_FLAGS		0x3f
+	tcph_flags_byte flags; //tcph_flag_set
 
 	unsigned short wnd;
 
@@ -141,6 +145,16 @@ typedef struct _tcp_segment_t tcp_segment_t;
 #define TCP_TCPLEN(seg)	((seg)->len + (((seg)->tcphdr->flags & \
 			(TCP_FIN | TCP_SYN)) ? 1 : 0))
 
+typedef enum{
+      TF_ACK_DELAY  = 0x01        /* Delayed ACK. */
+    , TF_ACK_NOW    = 0x02        /* Immediate ACK. */
+    , TF_INFR       = 0x04        /* In fast recovery. */
+    , TF_RESET      = 0x08        /* Connection was reset. */
+    , TF_CLOSED     = 0x10        /* Connection was sucessfully closed. */
+    , TF_GOT_FIN    = 0x20        /* Connection closed by remote end. */
+} tcps_flags;
+typedef unsigned char   tcps_flag_set;
+typedef tcph_flags_byte  tcph_flag_set;
 /*
  * The TCP protocol control block
  */
@@ -210,13 +224,7 @@ struct _tcp_socket_t {//: base_socket_t
 	unsigned short snd_buf;		/* Available bytes for sending. */
 	unsigned char snd_queuelen;	/* Available tcp_segment's for sending. */
 
-    unsigned char flags;
-#define TF_ACK_DELAY    0x01        /* Delayed ACK. */
-#define TF_ACK_NOW  0x02        /* Immediate ACK. */
-#define TF_INFR     0x04        /* In fast recovery. */
-#define TF_RESET    0x08        /* Connection was reset. */
-#define TF_CLOSED   0x10        /* Connection was sucessfully closed. */
-#define TF_GOT_FIN  0x20        /* Connection closed by remote end. */
+	tcps_flag_set    flags;
 
 	/* These are ordered by sequence number: */
 	tcp_segment_t *unsent;		/* Unsent (queued) segments. */
@@ -286,6 +294,7 @@ void tcp_abort (tcp_socket_t *s);
  * */
 int tcp_wait_avail(tcp_socket_t *s
                     , scheduless_condition waitfor, void* waitarg);
+
 /*
  * Blocking receive.
  * Return a number of received bytes >0.
@@ -464,8 +473,9 @@ tcp_next_seqno (ip_t *ip)
 	return ip->tcp_seqno;
 }
 
-int tcp_enqueue (tcp_socket_t *s, void *dataptr, small_uint_t len,
-	unsigned char flags, unsigned char *optdata, unsigned char optlen);
+int tcp_enqueue (tcp_socket_t *s, void *dataptr, small_uint_t len
+                 , tcph_flag_set flags
+                 , unsigned char *optdata, unsigned char optlen);
 
 void tcp_rexmit_seg (tcp_socket_t *s, tcp_segment_t *seg);
 
@@ -476,7 +486,7 @@ void tcp_rst (ip_t *ip, unsigned long seqno, unsigned long ackno,
 unsigned long tcp_next_seqno (ip_t *ip);
 
 void tcp_debug_print_header (tcp_hdr_t *tcphdr);
-void tcp_debug_print_flags (unsigned char flags);
+void tcp_debug_print_flags (tcph_flag_set flags);
 const char *tcp_state_name (tcp_state_t s);
 void tcp_debug_print_sockets (ip_t *ip);
 int tcp_debug_verify (ip_t *ip);

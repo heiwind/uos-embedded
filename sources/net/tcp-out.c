@@ -79,8 +79,9 @@ tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
  * Return 0 on error.
  */
 int
-tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len,
-	unsigned char flags, unsigned char *optdata, unsigned char optlen)
+tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
+            , tcph_flag_set flags
+            , unsigned char *optdata, unsigned char optlen)
 {
 	tcp_segment_t *seg, *useg, *queue;
 	unsigned long left, seqno;
