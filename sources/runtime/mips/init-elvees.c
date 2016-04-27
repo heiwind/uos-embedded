@@ -126,6 +126,69 @@ inline void _init_sdram(void){};
 
 
 
+#ifndef EXTERNAL_SETUP
+inline void _init_pll(void){
+
+#ifdef ELVEES_NVCOM01
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#elif defined(ELVEES_NVCOM02)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
+#elif defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+    /* Fixed mapping, clock multiply from CLKIN to KHZ. */
+    MC_CSR = MC_CSR_CLK(KHZ/ELVEES_CLKIN) | MC_CSR_CLKEN;
+#elif defined(ELVEES_MC24R2)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
+#elif defined(ELVEES_MCT02)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
+#elif defined(ELVEES_MCT03P)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#elif defined(ELVEES_MC0428)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#elif defined(ELVEES_MC30SF6)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#endif
+}
+#else //!EXTERNAL_SETUP
+inline void _init_pll(void){};
+#endif //EXTERNAL_SETUP
+
+
+
 //#define UOS_START_MODE_BINARY   0
 //#define UOS_START_MODE_LOADED   1
 #if UOS_START_MODE == 1
@@ -186,14 +249,36 @@ _init_ (void)
 #endif
 		);
 
+    /*
+     * Setup all essential system registers.
+     */
+	{
+	unsigned long csr = MC_CSR;
+
 #if defined (ENABLE_ICACHE) || defined (ENABLE_DCACHE)
 	/* Enable cache for kseg0 segment. */
 	mips_write_c0_register (C0_CONFIG, 3);
-	MC_CSR |= MC_CSR_FLUSH_I | MC_CSR_FLUSH_D;
+#   if defined (ENABLE_ICACHE)
+	csr |= MC_CSR_FLUSH_I;
+#   endif
+#   if defined (ENABLE_DCACHE)
+	csr |= MC_CSR_FLUSH_D;
+#   endif
 #else
 	/* Disable cache for kseg0 segment. */
 	mips_write_c0_register (C0_CONFIG, 2);
+#   ifndef EXTERNAL_SETUP
+#       ifndef ENABLE_ICACHE
+	    csr &= ~MC_CSR_FLUSH_I;
+#       endif
+#       ifndef ENABLE_DCACHE
+	    csr &= ~MC_CSR_FLUSH_D;
+#       endif
+#   endif
 #endif
+	MC_CSR = csr;
+	}
+
 #ifdef ENABLE_ICACHE
 	/* Jump to cached kseg0 segment. */
 	asm volatile (
@@ -239,40 +324,40 @@ _init_ (void)
 	mips_write_fpu_register (31, 0);
 #endif
 
-#ifndef EXTERNAL_SETUP
+	_init_pll();
+
 	/*
-	 * Setup all essential system registers.
-	 */
+     * Setup all essential system registers.
+     */
+
 #ifdef ELVEES_NVCOM01
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+	{
+#   ifndef EXTERNAL_SETUP
+	unsigned long csr;
+    /* Fixed mapping. */
+    csr = MC_CSR_FM;
+#   else
+    /* Fixed mapping. */
+    unsigned long csr = MC_CSR;
+    csr |= MC_CSR_FM;
+#   endif
 
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#   ifdef ELVEES_VECT_CRAM
+    csr |= MC_CSR_TR;
+#   elif !defined(EXTERNAL_SETUP)
+    csr &= ~MC_CSR_TR;
+#   endif
+    MC_CSR = csr;
+	}
 
-	/* Fixed mapping. */
-	MC_CSR = MC_CSR_FM;
-	
-#ifdef ELVEES_VECT_CRAM
-	MC_CSR |= MC_CSR_TR;
-#endif
-
-	MC_MASKR0 = 0;
-	MC_MASKR1 = 0;
-	MC_MASKR2 = 0;
-#endif
+    MC_MASKR0 = 0;
+    MC_MASKR1 = 0;
+    MC_MASKR2 = 0;
+#endif //ELVEES_NVCOM01
 
 #ifdef ELVEES_NVCOM02
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
-	MC_CSR = MC_CSR_FM;
+	MC_CSR |= MC_CSR_FM;
 
 #ifdef ELVEES_VECT_CRAM
 	MC_CSR |= MC_CSR_TR;
@@ -285,18 +370,11 @@ _init_ (void)
 
 #if defined(ELVEES_MC24) || defined(ELVEES_MC0226)
 	/* Fixed mapping, clock multiply from CLKIN to KHZ. */
-	MC_CSR = MC_CSR_FM | MC_CSR_CLK(KHZ/ELVEES_CLKIN) | MC_CSR_CLKEN;
+	MC_CSR |= MC_CSR_FM;
 	MC_MASKR = 0;
 #endif
 
 #ifdef ELVEES_MC24R2
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -307,13 +385,6 @@ _init_ (void)
 #endif
 
 #ifdef ELVEES_MCT02
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -325,13 +396,6 @@ _init_ (void)
 #endif
 
 #ifdef ELVEES_MCT03P
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -347,13 +411,6 @@ _init_ (void)
 #endif
 
 #ifdef ELVEES_MC0428
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -368,13 +425,6 @@ _init_ (void)
 #endif
 
 #ifdef ELVEES_MC30SF6
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -439,8 +489,6 @@ _init_ (void)
 	MC_CSCON4 = MC_CSCON_WS (15);
 	MC_SDRCON = 0;
 #endif
-
-#endif /* EXTERNAL_SETUP */
 	
 	/*
 	 * Setup UART registers.
