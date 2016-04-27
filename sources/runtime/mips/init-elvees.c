@@ -26,6 +26,8 @@ extern "C" {
 
 extern void _etext();
 extern unsigned __data_start, _edata, _end, _estack[];
+extern unsigned __bss_start[];
+extern unsigned __bss_end[];
 extern int main ();
 
 void _init_ (void);
@@ -525,8 +527,8 @@ _init_ (void)
 #endif
 
 	/* Initialize .bss segment by zeroes. */
-	dest = &_edata;
-	limit = &_end;
+	dest = __bss_start;
+	limit = __bss_end;
 	while (dest < limit)
 		*dest++ = 0;
 		
