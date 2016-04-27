@@ -88,6 +88,8 @@ int pthread_setname_np (pthread_t __target_thread, const char *__name)
 	t->base_prio = 0;			  \
 	free (t);				}
 
+#define pthread_yield()     sched_yield()
+
 /*The registered cleanup handlers are called via exception handling
 so we cannot mark this function with __THROW.*/
 INLINE __attribute__ ((__noreturn__)) 
