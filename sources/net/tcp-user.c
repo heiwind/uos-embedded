@@ -227,7 +227,7 @@ buf_t* tcp_read_buf_until (tcp_socket_t *s
 	    return 0;
 	int ok = tcp_lock_avail(s, TCP_STATES_TRANSFER, waitfor, waitarg);
 	if (ok != 0)
-	    return 0;
+	    return (buf_t*)ok;
 	
 	p = tcp_queue_get (s);
 
@@ -244,6 +244,12 @@ buf_t* tcp_read_buf_until (tcp_socket_t *s
 	}
 	mutex_unlock (&s->ip->lock);
 	return p;
+}
+
+//* non blocking version of tcp_read_buf_until
+buf_t* tcp_take_buf(tcp_socket_t *s)
+{
+    return tcp_read_buf_until(s, 0, (void*)1);
 }
 
 int tcp_read_until (tcp_socket_t *s, void *arg, unsigned short len

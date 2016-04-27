@@ -313,6 +313,9 @@ int tcp_read_until (tcp_socket_t *s, void *dataptr, unsigned short len
 buf_t* tcp_read_buf_until (tcp_socket_t *s
                 , scheduless_condition waitfor, void* waitarg);
 
+//* non blocking version of tcp_read_buf_until
+buf_t* tcp_take_buf(tcp_socket_t *s);
+
 /*
  * Send len>0 bytes.
  * Return a number ob transmitted bytes, or -1 on error.
@@ -352,6 +355,13 @@ bool_t   tcp_socket_is_state(tcp_socket_t *s, tcp_states_set states){
 INLINE
 bool_t   tcp_socket_is_online(tcp_socket_t *s){
     return tcp_socket_is_state(s, TCP_STATES_ONLINE);
+}
+
+static int tcp_queue_is_empty (tcp_socket_t *q);
+
+INLINE
+bool_t tcp_socket_is_avail(tcp_socket_t *s){
+    return !tcp_queue_is_empty(s);
 }
 
 
