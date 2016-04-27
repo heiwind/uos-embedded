@@ -289,7 +289,7 @@ ip_output_netif (ip_t *ip, buf_t *p
 	/*buf_print_ip (p);*/
 
 	if (!ipadr_not0(gateway))
-		gateway = ipref_4ucs(dest);
+		gateway = iphdr->dest.var;
     IP_printf ("ip: netif %s output %d bytes to %@.4D, gate %@.4D\n"
             ,netif->name, p->tot_len
             , dest, ipref_as_ucs(gateway)

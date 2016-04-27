@@ -182,10 +182,12 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 
 	/* If there is room in the last buf on the unsent queue,
 	chain the first buf on the queue together with that. */
-	if (useg != 0 && TCP_TCPLEN (useg) != 0 &&
-	    ! (useg->tcphdr->flags & (TCP_SYN | TCP_FIN)) &&
+	if (useg != 0 && TCP_TCPLEN (useg) != 0
+	    && !((flags | s->flags) & TF_NOCORK)
+	    && ! (useg->tcphdr->flags & (TCP_SYN | TCP_FIN)) &&
 	    ! (flags & (TCP_SYN | TCP_FIN)) &&
-	    useg->len + queue->len <= s->mss) {
+	    useg->len + queue->len <= s->mss)
+	{
 		/* Remove TCP header from first segment. */
 		buf_add_header (queue->p, -TCP_HLEN);
 		buf_chain (useg->p, queue->p);

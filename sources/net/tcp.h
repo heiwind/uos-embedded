@@ -152,9 +152,10 @@ typedef enum{
     , TF_RESET      = 0x08        /* Connection was reset. */
     , TF_CLOSED     = 0x10        /* Connection was sucessfully closed. */
     , TF_GOT_FIN    = 0x20        /* Connection closed by remote end. */
+    , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - combine small segments into big one
 } tcps_flags;
-typedef unsigned char   tcps_flag_set;
-typedef tcph_flags_byte  tcph_flag_set;
+typedef unsigned short tcps_flag_set;
+typedef tcps_flag_set  tcph_flag_set;
 /*
  * The TCP protocol control block
  */
