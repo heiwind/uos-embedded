@@ -270,8 +270,10 @@ mutex_unlock (mutex_t *m)
 #endif
 
 	mutex_do_unlock(m);
+#if MUTEX_LASY_SCHED <= 0
 	if (task_need_schedule)
 		task_schedule ();
+#endif
 	arch_intr_restore (x);
 }
 
