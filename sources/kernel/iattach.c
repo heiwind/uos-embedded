@@ -47,3 +47,10 @@ void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg)
     arch_intr_bind (irq);
     arch_intr_allow (irq);
 }
+
+void mutex_dettach_irq(mutex_t *m){
+    if (m->irq == 0)
+        return;
+    m->irq->lock = 0;
+    m->irq = 0;
+}
