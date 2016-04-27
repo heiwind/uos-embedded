@@ -20,6 +20,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifndef UOS_MGROUP_SMART
+#define UOS_MGROUP_SMART 0
+#endif
+
 /*
  * Initialize the group data structure.
  * Buffer must have at least sizeof(mutex_group_t) bytes.
@@ -47,6 +51,19 @@ mutex_group_add (mutex_group_t *g, mutex_t *m)
 
 	if (! m->item.next)
 		mutex_init (m);
+#if UOS_MGROUP_SMART > 0
+	// look 1st empty slot
+    for (s = g->slot;  s < (g->slot+g->num); ++s) {
+        if (s->lock == 0){
+            list_init (&s->item);
+            s->group = g;
+            s->lock = m;
+            s->message = 0;
+            //s->active = 0;
+            return 1;
+        }
+    }
+#endif
 	if (g->num >= g->size)
 		return 0;
 	s = g->slot + g->num;
@@ -57,6 +74,28 @@ mutex_group_add (mutex_group_t *g, mutex_t *m)
     //s->active = 0;
 	++g->num;
 	return 1;
+}
+
+bool_t mutex_group_remove (mutex_group_t* g, mutex_t* m)
+{
+    assert(UOS_MGROUP_SMART > 0);
+
+#if UOS_MGROUP_SMART > 0
+    // look 1st empty slot
+    mutex_slot_t *s;
+    arch_state_t x;
+    arch_intr_disable (&x);
+    for (s = g->slot + g->num; --s >= g->slot; ) {
+        if (s->lock == m){
+            list_unlink (&s->item);
+            s->lock = 0;
+            arch_intr_restore (x);
+            return 1;
+        }
+    }
+    arch_intr_restore (x);
+#endif
+    return 0;
 }
 
 /*
@@ -74,6 +113,9 @@ mutex_group_listen (mutex_group_t *g)
 	arch_intr_disable (&x);
 	assert_task_good_stack(task_current);
 	for (s = g->slot + g->num; --s >= g->slot; ) {
+#if UOS_MGROUP_SMART > 0
+        if (s->lock == 0) continue;
+#endif
 		assert (list_is_empty (&s->item));
 		s->message = 0;
 	    s->active = 0;
@@ -82,6 +124,11 @@ mutex_group_listen (mutex_group_t *g)
 	arch_intr_restore (x);
 }
 
+/** \~russian
+ * сбрасывает статус активности с мутехов группы, ожидание активности
+ * ведется с этого момента.
+ * подключает прослушивание не подключенных мутехов
+ */
 void mutex_group_relisten(mutex_group_t* g){
     arch_state_t x;
     mutex_slot_t *s;
@@ -89,6 +136,13 @@ void mutex_group_relisten(mutex_group_t* g){
     arch_intr_disable (&x);
     for (s = g->slot + g->num; --s >= g->slot; ) {
             s->active = 0;
+#if UOS_MGROUP_SMART > 0
+            if (s->lock != 0)
+            if (list_is_empty (&s->item)){
+                s->message = 0;
+                list_prepend (&s->lock->groups, &s->item);
+            }
+#endif
     }
     arch_intr_restore (x);
 }

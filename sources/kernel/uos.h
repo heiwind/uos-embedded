@@ -148,10 +148,12 @@ void mutex_dettach_irq(mutex_t *m);
 /* Group management. */
 mutex_group_t *mutex_group_init (array_t *buf, unsigned buf_size);
 bool_t mutex_group_add (mutex_group_t*, mutex_t*);
+bool_t mutex_group_remove (mutex_group_t*, mutex_t*);
 void mutex_group_listen (mutex_group_t*);
 /** \~russian
  * сбрасывает статус активности с мутехов группы, ожидание активности
- * ведется с этого момента
+ * ведется с этого момента.
+ * подключает прослушивание не подключенных мутехов
  */
 void mutex_group_relisten(mutex_group_t*);
 void mutex_group_unlisten (mutex_group_t*);

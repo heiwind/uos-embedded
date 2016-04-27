@@ -99,6 +99,17 @@
 //#define MUTEX_LASY_SCHED 1
 
 /**\~russian
+ * UOS_MGROUP_SMART определяет стиль поведения mutex_group:
+ *  UOS_MGROUP_SMART_BASIC - базовый вариант не расчитан на динамичное перестроение групп.
+ *          группа один раз собирается и запускается на прослушивание
+ *  UOS_MGROUP_SMART_DINAMIC - группы могут перестраиваться в процессе работы.
+ *          чуть разбухает размер кода. на скорость влияния нет.
+ * */
+#define UOS_MGROUP_SMART_BASIC      0
+#define UOS_MGROUP_SMART_DINAMIC    1
+#define UOS_MGROUP_SMART    UOS_MGROUP_SMART_DINAMIC
+
+/**\~russian
  * INLINE задает модификатор для инлайн функций уОС.
  * */
 //#ifndef INLINE
