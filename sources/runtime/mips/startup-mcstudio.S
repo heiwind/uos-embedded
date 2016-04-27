@@ -135,20 +135,20 @@ _reset_vector_: .globl  _reset_vector_
         sw  $31, (CONTEXT_RA * 4) ($sp)
         .set    at
 
-        mfhi    $a0                     # Save special registers
-        sw      $a0, (CONTEXT_HI * 4) ($sp)
+        mfhi    $k0                     # Save special registers
+        sw      $k0, (CONTEXT_HI * 4) ($sp)
         SAFE_NOP
 
-        mflo    $a0
-        sw      $a0, (CONTEXT_LO * 4) ($sp)
+        mflo    $k0
+        sw      $k0, (CONTEXT_LO * 4) ($sp)
         SAFE_NOP
 
-        mfc0    $a0, $C0_EPC
-        sw      $a0, (CONTEXT_PC * 4) ($sp)
+        mfc0    $k0, $C0_EPC
+        sw      $k0, (CONTEXT_PC * 4) ($sp)
         SAFE_NOP
 
-        mfc0    $a0, $C0_STATUS
-        sw      $a0, (CONTEXT_STATUS * 4) ($sp)
+        mfc0    $k0, $C0_STATUS
+        sw      $k0, (CONTEXT_STATUS * 4) ($sp)
         SAFE_NOP
         .endm
 
