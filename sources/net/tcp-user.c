@@ -162,6 +162,9 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 #include <stdbool.h>
 
 /* \~russian ожидает появления данных в приемнике сокета
+ * \return = 0 - if socket have some dats in receiver
+ *         = -1 - if timedout with no data
+ *         = SEerror_code - on error
  * */
 int tcp_lock_avail(tcp_socket_t *s, unsigned allow_states
                     , scheduless_condition waitfor, void* waitarg)
@@ -359,7 +362,7 @@ tcp_accept (tcp_socket_t *s)
         if ((unsigned)res == SENOMEM)
             //для совместимости со старым поведением
             continue;
-        if ((unsigned)res > SESOCKANY)
+        if (SEANYERROR(res))
             return res;
     } while (res == 0);
     return res;
@@ -380,10 +383,10 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
             tcp_debug ("tcp_accept: called in invalid state\n");
             return (tcp_socket_t *)SEINVAL;
         }
+        if (ok == -1)
+            return 0;
         return (tcp_socket_t *)ok;
     }
-    p = tcp_queue_get (s);
-	mutex_unlock (&s->lock);
 
 	/* Create a new PCB, and respond with a SYN|ACK.
 	 * If a new PCB could not be created (probably due to lack of memory),
@@ -392,12 +395,15 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
 	mutex_lock (&s->ip->lock);
 	ns = tcp_alloc (s->ip);
 	if (ns == 0) {
-		tcp_debug ("tcp_accept: could not allocate PCB\n");
-		++s->ip->tcp_in_discards;
+        mutex_unlock (&s->lock);
+		++(s->ip->tcp_in_discards);
 		mutex_unlock (&s->ip->lock);
-		buf_free (p);
+        tcp_debug ("tcp_accept: could not allocate PCB\n");
 		return (tcp_socket_t *)SENOMEM;
 	}
+    p = tcp_queue_get (s);
+    mutex_unlock (&s->lock);
+
 	h = (tcp_hdr_t*) p->payload;
 	iph = ((ip_hdr_t*) p->payload) - 1;
 

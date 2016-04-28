@@ -269,8 +269,8 @@ tcp_socket_t *tcp_accept (tcp_socket_t *s);
  *  The newly created socket is not in the listening state.
  *   
  * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
- * \return      = NULL if no connection (due wait finishes)
- * \return      = -1 (same ~0) if some failure
+ * \return      = NULL  - if timedout with no data
+ * \return      = SExxx - some error
  * */
 tcp_socket_t *tcp_accept_until (tcp_socket_t *s
                                 , scheduless_condition waitfor, void* waitarg);
