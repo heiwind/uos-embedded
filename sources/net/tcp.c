@@ -254,7 +254,7 @@ void
 tcp_set_socket_state (tcp_socket_t *s, tcp_state_t newstate)
 {
 	s->state = newstate;
-	mutex_signal (&s->lock, 0);
+	mutex_signal (&s->lock, s);
 }
 
 /*

@@ -364,7 +364,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 					++s->ip->tcp_in_errors;
 				} else {
 					tcp_queue_put (s, inseg->p);
-					mutex_signal (&s->lock, inseg->p);
+					mutex_signal (&s->lock, s);//inseg->p
 					inseg->p = 0;
 				}
 			}
@@ -381,7 +381,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 						++s->ip->tcp_in_errors;
 					} else {
 						tcp_queue_put (s, p);
-						mutex_signal (&s->lock, p);
+						mutex_signal (&s->lock, s); //p
 					}
 				}
 			}
@@ -518,7 +518,7 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 			/* Send a signal for tcp_write when
 			 * s->snd_queuelen is decreased. */
-			mutex_signal (&s->lock, 0);
+			mutex_signal (&s->lock, s);
 		}
 		break;
 
@@ -795,7 +795,7 @@ drop:		buf_free (p);
 			}
 			p->payload = (unsigned char*) h;
 			tcp_queue_put (s, p);
-			mutex_signal (&s->lock, p);
+			mutex_signal (&s->lock, s);
 			return;
 		}
 
