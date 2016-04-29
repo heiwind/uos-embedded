@@ -81,17 +81,17 @@ void task_schedule ()
 	if (new_task != task_current) {
 		new_task->ticks++;
 #ifndef NDEBUG
-        unsigned sp = (unsigned)arch_get_stack_pointer ();
+        unsigned sp = 0;
 #ifdef ARCH_CONTEXT_SIZE
-        sp -= ARCH_CONTEXT_SIZE;
+        sp += ARCH_CONTEXT_SIZE;
 #endif
 #ifdef ARCH_HAVE_FPU
 #   ifdef MIPS32
         if (task_current->fpu_state != ~0)
-            sp -= 32*4;
+            sp += 32*4;
 #   endif
 #endif
-        assert2(sp > (unsigned)(task_current->stack), uos_assert_task_name_msg, task_current->name);
+        assert2( task_stack_enough(sp), uos_assert_task_name_msg, task_current->name);
 #endif
 		arch_task_switch (new_task);
 	}

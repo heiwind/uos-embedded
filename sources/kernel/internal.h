@@ -349,6 +349,11 @@ extern task_t *task_yelds;
 #define assert_task_good_stack(t)
 #endif
 
+INLINE
+bool_t  task_stack_enough(unsigned preserve){
+    unsigned sp = (unsigned)arch_get_stack_pointer ();
+    return ( (sp-preserve-(ARCH_CONTEXT_SIZE+ARCH_ISR_FSPACE)) >= (unsigned)(task_current->stack) ) ;
+}
 
 
 #ifdef __cplusplus
