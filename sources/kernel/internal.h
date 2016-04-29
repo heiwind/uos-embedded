@@ -189,7 +189,10 @@ INLINE
 __attribute__ ((always_inline))
 bool_t mutex_trylock_in (mutex_t *m){
     if (! m->master){
-        assert (list_is_empty (&m->slaves));
+        assert2 (list_is_empty (&m->slaves)
+                , uos_assert_mutex_task_name_msg
+                , m, ((task_t *)list_first(&m->slaves))->name
+                );
         mutex_do_lock(m);
     }
     if (m->master == task_current){

@@ -54,6 +54,7 @@
 #include <runtime/lib.h>
 #include <runtime/math.h>
 #include <stream/stream.h>
+#include <kernel/internal.h>
 
 /* Max number conversion buffer length: a long in base 2, plus NUL byte. */
 #define MAXNBUF	(sizeof(long) * 8 + 1)
@@ -67,6 +68,11 @@ static int cvt (double number, int prec, int sharpflag, unsigned char *negp,
 	unsigned char fmtch, unsigned char *startp, unsigned char *endp);
 #endif
 
+#ifdef MIPS32
+#define VPRINTF_FRAME 256
+#else
+#define VPRINTF_FRAME 100
+#endif
 
 #if STREAM_HAVE_ACCEESS > 0
 static
@@ -100,6 +106,15 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 		return 0;
 	if (! fmt)
 		fmt = "(null)\n";
+
+#ifndef NDEBUG
+    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
+        debug_puts("printf asserted stack task ");
+        debug_puts(task_current->name);
+        debug_putchar(0, '\n');
+        return 0;//task_exit(0);
+    }
+#endif
 
 	retval = 0;
 	for (;;) {
@@ -551,8 +566,9 @@ ksprintn (unsigned char *nbuf, unsigned long ul, unsigned char base, int width,
 	p = nbuf;
 	*p = 0;
 	for (;;) {
-		*++p = mkhex (ul % base);
+		unsigned long rest = mkhex (ul % base);
 		ul /= base;
+		*++p = rest;
 		if (--width > 0)
 			continue;
 		if (! ul)
