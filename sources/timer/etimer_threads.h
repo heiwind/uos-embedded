@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 /* эта функция используется для теста ожидания завершения таймаута
- * \arg arg - (etimer*) инспектируемое событие
+ * \param arg - (etimer*) инспектируемое событие
  * \return  true - если событие сработало
  * */
 //#ifndef INLINE_ETIMER
@@ -44,8 +44,26 @@ INLINE bool_t etimer_mutex_wait(mutex_t* m, etimer* t){
 bool_t etimer_mutex_timedwait(mutex_t* m, etimer* t, etimer_time_t timeout);
 bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout);
 
+
+
+typedef enum{
+      ewsUntilTimeout  = 0
+    , ewsUntilActivate = 1
+} etimer_wait_sanity;
+
+/**
+ *  \brief      sleep current thread for activation by etimer
+ *              !!! it froces et to etimer_assign_task mode
+ *  \param et   A pointer to the event timer
+ * \param sanity == ewsUntilTimeout - ожидает до завершения таймаута
+ *      sanity != 0 - ожидает до ближайшего просыпания нитки
+ * \return = 0  - таймаут завершен
+ * \return = -1 - таймаут незавершен
+ */
+int etimer_wait(etimer *et, bool_t sanity);
+
 //* выполняет ожидание таймаута usec
-//* \arg sanity == 0 - ожидает до завершения таймаута
+//* \arg sanity == ewsUntilTimeout - ожидает до завершения таймаута
 //*      sanity != 0 - ожидает до ближайшего просыпания нитки
 //* \return = 0  - таймаут завершен
 //* \return = -1 - таймаут незавершен

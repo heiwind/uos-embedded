@@ -47,7 +47,43 @@ bool_t etimer_mutex_timedwait(mutex_t* m, etimer* t, etimer_time_t timeout){
 bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout){
     etimer t;
     list_init(&t.item);
-    return etimer_mutex_timedwait(m, &t, timeout);
+    if (etimer_is_wait(&t))
+        return etimer_mutex_timedwait(m, &t, timeout);
+    return 0;
+}
+
+
+/**
+ *  \brief      sleep current thread for activation by etimer
+ *              !!! it froces et to etimer_assign_task mode
+ *  \param et   A pointer to the event timer
+ * \param sanity == ewsUntilTimeout - ожидает до завершения таймаута
+ *      sanity != 0 - ожидает до ближайшего просыпания нитки
+ * \return = 0  - таймаут завершен
+ * \return = -1 - таймаут незавершен
+ */
+int etimer_wait(etimer *t, bool_t sanity){
+    if (!etimer_is_wait(t))
+        return 0;
+    etimer_assign_task(t, task_current);
+
+    arch_state_t x;
+    arch_intr_disable (&x);
+
+    bool_t ok = 0;
+    do {
+    /* Suspend the task. */
+    list_unlink (&task_current->item);
+    task_schedule ();
+    ok = !etimer_is_wait(t);
+    if (ok)
+        break;
+    } while (sanity == 0);
+    if (!ok)
+        etimer_stop(t);
+
+    arch_intr_restore (x);
+    return (ok)? 0: -1;
 }
 
 //* выполняет ожидание таймаута usec
@@ -58,31 +94,13 @@ int etimer_uswait(unsigned usec, bool_t sanity)
 {
     if (usec == 0){
         task_yield();
-        return 0; 
+        return 0;
     }
 
     etimer t;
     list_init(&t.item);
-    etimer_assign_task(&t, task_current);
-
-    arch_state_t x;
-    arch_intr_disable (&x);
-
     etimer_set(&t, usec);
-    bool_t ok = 0;
-    do {
-    /* Suspend the task. */
-    list_unlink (&task_current->item);
-    task_schedule ();
-    ok = !etimer_is_wait(&t);
-    if (ok)
-        break;
-    } while (sanity == 0);
-    if (!ok)
-        etimer_stop(&t);
-
-    arch_intr_restore (x);
-    return (ok)? 0: -1;
+    return etimer_wait(&t, sanity);
 }
 
 #endif //USER_TIMERS
