@@ -42,18 +42,21 @@ again:
 	return ip->tcp_port;
 }
 
+
+
 /*
- * Connect to another host. Wait until connection established.
- * Return 1 on success, 0 on error.
+ * Create socket and start connection to another host.
+ * ! not wait until connection established.
+ * \return socket in connection state
+ * \return      = NULL, or SExxx - some error
  */
-tcp_socket_t *
-tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
+tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 {
 	tcp_socket_t *s;
 	unsigned long optdata;
 
 	tcp_debug ("tcp_connect to port %u\n", port);
-	if (ipaddr == 0)
+	if (ipaddr.val == 0)
 		return 0;
 	mutex_lock (&ip->lock);
 
@@ -63,7 +66,7 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 	    return 0;
 	}
 	
-	s->remote_ip = ipadr_4ucs(ipaddr);
+	s->remote_ip.val = ipaddr.val;
 	s->remote_port = port;
 	if (s->local_port == 0) {
 		s->local_port = tcp_new_port (ip);
@@ -88,6 +91,19 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 	tcp_list_add (&ip->tcp_sockets, s);
 	tcp_output (s);
 	mutex_unlock (&ip->lock);
+	return s;
+}
+
+/*
+ * Connect to another host. Wait until connection established.
+ * Return 1 on success, 0 on error.
+ */
+tcp_socket_t *
+tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
+{
+    tcp_socket_t* s = tcp_connect_start(ip, ipadr_4ucs(ipaddr), port);
+    if ((s == 0) || SEANYERROR(s))
+        return s;
 
 	mutex_lock (&s->lock);
 	for (;;) {

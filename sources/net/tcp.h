@@ -152,7 +152,7 @@ typedef enum{
     , TF_RESET      = 0x08        /* Connection was reset. */
     , TF_CLOSED     = 0x10        /* Connection was sucessfully closed. */
     , TF_GOT_FIN    = 0x20        /* Connection closed by remote end. */
-    , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - combine small segments into big one
+    , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - don`t combine small segments into big one
 } tcps_flags;
 typedef unsigned short tcps_flag_set;
 typedef tcps_flag_set  tcph_flag_set;
@@ -243,8 +243,15 @@ typedef struct _tcp_socket_t tcp_socket_t;
  * Connect to another host. Wait until connection established.
  * Return 1 on success, 0 on error.
  */
-tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr,
-	unsigned short port);
+tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port);
+
+/*
+ * Create socket and start connection to another host.
+ * ! not wait until connection established.
+ * \return socket in connection state
+ * \return      = SExxx - some error
+ */
+tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port);
 
 /*
  * Set the state of the connection to be LISTEN, which means that it
@@ -268,7 +275,7 @@ tcp_socket_t *tcp_accept (tcp_socket_t *s);
  *  and returns a new tcp_socket. 
  *  The newly created socket is not in the listening state.
  *   
- * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
+ * \param waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
  * \return      = NULL  - if timedout with no data
  * \return      = SExxx - some error
  * */
