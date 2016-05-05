@@ -62,8 +62,6 @@ strnzcmp(const unsigned char *s1, const unsigned char *s2, size_t limit)
       a2 = (unsigned long*)s2;
       while (n >= sizeof (long) && *a1 == *a2)
         {
-          n -= sizeof (long);
-
           /* If we've run out of bytes or hit a null, return zero
 	     since we already know *a1 == *a2.  */
           if (n == 0 || DETECTNULL (*a1))
@@ -71,6 +69,7 @@ strnzcmp(const unsigned char *s1, const unsigned char *s2, size_t limit)
 
           a1++;
           a2++;
+          n -= sizeof (long);
         }
 
       /* A difference was detected in last few bytes of s1, so search bytewise */
@@ -78,7 +77,7 @@ strnzcmp(const unsigned char *s1, const unsigned char *s2, size_t limit)
       s2 = (unsigned char*)a2;
     }
 
-  while (n-- > 0)
+  while (n > 0)
     {
       if (__glibc_unlikely(*s1 != *s2)){
           if ((*s1 == '\0') || (*s2 == '\0'))
@@ -92,6 +91,7 @@ strnzcmp(const unsigned char *s1, const unsigned char *s2, size_t limit)
       }
       s1++;
       s2++;
+      n--;
     }
   return limit;
 }

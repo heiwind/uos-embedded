@@ -17,7 +17,6 @@ strnzcmp(const unsigned char *s1, const unsigned char *s2, size_t limit)
         register unsigned char ret;
         register unsigned char tmp2;
         while(n > 0) {
-            n--;
             ret  = *s1++;
             tmp2 = *s2++;
             if (__glibc_unlikely((ret != tmp2) || (tmp2 == 0))){
@@ -25,6 +24,7 @@ strnzcmp(const unsigned char *s1, const unsigned char *s2, size_t limit)
                     return limit - n;
                 return n - limit;
             }
+            n--;
         };
         return limit;
     }
