@@ -32,6 +32,7 @@ int     inet_aton(const char *cp, in_addr *ip) __noexcept
     return res.val;
 }
 
+//* return -1 if parse failed
 INLINE __NOTHROW
 in_addr_t inet_addr (const char *__cp) __noexcept
 {

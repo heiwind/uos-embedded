@@ -13,6 +13,7 @@ extern "C" {
  * with each call to the function.
  * */
 __noexcept char*   inet_iptoasn( ip_addr ip, char *cp, unsigned cplen) __NOTHROW;
+//* \return 0 - if parse failed
 __noexcept int     inet_atoip(const char *cp, ip_addr *ip) __NOTHROW;
 
 

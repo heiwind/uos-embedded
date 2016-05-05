@@ -21,10 +21,10 @@ char*   inet_iptoasn( ip_addr ip, char *cp, unsigned cplen){
 
 int     inet_atoip(const char *cp, ip_addr *ip){
     unsigned node[4];
-    int ok = sscanf((const unsigned char *)cp, "%u.%u.%u.%u", &node[0], &node[1], &node[2], &node[3]);
+    int ok = sscanf((const unsigned char *)cp, "%d.%d.%d.%d", &node[0], &node[1], &node[2], &node[3]);
     if (ok == 4){
         unsigned n = node[0]|node[1]|node[2]|node[3];
-        if (n < 0xff){
+        if (n != 0){
             n = node[3];
             n = (n<<8)|node[2];
             n = (n<<8)|node[1];
