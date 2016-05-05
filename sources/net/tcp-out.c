@@ -3,6 +3,7 @@
  */
 #include <runtime/lib.h>
 #include <kernel/uos.h>
+#include <kernel/internal.h>
 #include <buf/buf.h>
 #include <mem/mem.h>
 #include <crc/crc16-inet.h>
@@ -89,6 +90,7 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 	void *ptr;
 	unsigned char queuelen;
 
+    assert_task_good_stack(task_current);
 	tcp_debug ("tcp_enqueue(s=%p, arg=%p, len=%u, flags=%x) queuelen = %u\n",
 		(void*) s, arg, len, flags, s->snd_queuelen);
 	left = len;
@@ -354,6 +356,8 @@ tcp_output (tcp_socket_t *s)
 	if (s->ip->tcp_input_socket == s) {
 		return 1;
 	}
+
+    assert_task_good_stack(task_current);
 
 	wnd = (s->snd_wnd < s->cwnd) ? s->snd_wnd : s->cwnd;
 	seg = s->unsent;
