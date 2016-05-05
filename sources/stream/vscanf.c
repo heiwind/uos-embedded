@@ -28,13 +28,20 @@
 #define ISDIGIT(c,base)	((c>='0' && c<='9') || (base==16 && \
 			(('a'<=c && c<='f') || ('A'<=c && c<='F'))))
 
+enum scaner_number_opts{
+      snoBaseMask = 0xff
+    , snoUnsigned = 0x100
+};
+
 static unsigned char
-scan_number (stream_t *stream, void *ptr, unsigned char base,
+scan_number (stream_t *stream, void *ptr, unsigned opts,
 	unsigned short len, unsigned char size)
 {
 	int c;
 	long val;
 	unsigned char negate;
+	unsigned base = opts & snoBaseMask;
+
 
 	/* Skip spaces. */
 	for (;;) {
@@ -49,6 +56,8 @@ scan_number (stream_t *stream, void *ptr, unsigned char base,
 	/* Get sign. */
 	negate = 0;
 	if (c == '-' || c == '+') {
+	    if ((opts & snoUnsigned) != 0)
+	        return 0;
 		if (c == '-')
 			negate = 1;
 		getchar (stream);
@@ -199,7 +208,8 @@ stream_vscanf (stream_t *stream,
 	va_list argp)			/* Arguments to scanf */
 #endif
 {
-	unsigned char ch, size, base;
+	unsigned char ch, size;
+	unsigned base;
 	unsigned short len;
 	int nmatch, ic;
 	void *ptr;
@@ -265,13 +275,16 @@ string:			if (scan_string (stream, (char*) ptr, ch, len,
 				++nmatch;
 			break;
 		case 'o':
-			base = 8;
+			base = 8 | snoUnsigned;
 			goto number;
 		case 'x':
-			base = 16;
+			base = 16 | snoUnsigned;
 			goto number;
 		case 'd':
 			base = 10;
+            goto number;
+        case 'u':
+            base = 10 | snoUnsigned;
 number:			if (scan_number (stream, ptr, base, len, size) && ptr)
 				++nmatch;
 			break;
