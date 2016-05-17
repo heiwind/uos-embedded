@@ -98,7 +98,8 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 #define PUTC(c) { putchar(stream,(unsigned char)(c)); ++retval; }
 	unsigned char nbuf [MAXNBUF], padding, *q;
 	const unsigned char *s;
-	unsigned char c, base, lflag, ladjust, sharpflag, neg, dot, size;
+	unsigned char c, base, ladjust, sharpflag, neg, dot, size;
+	char lflag;
 	small_int_t n, width, dwidth, retval, uppercase, extrazeros, sign;
 	unsigned long ul;
 
@@ -127,7 +128,10 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 		width = 0; extrazeros = 0;
 		lflag = 0; ladjust = 0; sharpflag = 0; neg = 0;
 		sign = 0; dot = 0; uppercase = 0; dwidth = -1;
-reswitch:	switch (c = FETCH_BYTE (fmt++)) {
+reswitch:
+        c = FETCH_BYTE (fmt++);
+//doswitch:
+        switch (c) {
 		case '.':
 			dot = 1;
 			padding = ' ';
@@ -165,7 +169,7 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
         case '@':
             padding = FETCH_BYTE (fmt++);
             goto reswitch;
-            
+
 		case '0':
 			if (! dot) {
 				padding = '0';
@@ -251,18 +255,15 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 
         case 'i':
 		case 'd':
-			ul = lflag ? va_arg (ap, long) : va_arg (ap, int);
 			if (! sign) sign = 1;
 			base = 10;
-			goto number;
+			goto takenumber;
 
 		case 'l':
 			lflag = 1;
 			goto reswitch;
 
 		case 'o':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				va_arg (ap, unsigned int);
 			base = 8;
 			goto nosign;
 
@@ -273,15 +274,13 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 				goto const_string;
 			}
 			base = 16;
+			sign = 0;
 			sharpflag = (width == 0);
-			goto nosign;
+			goto number;
 
 		case 'n':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				sign ? (unsigned long) va_arg (ap, int) :
-				va_arg (ap, unsigned int);
 			base = 10;
-			goto number;
+			goto takenumber;
 
 		case 'S':
 #ifdef __AVR__
@@ -343,6 +342,7 @@ const_string:
 		case 'r':
 			/* Saturated counters. */
 			base = 10;
+			sign = 0;
 			if (lflag) {
 				ul = va_arg (ap, unsigned long);
 				if (ul == (unsigned long)-1) {
@@ -357,7 +357,7 @@ cnt_unknown:				if (ladjust)
 				if (ul >= (unsigned long)-2) {
 					ul = -3;
 					neg = '>';
-					goto nosign;
+					goto number;
 				}
 			} else {
 				ul = va_arg (ap, unsigned int);
@@ -366,34 +366,43 @@ cnt_unknown:				if (ladjust)
 				if (ul >= (unsigned short) -2) {
 					ul = (unsigned short) -3;
 					neg = '>';
-					goto nosign;
+					goto number;
 				}
 			}
-			goto nosign;
+			goto number;
 
 		case 'u':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				va_arg (ap, unsigned int);
 			base = 10;
 			goto nosign;
 
 		case 'x':
 		case 'X':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				va_arg (ap, unsigned int);
 			base = 16;
 			uppercase = (c == 'X');
 			goto nosign;
+
 		case 'z':
 		case 'Z':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				sign ? (unsigned long) va_arg (ap, int) :
-				va_arg (ap, unsigned int);
 			base = 16;
 			uppercase = (c == 'Z');
-			goto number;
+			goto takenumber;
 
 nosign:			sign = 0;
+
+takenumber:
+            if (lflag>0){
+                if (sign)
+                    ul = (unsigned long)va_arg (ap, long);
+                else
+                    ul = va_arg (ap, unsigned long);
+            }
+            else {
+                if (sign)
+                    ul = (unsigned long)va_arg (ap, int);
+                else
+                    ul = va_arg (ap, unsigned int);
+            }
+
 number:		if (sign && ((long) ul != 0L)) {
 				if ((long) ul < 0L) {
 					neg = '-';
