@@ -348,15 +348,18 @@ bool_t __PURE ipadr_is_broadcast_ucs(const unsigned char* a)
 
 struct _ip_t;
 
-typedef struct _base_socket_t {
-    mutex_t     lock;
-    struct _ip_t          *ip;
-    struct _base_socket_t *next;
+#define UOSIP_BASE_SOCKET(sock_type) \
+        mutex_t     lock;\
+        struct _ip_t          *ip;\
+        sock_type*          next;\
+\
+        ip_addr_const   local_ip;\
+        unsigned short  local_port;\
+        ip_addr         peer_ip;\
+        unsigned short  peer_port;
 
-    ip_addr_const   local_ip;
-    unsigned short  local_port;
-    ip_addr         peer_ip;
-    unsigned short  peer_port;
+typedef struct _base_socket_t {
+    UOSIP_BASE_SOCKET(struct _base_socket_t);
 } base_socket_t;
 
 #include <net/errors.h> 

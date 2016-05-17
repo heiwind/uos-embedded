@@ -25,14 +25,7 @@ typedef struct _udp_socket_queue_t {
 } udp_socket_queue_t;
 
 typedef struct _udp_socket_t { //: base_socket_t
-	mutex_t		lock;
-	struct _ip_t	*ip;
-	struct _udp_socket_t *next;
-
-	ip_addr_const   local_ip;
-    unsigned short  local_port;
-	ip_addr         peer_ip;
-	unsigned short	peer_port;
+    UOSIP_BASE_SOCKET(struct _udp_socket_t);
 
 	struct _netif_t	*netif;
 	ip_addr_const   gateway;
