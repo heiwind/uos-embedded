@@ -32,9 +32,11 @@ tcp_slowtmr (ip_t *ip)
 
 	/* Steps through all of the active PCBs. */
 	prev = 0;
+    //tcp_debug ("tcp_slowtmr: processing active sockets\n");
 	for (s=ip->tcp_sockets; s; s=s->next) {
-		/* tcp_debug ("tcp_slowtmr: processing active sockets\n"); */
-		mutex_lock (&s->lock);
+		if (!mutex_trylock (&s->lock))
+		    continue;
+	    tcp_debug ("tcp_slowtmr: processing active socket $%p\n",s);
 		assert (s->state != CLOSED);
 		assert (s->state != LISTEN);
 		assert (s->state != TIME_WAIT);
@@ -110,7 +112,8 @@ tcp_slowtmr (ip_t *ip)
 	/* Steps through all of the TIME-WAIT PCBs. */
 	prev = 0;
 	for (s=ip->tcp_closing_sockets; s; s=s->next) {
-		mutex_lock (&s->lock);
+        if (!mutex_trylock (&s->lock))
+            continue;
 		assert (s->state == TIME_WAIT);
 
 		/* Check if this PCB has stayed long enough in TIME-WAIT */
@@ -147,6 +150,11 @@ tcp_fasttmr (ip_t *ip)
 			tcp_debug ("tcp_fasttmr: delayed ACK\n");
 			tcp_ack_now (s);
 			s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
+		}
+		else
+		if (s->unsent != 0){
+		    //* try to activate tcp output if it freese by ip_output failures
+		    mutex_signal(&s->lock, s);
 		}
 	}
 }
