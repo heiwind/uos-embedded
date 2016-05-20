@@ -156,8 +156,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 					(unsigned int) s->snd_queuelen);
 
 				next = s->unacked;
-				s->unacked = s->unacked->next;
-				s->snd_queuelen -= buf_chain_len (next->p);
+                s->unacked = next->next;
+                --(s->snd_queuelen);
 				tcp_segment_free (next);
 
 				tcp_debug ("%u (after freeing unacked)\n",
@@ -189,7 +189,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 			next = s->unsent;
 			s->unsent = s->unsent->next;
-			s->snd_queuelen -= buf_chain_len (next->p);
+			--(s->snd_queuelen);
 			tcp_segment_free (next);
 			if (s->snd_queuelen != 0) {
 				assert (s->unacked != 0 || s->unsent != 0);
