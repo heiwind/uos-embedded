@@ -144,9 +144,11 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 			/* Remove segment from the unacknowledged list if
 			 * the incoming ACK acknowlegdes them. */
+			next = 0;
 			while (s->unacked != 0 &&
 			    TCP_SEQ_LEQ (NTOHL (s->unacked->tcphdr->seqno) +
-			    TCP_TCPLEN (s->unacked), s->ip->tcp_input_ackno)) {
+			    TCP_TCPLEN (s->unacked), s->ip->tcp_input_ackno)) 
+			{
 				tcp_debug ("tcp_receive: removing %lu:%lu from s->unacked\n",
 					NTOHL (s->unacked->tcphdr->seqno),
 					NTOHL (s->unacked->tcphdr->seqno) +
@@ -160,15 +162,16 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
                 --(s->snd_queuelen);
 				tcp_segment_free (next);
 
-				tcp_debug ("%u (after freeing unacked)\n",
-					(unsigned int) s->snd_queuelen);
-				if (s->snd_queuelen != 0) {
-					assert (s->unacked != 0 ||
-						s->unsent != 0);
-				}
-				/* Send a signal for tcp_write when
-				 * s->snd_queuelen is decreased. */
-				mutex_signal (&s->lock, s);
+			}
+			if (next != 0){
+                tcp_debug ("%u (after freeing unacked)\n",
+                    (unsigned int) s->snd_queuelen);
+                if (s->snd_queuelen != 0) {
+                    assert (s->unacked != 0 || s->unsent != 0);
+                }
+                /* Send a signal for tcp_write when
+                 * s->snd_queuelen is decreased. */
+                mutex_signal (&s->lock, s);
 			}
 		}
 
@@ -178,10 +181,12 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		 * be acked. The rationale is that lwIP puts all outstanding
 		 * segments on the ->unsent list after a retransmission,
 		 * so these segments may in fact have been sent once. */
+        next = 0;
 		while (s->unsent != 0 &&
 		    TCP_SEQ_LEQ (NTOHL (s->unsent->tcphdr->seqno) +
 		    TCP_TCPLEN (s->unsent), s->ip->tcp_input_ackno) &&
-		    TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_max)) {
+		    TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_max)) 
+		{
 			tcp_debug ("tcp_receive: removing %lu:%lu from s->unsent, queuelen = %u\n",
 				NTOHL (s->unsent->tcphdr->seqno),
 				NTOHL (s->unsent->tcphdr->seqno) +
@@ -197,13 +202,14 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			if (s->unsent != 0) {
 				s->snd_nxt = HTONL (s->unsent->tcphdr->seqno);
 			}
-			tcp_debug ("tcp_receive: queuelen = %u, snd_nxt = %u\n",
-				s->snd_queuelen, s->snd_nxt);
-
-			/* Send a signal for tcp_write when
-			 * s->snd_queuelen is decreased. */
-			mutex_signal (&s->lock, s);
 		}
+        if (next != 0){
+            tcp_debug ("tcp_receive: queuelen = %u, snd_nxt = %u\n",
+                s->snd_queuelen, s->snd_nxt);
+            /* Send a signal for tcp_write when
+             * s->snd_queuelen is decreased. */
+            mutex_signal (&s->lock, s);
+        }
 
 		/* End of ACK for new data processing. */
 
