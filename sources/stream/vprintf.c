@@ -128,6 +128,7 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 		width = 0; extrazeros = 0;
 		lflag = 0; ladjust = 0; sharpflag = 0; neg = 0;
 		sign = 0; dot = 0; uppercase = 0; dwidth = -1;
+		size = 0;
 reswitch:
         c = FETCH_BYTE (fmt++);
 //doswitch:
@@ -192,7 +193,10 @@ reswitch:
 		case 'b':
 			ul = va_arg (ap, int);
 			s = va_arg (ap, const unsigned char*);
-			q = ksprintn (nbuf, ul, *s++, -1, 0);
+            base = *s++;
+            if (*s == 0)
+                goto number;
+			q = ksprintn (nbuf, ul, base, -1, 0);
 			while (*q)
 				PUTC (*q--);
 
@@ -473,6 +477,7 @@ number:		if (sign && ((long) ul != 0L)) {
 		case 'g':
 		case 'G': {
 			double d = va_arg (ap, double);
+
 			/*
 			 * don't do unrealistic precision; just pad it with
 			 * zeroes later, so buffer size stays rational.
@@ -574,6 +579,8 @@ ksprintn (unsigned char *nbuf, unsigned long ul, unsigned char base, int width,
 
 	p = nbuf;
 	*p = 0;
+	if (base > 16)
+	    return p;
 	for (;;) {
 		unsigned long rest = mkhex (ul % base);
 		ul /= base;
