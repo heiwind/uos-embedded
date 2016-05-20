@@ -817,9 +817,10 @@ drop:		buf_free (p);
 		goto drop;
 	}
 	mutex_lock (&s->lock);
-	tcp_debug ("tcp_input: flags =");
-	tcp_debug_print_flags (h->flags);
-	tcp_debug (", state=%S\n", tcp_state_name (s->state));
+    tcp_debug ("tcp_input: flags =%b , state=%S\n"
+            , h->flags, tcp_flags_dumpfmt
+            , tcp_state_name (s->state)
+            );
 
 	/* The incoming segment belongs to a connection. */
 	/* Set up a tcp_segment structure. */
@@ -841,8 +842,7 @@ drop:		buf_free (p);
 	if (s->unsent != 0 || (s->flags & TF_ACK_NOW))
 		tcp_output (s);
 
-	tcp_debug ("tcp_input: done, state=%S\n\n",
-		tcp_state_name (s->state));
+	tcp_debug ("tcp_input: done, state=%S\n\n", tcp_state_name (s->state));
 	mutex_unlock (&s->lock);
 
 	assert (tcp_debug_verify (ip));

@@ -216,8 +216,7 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 	s->snd_lbb += len;
 	s->snd_buf -= len;
 	s->snd_queuelen = queuelen;
-	tcp_debug ("tcp_enqueue: done, queuelen = %d\n",
-		s->snd_queuelen);
+	tcp_debug ("tcp_enqueue: done, queuelen = %d\n", s->snd_queuelen);
 	if (s->snd_queuelen != 0) {
 		assert (s->unacked != 0 || s->unsent != 0);
 	}
@@ -376,8 +375,7 @@ tcp_output (tcp_socket_t *s)
 			tcp_debug ("tcp_output: (ACK) could not allocate buf\n");
 			return 0;
 		}
-		tcp_debug ("tcp_output: sending ACK for %lu\n",
-			s->rcv_nxt);
+		tcp_debug ("tcp_output: sending ACK for %lu\n", s->rcv_nxt);
 
 		tcphdr = (tcp_hdr_t*) p->payload;
 		tcphdr->src = HTONS (s->local_port);

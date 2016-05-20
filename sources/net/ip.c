@@ -12,7 +12,11 @@
 #include <net/arp.h>
 
 #ifdef DEBUG_NET_IP
+#   ifndef IP_PRINTF
 #define IP_printf(...) debug_printf(__VA_ARGS__)
+#   else
+#define IP_printf(...) IP_PRINTF(__VA_ARGS__)
+#   endif
 #else
 #define IP_printf(...)
 #endif

@@ -500,7 +500,12 @@ void tcp_debug_print_sockets (ip_t *ip);
 int tcp_debug_verify (ip_t *ip);
 
 #ifdef TCP_DEBUG
+extern const unsigned char tcp_flags_dumpfmt[];
+#   ifndef TCP_PRINTF
 #define tcp_debug			debug_printf
+#   else
+#define tcp_debug(...)      TCP_PRINTF(__VA_ARGS__)
+#   endif
 #else
 #define tcp_debug(...)			/* void */
 #define tcp_debug_print_header(tcphdr)	/* void */

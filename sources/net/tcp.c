@@ -320,35 +320,41 @@ tcp_queue_free (tcp_socket_t *q)
 }
 
 #ifdef TCP_DEBUG
+/*
+  TCP_FIN         = 0x01
+, TCP_SYN         = 0x02
+, TCP_RST         = 0x04
+, TCP_PSH         = 0x08
+, TCP_ACK         = 0x10
+, TCP_URG         = 0x20
+*/
+
+const unsigned char tcp_flags_dumpfmt[] = 
+        "\30\1FIN\2SYN\3RST\4PSH\5ACK\6URG";
 void
 tcp_debug_print_header (tcp_hdr_t *tcphdr)
 {
-	debug_printf ("TCP header:\n");
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|      %04x     |      %04x     | (src port, dest port)\n",
-		tcphdr->src, tcphdr->dest);
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|            %08lu           | (seq no)\n",
-		tcphdr->seqno);
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|            %08lu           | (ack no)\n",
-		tcphdr->ackno);
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("| %2u |    |%u%u%u%u%u|    %5u      | (offset, flags (",
-		tcphdr->offset,
-		tcphdr->flags >> 5 & 1,
-		tcphdr->flags >> 4 & 1,
-		tcphdr->flags >> 3 & 1,
-		tcphdr->flags >> 2 & 1,
-		tcphdr->flags >> 1 & 1,
-		tcphdr->flags & 1,
-		tcphdr->wnd);
-	tcp_debug_print_flags (tcphdr->flags);
-	debug_printf ("), win)\n");
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|    0x%04x     |     %5u     | (chksum, urgp)\n",
-		NTOHS (tcphdr->chksum), NTOHS (tcphdr->urgp));
-	debug_printf ("+-------------------------------+\n");
+    tcp_debug ( "TCP header:\n"
+                "+-------------------------------+\n"
+	            "|      %04x     |      %04x     | (src port, dest port)\n"
+                "+-------------------------------+\n"
+                "|            %08lu           | (seq no)\n"
+                "+-------------------------------+\n"
+                "|            %08lu           | (ack no)\n"
+            , tcphdr->src, tcphdr->dest
+            , tcphdr->seqno, tcphdr->ackno
+		    );
+    //                "| %2u |    |%u%u%u%u%u|    %5u      | (offset, flags (",
+    tcp_debug ("+-------------------------------+\n"
+                  "| %2u |    |%6b|    %5u      | (offset, flags (%b), win)\n"
+	            , tcphdr->offset
+	            , tcphdr->flags, "\2\0"
+                , tcphdr->flags, tcp_flags_dumpfmt
+	            , tcphdr->wnd);
+    tcp_debug ( "+-------------------------------+\n"
+                "|    0x%04x     |     %5u     | (chksum, urgp)\n"
+                "+-------------------------------+\n"
+            ,NTOHS (tcphdr->chksum), NTOHS (tcphdr->urgp));
 }
 
 const char *
@@ -373,36 +379,41 @@ tcp_state_name (tcp_state_t state)
 void
 tcp_debug_print_flags (tcph_flag_set flags)
 {
-	if (flags & TCP_FIN) debug_printf (" FIN");
-	if (flags & TCP_SYN) debug_printf (" SYN");
-	if (flags & TCP_RST) debug_printf (" RST");
-	if (flags & TCP_PSH) debug_printf (" PSH");
-	if (flags & TCP_ACK) debug_printf (" ACK");
-	if (flags & TCP_URG) debug_printf (" URG");
+    /*
+	if (flags & TCP_FIN) tcp_debug (" FIN");
+	if (flags & TCP_SYN) tcp_debug (" SYN");
+	if (flags & TCP_RST) tcp_debug (" RST");
+	if (flags & TCP_PSH) tcp_debug (" PSH");
+	if (flags & TCP_ACK) tcp_debug (" ACK");
+	if (flags & TCP_URG) tcp_debug (" URG");
+	*/
+    tcp_debug ("%b", flags, tcp_flags_dumpfmt);
+}
+
+void tcp_debug_print_socket (tcp_socket_t *s){
+    const char *fmt = "Local port %u, foreign port %u "
+              "snd_nxt %lu rcv_nxt %lu state %S\n";
+    tcp_debug (fmt
+            , s->local_port, s->remote_port
+            , s->snd_nxt, s->rcv_nxt
+            , tcp_state_name (s->state)
+            );
 }
 
 void
 tcp_debug_print_sockets (ip_t *ip)
 {
 	tcp_socket_t *s;
-	const char *fmt = "Local port %u, foreign port %u "
-			  "snd_nxt %lu rcv_nxt %lu state %S\n";
 
-	debug_printf ("Active PCB states:\n");
-	for (s=ip->tcp_sockets; s; s=s->next) {
-		debug_printf (fmt, s->local_port, s->remote_port,
-			s->snd_nxt, s->rcv_nxt, tcp_state_name (s->state));
-	}
-	debug_printf ("Listen PCB states:\n");
-	for (s=ip->tcp_listen_sockets; s; s=s->next) {
-		debug_printf (fmt, s->local_port, s->remote_port,
-			s->snd_nxt, s->rcv_nxt, tcp_state_name (s->state));
-	}
-	debug_printf ("TIME-WAIT PCB states:\n");
-	for (s=ip->tcp_closing_sockets; s; s=s->next) {
-		debug_printf (fmt, s->local_port, s->remote_port,
-			s->snd_nxt, s->rcv_nxt, tcp_state_name (s->state));
-	}
+	tcp_debug ("Active PCB states:\n");
+	for (s=ip->tcp_sockets; s; s=s->next) 
+	    tcp_debug_print_socket(s);
+	tcp_debug ("Listen PCB states:\n");
+	for (s=ip->tcp_listen_sockets; s; s=s->next)
+        tcp_debug_print_socket(s);
+	tcp_debug ("TIME-WAIT PCB states:\n");
+	for (s=ip->tcp_closing_sockets; s; s=s->next)
+        tcp_debug_print_socket(s);
 }
 
 int

@@ -463,8 +463,7 @@ tcp_close (tcp_socket_t *s)
 {
 	mutex_lock (&s->lock);
 
-	tcp_debug ("tcp_close: state=%S\n",
-		tcp_state_name (s->state));
+	tcp_debug ("tcp_close: state=%S\n", tcp_state_name (s->state));
 
 	switch (s->state) {
 	default: /* Has already been closed. */
