@@ -107,7 +107,6 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 
 	mutex_lock (&s->lock);
 	for (;;) {
-		mutex_wait (&s->lock);
 		if (s->state == ESTABLISHED) {
 			mutex_unlock (&s->lock);
 			return s;
@@ -117,6 +116,7 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 			mem_free (s);
 			return 0;
 		}
+        mutex_wait (&s->lock);
 	}
 }
 
