@@ -69,6 +69,11 @@
 /**************************************************************************
  * TCP options
  */
+
+//* uTCP ability allows use event handling on tcp-segments - tech from uIP contiki stack
+//*  one handling allow release memory from sent tcp-segments during ack wait for retransmition 
+#define UTCP_RAW
+
 //#define TCP_WND                         2048
 //#define TCP_MAXRTX                      12
 //#define TCP_SYNMAXRTX                   6

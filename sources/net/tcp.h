@@ -145,6 +145,38 @@ typedef struct _tcp_hdr tcp_hdr_t;
 #define TCP_HLEN		20
 #define TCP_CAPLEN       (TCP_HLEN + IP_HLEN + MAC_HLEN)
 #define TCP_HRESERVE     IP_ALIGNED(TCP_CAPLEN)
+#define TCP_SEG_RESERVE  IP_ALIGNED(TCP_HRESERVE+NETIO_OVERLAP_HLEN)
+
+#ifdef ETH_MTU
+//* check MSS vs MTU - tcp-packet len must not exceed eth MTU limit
+#if (ETH_MTU - TCP_CAPLEN) < TCP_MSS
+#undef TCP_MSS
+#define TCP_MSS (ETH_MTU - TCP_CAPLEN)
+#endif
+#endif
+
+
+struct _tcp_segment_t;
+typedef struct _tcp_segment_t tcp_segment_t;
+struct _tcp_socket_t;
+typedef struct _tcp_socket_t tcp_socket_t;
+
+
+//* this is raw events handler for tcp-segments. this handle intends for 
+//* proper buffer utilisation. 
+//* see tcp_write_raw
+typedef enum{
+    //after eth output called, and from this seg->hsave.seqno can be used for
+    //  rexmit data recovery
+      teSENT  
+    , teFREE    //after seg acked, and can be free
+    , teDROP    //seg aborted< and buffer can be free
+    , teREXMIT  //on ack loose, need provide data for seg
+} tcp_cb_event;
+typedef void (*tcp_callback)(tcp_cb_event ev
+                            , tcp_segment_t* seg
+                            , tcp_socket_t* s
+                            );
 
 /*
  * This structure is used to repressent TCP segments when queued.
@@ -156,11 +188,19 @@ struct _tcp_segment_t {
 	tcp_hdr_t *tcphdr;	/* the TCP header */
 	small_uint_t len;	/* the TCP length of this segment */
 	small_uint_t datacrc;// crc16_inet of data at dataptr, ==0 if no crc
-};
-typedef struct _tcp_segment_t tcp_segment_t;
 
-#define TCP_TCPLEN(seg)	((seg)->len + (((seg)->tcphdr->flags & \
-			(TCP_FIN | TCP_SYN)) ? 1 : 0))
+#ifdef UTCP_RAW
+	tcp_callback    handle;
+	long            harg;
+	struct hdr_save{
+	    //* this saves used for rexmit tcp hdr restoration, when socket event handle
+	    //*     provides data
+	    unsigned long seqno;
+	    unsigned long ackno;    //* this is just for debug interest 
+	    unsigned short urgp;
+	} hsave;
+#endif
+};
 
 typedef enum{
       TF_ACK_DELAY  = 0x01        /* Delayed ACK. */
@@ -172,6 +212,7 @@ typedef enum{
     , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - don`t combine small segments into big one
     , TF_SOCK_LOCK  = 0x200       //*< tcp_enqueue leaves socket locked after return, (so propagated with tcp_write)
     , TCP_SOCK_LOCK = TF_SOCK_LOCK
+    , TF_NOBLOCK    = 0x400       //*< tcp_write/read returns imidiately, not waiting for all data enqueued
 } tcps_flags;
 typedef unsigned short tcps_flag_set;
 typedef tcps_flag_set  tcph_flag_set;
@@ -182,6 +223,7 @@ struct _tcp_socket_t {//: base_socket_t
     //! lock demarcate access between send/recv, and it must not use to demarcate
     //  concurent recv or sends - their can be interleaved
 	mutex_t lock;
+    
 	struct _ip_t *ip;
 	struct _tcp_socket_t *next;	/* for the linked list */
 
@@ -250,7 +292,6 @@ struct _tcp_socket_t {//: base_socket_t
 	tcp_segment_t *unsent;		/* Unsent (queued) segments. */
 	tcp_segment_t *unacked;		/* Sent but unacknowledged segments. */
 };
-typedef struct _tcp_socket_t tcp_socket_t;
 
 
 
@@ -357,6 +398,24 @@ buf_t* tcp_take_buf(tcp_socket_t *s);
  * Return a number ob transmitted bytes, or -1 on error.
  */
 int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len);
+
+
+#ifdef UTCP_RAW
+
+//* \brief passes buffer for tcp send, with extra events-handling 
+//* \arg evhandle invokes from ip-thread and allows data-bufer manipulation 
+//*         during segment life, allows more stricted memory use.
+//*         main goal is - free buffer after teSENT, forget sended data on teFREE, 
+//*         and provide buffer with data on teREXMIT event.
+//* \arg data   buffer with user data, must have preserved header TCP_SEG_RESERVE size
+int tcp_write_buf (tcp_socket_t *s, buf_t* data, tcps_flag_set opts
+                    , tcp_callback evhandle, unsigned long harg);
+
+//* uTCP segment handle helper - assign data bufer to segment.
+//*     intended for use on teREXMIT
+int tcp_segment_assign_buf(tcp_socket_t *s, tcp_segment_t * seg, buf_t* p);
+
+#endif // UTCP_RAW
 
 /*
  * Return the period of socket inactivity, in seconds.
@@ -480,6 +539,27 @@ unsigned char tcp_segments_free (tcp_segment_t *seg);
 unsigned char tcp_segment_free (tcp_segment_t *seg);
 tcp_segment_t *tcp_segment_copy (tcp_segment_t *seg);
 
+#define TCP_TCPLEN(seg) ((seg)->len + (((seg)->tcphdr->flags & \
+            (TCP_FIN | TCP_SYN)) ? 1 : 0))
+
+#ifdef UTCP_RAW
+INLINE
+unsigned long tcp_segment_seqno(tcp_segment_t* seg){
+    return seg->hsave.seqno;
+}
+
+#else
+INLINE
+unsigned long tcp_segment_seqno(tcp_segment_t* seg){
+    return NTOHL (seg->tcphdr->seqno);
+}
+#endif
+
+INLINE
+unsigned long tcp_segment_seqafter(tcp_segment_t* seg){
+    return tcp_segment_seqno(seg) + TCP_TCPLEN(seg);
+}
+
 static inline void
 tcp_ack_now (tcp_socket_t *s)
 {
@@ -595,6 +675,20 @@ tcp_list_remove (tcp_socket_t **socklist, tcp_socket_t *ns)
 }
 
 
+
+#ifdef UTCP_RAW
+INLINE
+void tcp_event_seg(tcp_cb_event ev
+                , tcp_segment_t* seg
+                , tcp_socket_t* s
+                ) 
+{
+    if (seg->handle != 0)
+        seg->handle(ev, seg, s);
+}
+#else
+#define tcp_event_seg(ev, seg, sock)
+#endif
 
 #ifdef __cplusplus
 }

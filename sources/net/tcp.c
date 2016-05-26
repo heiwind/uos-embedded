@@ -187,6 +187,7 @@ tcp_segment_free (tcp_segment_t *seg)
 		return 0;
 
 	if (seg->p != 0) {
+	    tcp_event_seg(teFREE, seg, 0);
 		count = buf_free (seg->p);
 	}
 	mem_free (seg);
@@ -245,6 +246,7 @@ tcp_socket_purge (tcp_socket_t *s)
 		tcp_debug ("tcp_socket_purge: data left on ->unacked\n");
 	    tcp_segment_t *useg = s->unacked;
 	    while (useg != 0){
+	        tcp_event_seg(teFREE, useg, s);
 	        netif_terminate_buf(0, useg->p);
             s->unacked = useg->next;
 	        useg->p = 0;

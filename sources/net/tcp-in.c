@@ -60,7 +60,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 						/* This is fast retransmit. Retransmit the first unacked segment. */
 						tcp_debug ("tcp_receive: dupacks %u (%lu), fast retransmit %lu\n",
 							(unsigned int) s->dupacks, s->lastack,
-							NTOHL (s->unacked->tcphdr->seqno));
+							tcp_segment_seqno(s->unacked)
+							);
 						tcp_rexmit (s);
 						/* Set ssthresh to max (FlightSize / 2, 2*SMSS) */
 						s->ssthresh = (s->snd_max -
@@ -136,23 +137,22 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				}
 			}
 			tcp_debug ("tcp_receive: ACK for %lu, unacked->seqno %lu:%lu\n",
-				s->ip->tcp_input_ackno, s->unacked != 0 ?
-				NTOHL (s->unacked->tcphdr->seqno) : 0,
-				s->unacked != 0 ?
-				NTOHL (s->unacked->tcphdr->seqno) +
-				TCP_TCPLEN (s->unacked) : 0);
+                s->ip->tcp_input_ackno
+                , s->unacked != 0 ? tcp_segment_seqno(s->unacked) : 0
+                , s->unacked != 0 ? tcp_segment_seqafter(s->unacked) : 0
+                );
 
 			/* Remove segment from the unacknowledged list if
 			 * the incoming ACK acknowlegdes them. */
 			next = 0;
 			while (s->unacked != 0 &&
-			    TCP_SEQ_LEQ (NTOHL (s->unacked->tcphdr->seqno) +
-			    TCP_TCPLEN (s->unacked), s->ip->tcp_input_ackno)) 
+			    TCP_SEQ_LEQ (tcp_segment_seqafter(s->unacked)
+			               , s->ip->tcp_input_ackno)) 
 			{
-				tcp_debug ("tcp_receive: removing %lu:%lu from s->unacked\n",
-					NTOHL (s->unacked->tcphdr->seqno),
-					NTOHL (s->unacked->tcphdr->seqno) +
-					TCP_TCPLEN (s->unacked));
+                tcp_debug ("tcp_receive: removing %lu:%lu from s->unacked\n"
+                        , tcp_segment_seqno(s->unacked)
+                        , tcp_segment_seqafter(s->unacked)
+                        );
 
 				next = s->unacked;
                 s->unacked = next->next;
@@ -179,15 +179,14 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		 * segments on the ->unsent list after a retransmission,
 		 * so these segments may in fact have been sent once. */
         next = 0;
-		while (s->unsent != 0 &&
-		    TCP_SEQ_LEQ (NTOHL (s->unsent->tcphdr->seqno) +
-		    TCP_TCPLEN (s->unsent), s->ip->tcp_input_ackno) &&
-		    TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_max)) 
+		while (s->unsent != 0 
+		    && TCP_SEQ_LEQ (tcp_segment_seqafter(s->unsent), s->ip->tcp_input_ackno) 
+		    && TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_max)) 
 		{
-			tcp_debug ("tcp_receive: removing %lu:%lu from s->unsent, queuelen = %u\n",
-				NTOHL (s->unsent->tcphdr->seqno),
-				NTOHL (s->unsent->tcphdr->seqno) +
-				TCP_TCPLEN (s->unsent),  s->snd_queuelen);
+            tcp_debug ("tcp_receive: removing %lu:%lu from s->unsent, queuelen = %u\n"
+                    , tcp_segment_seqno(s->unsent)
+                    , tcp_segment_seqafter(s->unsent)
+                    );
 
 			next = s->unsent;
 			s->unsent = s->unsent->next;
@@ -197,7 +196,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				assert (s->unacked != 0 || s->unsent != 0);
 			}
 			if (s->unsent != 0) {
-				s->snd_nxt = HTONL (s->unsent->tcphdr->seqno);
+				s->snd_nxt = tcp_segment_seqno(s->unsent);
 			}
 		}
         if (next != 0){
@@ -497,16 +496,16 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 	case SYN_SENT:
 		tcp_debug ("SYN-SENT: ackno %lu s->snd_nxt %lu unacked %lu\n",
 			s->ip->tcp_input_ackno, s->snd_nxt,
-			NTOHL (s->unacked->tcphdr->seqno));
+			tcp_segment_seqno(s->unacked));
 		if (s->ip->tcp_input_flags & (TCP_ACK | TCP_SYN) &&
-		    s->ip->tcp_input_ackno == NTOHL (s->unacked->tcphdr->seqno) + 1) {
+		    s->ip->tcp_input_ackno == tcp_segment_seqno(s->unacked) + 1) 
+		{
 			s->rcv_nxt = s->ip->tcp_input_seqno + 1;
 			s->lastack = s->ip->tcp_input_ackno;
 			s->snd_wnd = s->snd_wl1 = h->wnd;
 			s->cwnd = s->mss;
 			--s->snd_queuelen;
-			tcp_debug ("tcp_process: queuelen = %u\n",
-				s->snd_queuelen);
+			tcp_debug ("tcp_process: queuelen = %u\n", s->snd_queuelen);
 			rseg = s->unacked;
 			s->unacked = rseg->next;
 			tcp_segment_free (rseg);
