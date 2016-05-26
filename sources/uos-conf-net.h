@@ -105,6 +105,13 @@
 
 //#define TCP_DEBUG
 
-
+/*
+#include <buffers/rtlog_buf.h>
+extern rtlog tcp_log;
+#define RT_PRINTF(...) rtlog_printf(&tcp_log, __VA_NARG__(__VA_ARGS__), __VA_ARGS__)
+#define TCP_PRINTF(...) RT_PRINTF(__VA_ARGS__)
+#define IP_PRINTF(...)  RT_PRINTF(__VA_ARGS__)
+#define ETH_PRINTF(...)  RT_PRINTF(__VA_ARGS__)
+*/
 
 #endif /* UOS_CONF_NET_H_ */
