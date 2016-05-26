@@ -167,6 +167,7 @@ typedef struct _netif_io_overlap{
         netif_callback callback;
     } action;
     unsigned arg;
+    unsigned arg2;
     //*внутреннее поле оверлея для организации конкурентной обработки
     volatile char asynco;
     volatile char options;

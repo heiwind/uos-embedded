@@ -437,7 +437,15 @@ void tcp_input (struct _ip_t *ip, struct _buf_t *p, struct _netif_t *inp,
 
 /* Used within the TCP code only: */
 tcp_socket_t *tcp_alloc (ip_t *ip);
+
+/* tcp_output_poll - pull tcp segments until netif accept them
+ * */
+int tcp_output_poll (tcp_socket_t *s);
+
+/* tcp_output - pull tcp segments until all unsent passed to netif
+ * */
 int tcp_output (tcp_socket_t *s);
+
 void tcp_rexmit (tcp_socket_t *s);
 void tcp_parseopt (tcp_socket_t *s, tcp_hdr_t *h);
 struct _buf_t *tcp_queue_get (tcp_socket_t *q);

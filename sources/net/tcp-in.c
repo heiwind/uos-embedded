@@ -765,7 +765,7 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 				tcp_ack_now (s);
 			}
             //! TODO WARNING nonsafe scoket access
-			tcp_output (s);
+			tcp_output_poll (s);
 			goto drop;
 		}
 
@@ -848,7 +848,7 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 		buf_free (inseg.p);
 
 	if (s->unsent != 0 || (s->flags & TF_ACK_NOW))
-		tcp_output (s);
+		tcp_output_poll (s);
 
 	tcp_debug ("tcp_input: done, state=%S\n\n", tcp_state_name (s->state));
 	mutex_unlock (&s->lock);

@@ -464,6 +464,29 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 	return  res;
 }
 
+
+
+//overlaped buffer can rearm suspended transfer when reaches s->snd_nxt mark
+void tcp_output_segment_arm_handle(buf_t *p, unsigned arg){
+    tcp_socket_t *s = (tcp_socket_t *)arg; 
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (s->snd_nxt <= over->arg2){
+        mutex_signal(&s->lock, s);
+    }
+}
+
+void tcp_output_segment_arm(tcp_socket_t *s, tcp_segment_t *seg){
+      netif_io_overlap* over = netif_is_overlaped(seg->p);
+      if (over == 0)
+          return;
+      //overlaped buffer can rearm suspended transfer when reaches s->snd_nxt mark
+      over->action.callback = &(tcp_output_segment_arm_handle);
+      over->options &= ~nioo_ActionMASK;
+      over->options |= nioo_ActionCB;
+      over->arg  = (unsigned)s;
+      over->arg2 = s->snd_nxt + TCP_TCPLEN (seg);
+}
+
 /*
  * Find out what we can send and send it.
  * Must be called with ip locked        if TCP_LOCK_LEGACY.
@@ -473,7 +496,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 //empty overlaped buffer seg->p managed by netif_output to free or hold in segment
 //  after tx 
 int
-tcp_output (tcp_socket_t *s)
+tcp_output_poll (tcp_socket_t *s)
 {
 	buf_t *p;
 	tcp_hdr_t *tcphdr;
@@ -506,7 +529,6 @@ tcp_output (tcp_socket_t *s)
 	 * segment and send it. */
 	if ((s->flags & TF_ACK_NOW) && (seg == 0 ||
 	    NTOHL (seg->tcphdr->seqno) - s->lastack + seg->len > wnd)) {
-		s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
 		p = buf_alloc (s->ip->pool, TCP_HLEN, 16 + IP_HLEN);
 		if (p == 0) {
 			tcp_debug ("tcp_output: (ACK) could not allocate buf\n");
@@ -533,7 +555,10 @@ tcp_output (tcp_socket_t *s)
       #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
 		mutex_t* ip_locked = tcpo_lock_ensure(&s->ip->lock);
       #endif
-		ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+		if (ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP) != 0)
+		{
+		    s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
+		}
       #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
 		tcpo_unlock_ensure(ip_locked);
       #endif
@@ -562,7 +587,7 @@ tcp_output (tcp_socket_t *s)
 			s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
 		}
 
-	    netif_io_overlap* over = netif_is_overlaped(p);
+	    netif_io_overlap* over = netif_is_overlaped(seg->p);
 		int tcpseglen = TCP_TCPLEN (seg);
 		if (tcpseglen == 0){
             //empty buffer not acked, so we can free it right in after send
@@ -572,6 +597,9 @@ tcp_output (tcp_socket_t *s)
 	            over->options &= ~nioo_ActionMASK;
 	            over->options |= nioo_ActionNone;
 	        }
+		}
+		else if (seg->next != 0){ 
+		      tcp_output_segment_arm(s, seg);
 		}
 
 		if (!tcp_output_segment (seg, s))
@@ -603,6 +631,53 @@ tcp_output (tcp_socket_t *s)
     tcpo_unlock_ensure(s_locked);
 
 	return 1;
+}
+
+
+/*
+ * Find out what we can send and send it. poll sending until unsent queue empty.
+ * Must be called with ip locked        if TCP_LOCK_LEGACY.
+ * or ensures that socket locked        if TCP_LOCK_RELAXED
+ * Return 0 on error.
+ */
+int
+tcp_output (tcp_socket_t *s)
+{
+    /* First, check if we are invoked by the TCP input processing code.
+     * If so, we do not output anything. Instead, we rely on the input
+     * processing code to call us when input processing is done with. */
+    if (s->ip->tcp_input_socket == s) {
+        return 1;
+    }
+    if (s->unsent == 0)
+        return 1;
+
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+    mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
+#elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
+#endif
+
+    while (s->unsent != 0){
+        tcp_output_poll(s);
+        if (s->unsent == 0)
+            break;
+
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+        mutex_wait(&s->lock);
+#elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        mutex_t* sock_locked = tcpo_lock_ensure(&s->lock);
+        //if (!s_locked) //caller have alredy locked iplock
+        mutex_unlock(&s->ip->lock);
+        mutex_wait(&s->lock);
+        tcpo_unlock_ensure(sock_locked);
+        mutex_lock(&s->ip->lock);
+#endif
+        /* TODO Может Проверим, не закрылось ли соединение??? */
+    }
+
+    tcpo_unlock_ensure(s_locked);
+    return 1;
 }
 
 void

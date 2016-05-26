@@ -152,16 +152,17 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 	    int sent = tcp_enqueue (s, ptr, len, TCP_SOCK_LOCK);
 	    left    -= sent;
         ptr     += sent;
-#       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
-        mutex_unlock (&s->lock);
-        tcp_output (s);
-#       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
-        tcp_output (s);
-        mutex_unlock (&s->lock);
-#       endif
 
         if (left == 0)
             break;
+
+#       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        mutex_unlock (&s->lock);
+        tcp_output_poll (s);
+#       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
+        tcp_output_poll (s);
+        mutex_unlock (&s->lock);
+#       endif
 
         /* Не удалось поставить пакет в очередь - мало памяти. */
         if (! g) {
@@ -183,6 +184,14 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 
 	if (g)
 		mutex_group_unlisten (g);
+
+#       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        mutex_unlock (&s->lock);
+        tcp_output (s);
+#       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
+        tcp_output (s);
+        mutex_unlock (&s->lock);
+#       endif
 	return len;
 }
 
