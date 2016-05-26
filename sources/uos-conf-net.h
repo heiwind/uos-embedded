@@ -112,6 +112,7 @@ extern rtlog tcp_log;
 #define TCP_PRINTF(...) RT_PRINTF(__VA_ARGS__)
 #define IP_PRINTF(...)  RT_PRINTF(__VA_ARGS__)
 #define ETH_PRINTF(...)  RT_PRINTF(__VA_ARGS__)
+#define ARP_PRINTF(...)  RT_PRINTF(__VA_ARGS__)
 */
 
 #endif /* UOS_CONF_NET_H_ */

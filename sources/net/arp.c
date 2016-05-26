@@ -8,14 +8,18 @@
 #include <net/ip.h>
 
 //#undef ARP_TRACE
+#ifndef ARP_PRINTF
+#define ARP_PRINTF(...)
+#endif
+
 #ifdef DEBUG_NET_ARPTABLE
-#define ARPTABLE_printf(...) debug_printf(__VA_ARGS__)
+#define ARPTABLE_printf(...) ARP_PRINTF(__VA_ARGS__)
 #else
 #define ARPTABLE_printf(...)
 #endif
 
 #ifdef ARP_TRACE
-#define ARPTRACE_printf(...) debug_printf(__VA_ARGS__)
+#define ARPTRACE_printf(...) ARP_PRINTF(__VA_ARGS__)
 #else
 #define ARPTRACE_printf(...)
 #endif
