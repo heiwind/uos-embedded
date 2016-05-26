@@ -389,20 +389,6 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 		s->local_ip = local_ip;
 	}
 
-	s->rtime = 0;
-
-	if (s->rttest == 0) {
-		s->rttest = s->ip->tcp_ticks;
-		s->rtseq = NTOHL (tcphdr->seqno);
-	}
-	s->snd_nxt = NTOHL (tcphdr->seqno) + TCP_TCPLEN (seg);
-	if (TCP_SEQ_LT (s->snd_max, s->snd_nxt)) {
-		s->snd_max = s->snd_nxt;
-	}
-	tcp_debug ("tcp_output_segment: %lu:%lu, snd_nxt = %u\n",
-		HTONL (tcphdr->seqno),
-		HTONL (tcphdr->seqno) + seg->len, s->snd_nxt);
-
 	p = seg->p;
 
 	n = (unsigned int) ((unsigned char*) tcphdr -
@@ -450,12 +436,30 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
 #endif
 
-	++s->ip->tcp_out_datagrams;
 	bool_t res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
 
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
 	tcpo_unlock_ensure(s_locked);
 #endif
+
+	if (res){
+	    ++s->ip->tcp_out_datagrams;
+        s->rtime = 0;
+    
+        if (s->rttest == 0) {
+            s->rttest = s->ip->tcp_ticks;
+            s->rtseq = NTOHL (tcphdr->seqno);
+        }
+        s->snd_nxt = NTOHL (tcphdr->seqno) + TCP_TCPLEN (seg);
+        if (TCP_SEQ_LT (s->snd_max, s->snd_nxt)) {
+            s->snd_max = s->snd_nxt;
+        }
+	} //if (res)
+    tcp_debug ("tcp_output_segment: %lu:%lu, snd_nxt = %u ok %d\n",
+        HTONL (tcphdr->seqno),
+        HTONL (tcphdr->seqno) + seg->len, s->snd_nxt
+        , res
+        );
 
 	return  res;
 }
@@ -490,10 +494,10 @@ tcp_output (tcp_socket_t *s)
 #elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
     mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
 #endif
+    
+    wnd = (s->snd_wnd < s->cwnd) ? s->snd_wnd : s->cwnd;
+    seg = s->unsent;
 	
-	wnd = (s->snd_wnd < s->cwnd) ? s->snd_wnd : s->cwnd;
-	seg = s->unsent;
-
 	/* If the TF_ACK_NOW flag is set, we check if there is data that is
 	 * to be sent. If data is to be sent out, we'll just piggyback our
 	 * acknowledgement with the outgoing segment. If no data will be
@@ -536,6 +540,7 @@ tcp_output (tcp_socket_t *s)
 	    tcpo_unlock_ensure(s_locked);
 		return 1;
 	}
+
 	if (seg == 0) {
 		tcp_debug ("tcp_output: nothing to send, snd_wnd %lu, cwnd %lu, wnd %lu, ack %lu\n",
 			s->snd_wnd, s->cwnd, wnd, s->lastack);
@@ -547,7 +552,6 @@ tcp_output (tcp_socket_t *s)
 			s->snd_wnd, s->cwnd, wnd,
 			NTOHL (seg->tcphdr->seqno) + seg->len - s->lastack,
 			NTOHL (seg->tcphdr->seqno), s->lastack);
-		s->unsent = seg->next;
 
 		if (s->state != SYN_SENT) {
 			seg->tcphdr->flags |= TCP_ACK;
@@ -569,6 +573,7 @@ tcp_output (tcp_socket_t *s)
 		if (!tcp_output_segment (seg, s))
 		    break;
 
+		s->unsent = seg->next;
 		/* put segment on unacknowledged list if length > 0 */
 		if (tcpseglen > 0) {
 			seg->next = 0;
