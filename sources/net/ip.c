@@ -227,24 +227,10 @@ proto_unreach:
 	}
 }
 
-/*
- * Send an IP packet on a network interface. This function constructs
- * the IP header and calculates the IP header checksum.
- * dest		- destination IP address
- * src		- source IP adress. If NULL, the IP address of outgoing
- *		  interface is used instead
- * proto	- protocol field value
- * gateway	- IP address of gateway
- * netif	- outgoing interface. If NULL, the routing table is searched
- *		  for an interface, using destination address as a key
- * netif_ipaddr	- IP address of outgoing interface (when netif is not NULL)
- */
 bool_t
-ip_output_netif (ip_t *ip, buf_t *p
-        , const unsigned char *dest, const unsigned char *src
-        , small_uint_t proto
-        , ip_addr_const gateway
-        , netif_t *netif , ip_addr_const netif_ipaddr)
+ip_add_header (ip_t *ip, buf_t *p
+        , ip_addr_const dest, ip_addr_const src
+        , small_uint_t proto)
 {
 	ip_hdr_t *iphdr;
 	unsigned short chksum;
@@ -256,7 +242,6 @@ ip_output_netif (ip_t *ip, buf_t *p
 		/*debug_printf ("ip_output_netif: no space for header\n");*/
 		++ip->out_discards;
 		//iptx_unlock_ensure(iplock);
-		netif_free_buf (netif, p);
 		return 0;
 	}
 
@@ -278,11 +263,8 @@ ip_output_netif (ip_t *ip, buf_t *p
 
 	//iptx_unlock_ensure(iplock);
 
-	iphdr->dest = ipadr_4ucs(dest);
-	if (src)
-	    iphdr->src = ipadr_4ucs(src);
-	else
-	    iphdr->src.var = netif_ipaddr;
+	iphdr->dest.val = dest;
+    iphdr->src.val = src;
 
 	iphdr->chksum_h = 0;
 	iphdr->chksum_l = 0;
@@ -294,15 +276,42 @@ ip_output_netif (ip_t *ip, buf_t *p
 	iphdr->chksum_h = chksum;
 	iphdr->chksum_l = chksum >> 8;
 #endif
-	/*buf_print_ip (p);*/
 
+	/*buf_print_ip (p);*/
+	return 1;
+}
+
+/*
+ * Send an IP packet on a network interface. This function constructs
+ * the IP header and calculates the IP header checksum.
+ * dest     - destination IP address
+ * src      - source IP adress. If NULL, the IP address of outgoing
+ *        interface is used instead
+ * proto    - protocol field value
+ * gateway  - IP address of gateway
+ * netif    - outgoing interface. If NULL, the routing table is searched
+ *        for an interface, using destination address as a key
+ * netif_ipaddr - IP address of outgoing interface (when netif is not NULL)
+ */
+bool_t
+ip_output_netif (ip_t *ip, buf_t *p
+        , ip_addr_const dest, ip_addr_const src
+        , small_uint_t proto
+        , ip_addr_const gateway
+        , netif_t *netif , ip_addr_const netif_ipaddr)
+{
+    if (!src)
+        src = netif_ipaddr;
+    if (!ip_add_header(ip, p, dest, src, proto)){
+        netif_free_buf (netif, p);
+        return 0;
+    }
 	if (!ipadr_not0(gateway))
-		gateway = iphdr->dest.var;
+		gateway = dest;
     IP_printf ("ip: netif %s output %d bytes to %@.4D, gate %@.4D\n"
             ,netif->name, p->tot_len
-            , dest, ipref_as_ucs(gateway)
+            , ipref_as_ucs(dest), ipref_as_ucs(gateway)
             );
-    assert(p != 0);
 
 	return netif_output (netif, p, gateway, netif_ipaddr);
 }
@@ -317,9 +326,10 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	netif_t *netif;
     ip_addr_const netif_ipaddr;
     ip_addr_const gateway;
+    ip_addr ipdest = ipadr_4ucs(dest);
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (ip, ipref_4ucs(dest), &gateway, &netif_ipaddr);
+	netif = route_lookup (ip, ipdest.var, &gateway, &netif_ipaddr);
 	if (! netif) {
 		/* No route to host. */
 	    IP_printf("ip_output: no route to host %@.4D\n", dest);
@@ -330,7 +340,7 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 		netif_free_buf (0, p);
 		return 0;
 	}
-	return ip_output_netif (ip, p, dest, src, proto
+	return ip_output_netif (ip, p, ipdest.var, ipref_4ucs(src), proto
 	        , gateway, netif, netif_ipaddr
 	        );
 }

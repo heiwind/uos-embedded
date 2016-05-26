@@ -115,6 +115,10 @@ INLINE
 ip_addr __PURE ipadr_4ucs(const unsigned char* x)
 {
     ip_addr res;
+    if (x == 0){
+        res.val = 0;
+        return res;
+    }
 #if CPU_ACCESSW_ALIGNMASK > 0
     if (( (uintptr_t)x &CPU_ACCESSW_ALIGNMASK) == 0){
         res.val = *((const ip_addr_t*)x);
@@ -568,7 +572,7 @@ void ip_input (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
 bool_t ip_output (ip_t *ip, struct _buf_t *p, unsigned char *dest,
 	unsigned char *src, small_uint_t proto);
 bool_t ip_output_netif (ip_t *ip, struct _buf_t *p
-        , const unsigned char *dest, const unsigned char *src
+        , ip_addr_const dest, ip_addr_const src
         , small_uint_t proto
         , ip_addr_const gateway
         , struct _netif_t *netif, ip_addr_const netif_ipaddr);
@@ -580,6 +584,12 @@ void icmp_time_exceeded (ip_t *ip, struct _buf_t *p);
 
 
 //***********************    ip internals      *****************************
+
+bool_t ip_add_header(ip_t *ip, struct _buf_t *p
+                , ip_addr_const dest, ip_addr_const src
+                , small_uint_t proto);
+
+
 #if IP_LOCK_STYLE <= IP_LOCK_STYLE_BASE
 #define IP_TX_LOCK(ip)  (&ip->lock)
 #elif IP_LOCK_STYLE == IP_LOCK_STYLE_OUT1

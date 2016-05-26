@@ -198,7 +198,7 @@ drop:
  */
 static bool_t
 udp_send_netif (udp_socket_t *s, buf_t *p
-        , const unsigned char *dest,
+        , ip_addr_const dest,
 	unsigned short port, netif_t *netif
 	, ip_addr_const local_ip
 	, ip_addr_const gateway)
@@ -231,7 +231,7 @@ udp_send_netif (udp_socket_t *s, buf_t *p
 
 	/* Calculate checksum. */
 	chksum = buf_chksum (p
-	        , crc16_inet_header (ipref_as_ucs(local_ip), dest, IP_PROTO_UDP, p->tot_len)
+	        , crc16_inet_header (ipref_as_ucs(local_ip), ipref_as_ucs(dest), IP_PROTO_UDP, p->tot_len)
 	        );
 	if (chksum == 0x0000)
 		chksum = 0xffff;
@@ -258,7 +258,7 @@ udp_send_netif (udp_socket_t *s, buf_t *p
 	// TODO this should be atomic - protected for thread safe
 	++s->ip->udp_out_datagrams;
 
-    return ip_output_netif (s->ip, p, dest, ipref_as_ucs(local_ip), IP_PROTO_UDP,
+    return ip_output_netif (s->ip, p, dest, local_ip, IP_PROTO_UDP,
 		gateway, netif, local_ip);
 }
 
@@ -271,9 +271,10 @@ udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 	netif_t *netif;
 	ip_addr_const local_ip;
 	ip_addr_const gateway;
+    ip_addr ipdest = ipadr_4ucs(dest);
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (s->ip, ipref_4ucs(dest), &gateway, &local_ip);
+	netif = route_lookup (s->ip, ipdest.var, &gateway, &local_ip);
 	if (! netif) {
 	    netif_free_buf(0, p);
 		return 0;
@@ -285,7 +286,7 @@ udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 		local_ip[0], local_ip[1], local_ip[2], local_ip[3],
 		s->local_port,
 		gateway[0], gateway[1], gateway[2], gateway[3]); */
-	return udp_send_netif (s, p, dest, port
+	return udp_send_netif (s, p, ipdest.var, port
 	        , netif, local_ip, gateway
 	        );
 }
@@ -306,7 +307,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 	if (! s->netif) {
 		return 0;
 	}
-	return udp_send_netif (s, p, s->peer_ip.ucs, s->peer_port, s->netif,
+	return udp_send_netif (s, p, s->peer_ip.var, s->peer_port, s->netif,
 	        s->local_ip, s->gateway);
 }
 
