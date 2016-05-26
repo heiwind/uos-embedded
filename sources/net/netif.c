@@ -36,6 +36,10 @@ discard:    /* Count this packet as discarded. */
 			return 0;
 		}
 	}
+    netif_io_overlap* over = netif_is_overlaped(p);
+	if (over){
+	    over->status |= nios_IPOK;
+	}
 	return netif->interface->output (netif, p, prio);
 }
 

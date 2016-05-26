@@ -153,6 +153,10 @@ enum netif_io_overlay_asynco{
     , nios_inprocess
 };
 
+enum netif_io_overlap_status{
+        nios_IPOK   =   1   //< завершены заголовки ip,eth
+};
+
 typedef void (*netif_callback)(buf_t *p, unsigned arg);
 #define NETIF_OVERLAP_MARK 0x5a
 
@@ -166,6 +170,8 @@ typedef struct _netif_io_overlap{
     //*внутреннее поле оверлея для организации конкурентной обработки
     volatile char asynco;
     volatile char options;
+    //поля, флаги заполняемые по мере продвижения пакета по стеку
+    char status;
     //контрольный маркер, чтобы убедиться что в буфере лежит именно оверлап
     char mark;
 } netif_io_overlap;
@@ -190,6 +196,7 @@ netif_io_overlap* netif_overlap_init(buf_t *p){
         return 0;
     over->mark = NETIF_OVERLAP_MARK;
     over->options = 0;
+    over->status = 0;
     over->action.signal = 0;
     return over;
 }
