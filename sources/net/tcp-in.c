@@ -29,28 +29,29 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 	long off;
 	int m;
 	unsigned long right_wnd_edge;
+    ip_t *ip = s->ip;
 
-	if (s->ip->tcp_input_flags & TCP_ACK) {
+	if (ip->tcp_input_flags & TCP_ACK) {
 		right_wnd_edge = s->snd_wnd + s->snd_wl1;
 
 		/* Update window. */
-		if (TCP_SEQ_LT (s->snd_wl1, s->ip->tcp_input_seqno) ||
-		    (s->snd_wl1 == s->ip->tcp_input_seqno &&
-		    TCP_SEQ_LT (s->snd_wl2, s->ip->tcp_input_ackno)) ||
-		    (s->snd_wl2 == s->ip->tcp_input_ackno &&
+		if (TCP_SEQ_LT (s->snd_wl1, ip->tcp_input_seqno) ||
+		    (s->snd_wl1 == ip->tcp_input_seqno &&
+		    TCP_SEQ_LT (s->snd_wl2, ip->tcp_input_ackno)) ||
+		    (s->snd_wl2 == ip->tcp_input_ackno &&
 		    h->wnd > s->snd_wnd)) {
 			s->snd_wnd = h->wnd;
-			s->snd_wl1 = s->ip->tcp_input_seqno;
-			s->snd_wl2 = s->ip->tcp_input_ackno;
+			s->snd_wl1 = ip->tcp_input_seqno;
+			s->snd_wl2 = ip->tcp_input_ackno;
 			tcp_debug ("tcp_receive: window update %lu\n",
 				s->snd_wnd);
 		} else if (s->snd_wnd != h->wnd) {
 			tcp_debug ("tcp_receive: no window update lastack %lu snd_max %lu ackno %lu wl1 %lu seqno %lu wl2 %lu\n",
-				s->lastack, s->snd_max, s->ip->tcp_input_ackno,
-				s->snd_wl1, s->ip->tcp_input_seqno, s->snd_wl2);
+				s->lastack, s->snd_max, ip->tcp_input_ackno,
+				s->snd_wl1, ip->tcp_input_seqno, s->snd_wl2);
 		}
 
-		if (s->lastack == s->ip->tcp_input_ackno) {
+		if (s->lastack == ip->tcp_input_ackno) {
 			s->acked = 0;
 
 			if (s->snd_wl1 + s->snd_wnd == right_wnd_edge) {
@@ -84,8 +85,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				tcp_debug ("tcp_receive: dupack averted %lu %lu\n",
 					s->snd_wl1 + s->snd_wnd, right_wnd_edge);
 			}
-		} else if (TCP_SEQ_LT (s->lastack, s->ip->tcp_input_ackno) &&
-		    TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_max)) {
+		} else if (TCP_SEQ_LT (s->lastack, ip->tcp_input_ackno) &&
+		    TCP_SEQ_LEQ (ip->tcp_input_ackno, s->snd_max)) {
 			/* We come here when the ACK acknowledges new data. */
 
 			/* Reset the "IN Fast Retransmit" flag, since we are
@@ -103,7 +104,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			s->rto = (s->sa >> 3) + s->sv;
 
 			/* Update the send buffer space. */
-			s->acked = s->ip->tcp_input_ackno - s->lastack;
+			s->acked = ip->tcp_input_ackno - s->lastack;
 			if (s->acked > 0) {
 				s->snd_buf += s->acked;
 				/* Send a signal for tcp_write when
@@ -112,7 +113,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			}
 			/* Reset the fast retransmit variables. */
 			s->dupacks = 0;
-			s->lastack = s->ip->tcp_input_ackno;
+			s->lastack = ip->tcp_input_ackno;
 
 			/* Update the congestion control variables (cwnd and
 			 * ssthresh). */
@@ -137,7 +138,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				}
 			}
 			tcp_debug ("tcp_receive: ACK for %lu, unacked->seqno %lu:%lu\n",
-                s->ip->tcp_input_ackno
+                ip->tcp_input_ackno
                 , s->unacked != 0 ? tcp_segment_seqno(s->unacked) : 0
                 , s->unacked != 0 ? tcp_segment_seqafter(s->unacked) : 0
                 );
@@ -147,7 +148,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			next = 0;
 			while (s->unacked != 0 &&
 			    TCP_SEQ_LEQ (tcp_segment_seqafter(s->unacked)
-			               , s->ip->tcp_input_ackno)) 
+			               , ip->tcp_input_ackno)) 
 			{
                 tcp_debug ("tcp_receive: removing %lu:%lu from s->unacked\n"
                         , tcp_segment_seqno(s->unacked)
@@ -180,8 +181,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		 * so these segments may in fact have been sent once. */
         next = 0;
 		while (s->unsent != 0 
-		    && TCP_SEQ_LEQ (tcp_segment_seqafter(s->unsent), s->ip->tcp_input_ackno) 
-		    && TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_max)) 
+		    && TCP_SEQ_LEQ (tcp_segment_seqafter(s->unsent), ip->tcp_input_ackno) 
+		    && TCP_SEQ_LEQ (ip->tcp_input_ackno, s->snd_max)) 
 		{
             tcp_debug ("tcp_receive: removing %lu:%lu from s->unsent, queuelen = %u\n"
                     , tcp_segment_seqno(s->unsent)
@@ -210,13 +211,13 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		/* End of ACK for new data processing. */
 
 		tcp_debug ("tcp_receive: s->rttest %u rtseq %lu ackno %lu\n",
-			s->rttest, s->rtseq, s->ip->tcp_input_ackno);
+			s->rttest, s->rtseq, ip->tcp_input_ackno);
 
 		/* RTT estimation calculations. This is done by checking
 		 * if the incoming segment acknowledges the segment we use
 		 * to take a round-trip time measurement. */
-		if (s->rttest && TCP_SEQ_LT (s->rtseq, s->ip->tcp_input_ackno)) {
-			m = s->ip->tcp_ticks - s->rttest;
+		if (s->rttest && TCP_SEQ_LT (s->rtseq, ip->tcp_input_ackno)) {
+			m = ip->tcp_ticks - s->rttest;
 
 			tcp_debug ("tcp_receive: experienced rtt %u ticks (%u msec).\n",
 				m, m * TCP_SLOW_INTERVAL);
@@ -240,10 +241,10 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 	}
 
 	/* Segments with length 0 is taken care of here. */
-	if (s->ip->tcp_input_len == 0) {
+	if (ip->tcp_input_len == 0) {
 		/* Segments that fall out of the window are ACKed. */
-		if (TCP_SEQ_GT (s->rcv_nxt, s->ip->tcp_input_seqno) ||
-		    TCP_SEQ_GEQ (s->ip->tcp_input_seqno, s->rcv_nxt + s->rcv_wnd)) {
+		if (TCP_SEQ_GT (s->rcv_nxt, ip->tcp_input_seqno) ||
+		    TCP_SEQ_GEQ (ip->tcp_input_seqno, s->rcv_nxt + s->rcv_wnd)) {
 			tcp_ack_now (s);
 		}
 		return;
@@ -276,9 +277,9 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 	 * to do this if the sequence number of the incoming segment
 	 * is less than rcv_nxt, and the sequence number plus
 	 * the length of the segment is larger than rcv_nxt. */
-	if (TCP_SEQ_LT (s->ip->tcp_input_seqno, s->rcv_nxt)) {
+	if (TCP_SEQ_LT (ip->tcp_input_seqno, s->rcv_nxt)) {
 		if (TCP_SEQ_LT (s->rcv_nxt,
-		    s->ip->tcp_input_seqno + s->ip->tcp_input_len)) {
+		    ip->tcp_input_seqno + ip->tcp_input_len)) {
 			/* Trimming the first edge is done by pushing
 			 * the payload pointer in the buf downwards.
 			 * This is somewhat tricky since we do not want
@@ -304,7 +305,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			 * After we are done with adjusting the buf
 			 * pointers we must adjust the ->data pointer
 			 * in the seg and the segment length.*/
-			off = s->rcv_nxt - s->ip->tcp_input_seqno;
+			off = s->rcv_nxt - ip->tcp_input_seqno;
 			if (inseg->p->len < off) {
 				p = inseg->p;
 				while (p->len < off) {
@@ -318,14 +319,14 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				buf_add_header (inseg->p, -off);
 			}
 			inseg->dataptr = inseg->p->payload;
-			inseg->len -= s->rcv_nxt - s->ip->tcp_input_seqno;
-			inseg->tcphdr->seqno = s->ip->tcp_input_seqno = s->rcv_nxt;
+			inseg->len -= s->rcv_nxt - ip->tcp_input_seqno;
+			inseg->tcphdr->seqno = ip->tcp_input_seqno = s->rcv_nxt;
 		} else {
 			/* The whole segment is < rcv_nxt.
 			 * Must be a duplicate of a packet that has
 			 * already been correctly handled */
 			tcp_debug ("tcp_receive: duplicate seqno %lu\n",
-				s->ip->tcp_input_seqno);
+				ip->tcp_input_seqno);
 			tcp_ack_now (s);
 		}
 	}
@@ -333,19 +334,19 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 	/* The sequence number must be within the window (above rcv_nxt
 	 * and below rcv_nxt + rcv_wnd) in order to be further
 	 * processed. */
-	if (TCP_SEQ_GEQ (s->ip->tcp_input_seqno, s->rcv_nxt) &&
-	    TCP_SEQ_LT (s->ip->tcp_input_seqno, s->rcv_nxt + s->rcv_wnd)) {
-		if (s->rcv_nxt == s->ip->tcp_input_seqno) {
+	if (TCP_SEQ_GEQ (ip->tcp_input_seqno, s->rcv_nxt) &&
+	    TCP_SEQ_LT (ip->tcp_input_seqno, s->rcv_nxt + s->rcv_wnd)) {
+		if (s->rcv_nxt == ip->tcp_input_seqno) {
 			/* The incoming segment is the next in
 			 * sequence. Pass the data to the application. */
-			s->ip->tcp_input_len = TCP_TCPLEN (inseg);
-			s->rcv_nxt += s->ip->tcp_input_len;
+			ip->tcp_input_len = TCP_TCPLEN (inseg);
+			s->rcv_nxt += ip->tcp_input_len;
 
 			/* Update the receiver's (our) window. */
-			if (s->rcv_wnd < s->ip->tcp_input_len) {
+			if (s->rcv_wnd < ip->tcp_input_len) {
 				s->rcv_wnd = 0;
 			} else {
-				s->rcv_wnd -= s->ip->tcp_input_len;
+				s->rcv_wnd -= ip->tcp_input_len;
 			}
 
 			/* If there is data in the segment, we make
@@ -363,7 +364,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			if (inseg->p->tot_len > 0) {
 				if (tcp_queue_is_full (s)) {
 					tcp_debug ("tcp_receive: socket overflow\n");
-					++s->ip->tcp_in_errors;
+					++ip->tcp_in_errors;
 				} else {
 					tcp_queue_put (s, inseg->p);
 					mutex_signal (&s->lock, s);//inseg->p
@@ -374,13 +375,13 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				tcp_debug ("tcp_receive: received FIN.");
 				if (tcp_queue_is_full (s)) {
 					tcp_debug ("tcp_receive: socket overflow\n");
-					++s->ip->tcp_in_errors;
+					++ip->tcp_in_errors;
 				} else {
 					/* Enqueue empty buf. */
-					p = buf_alloc (s->ip->pool, 0, 0);
+					p = buf_alloc (ip->pool, 0, 0);
 					if (p == 0) {
 						tcp_debug ("tcp_receive: could not allocate empty buf\n");
-						++s->ip->tcp_in_errors;
+						++ip->tcp_in_errors;
 					} else {
 						tcp_queue_put (s, p);
 						mutex_signal (&s->lock, s); //p
@@ -457,51 +458,52 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 {
 	tcp_segment_t *rseg;
 	unsigned char acceptable = 0;
+    ip_t *ip = s->ip;
 
 	/* Process incoming RST segments. */
-	if (s->ip->tcp_input_flags & TCP_RST) {
+	if (ip->tcp_input_flags & TCP_RST) {
 		/* First, determine if the reset is acceptable. */
 		if (s->state == SYN_SENT) {
-			if (s->ip->tcp_input_ackno == s->snd_nxt) {
+			if (ip->tcp_input_ackno == s->snd_nxt) {
 				acceptable = 1;
 			}
 		} else {
-			if (TCP_SEQ_GEQ (s->ip->tcp_input_seqno, s->rcv_nxt) &&
-			    TCP_SEQ_LEQ (s->ip->tcp_input_seqno, s->rcv_nxt + s->rcv_wnd)) {
+			if (TCP_SEQ_GEQ (ip->tcp_input_seqno, s->rcv_nxt) &&
+			    TCP_SEQ_LEQ (ip->tcp_input_seqno, s->rcv_nxt + s->rcv_wnd)) {
 				acceptable = 1;
 			}
 		}
 
 		if (! acceptable) {
 			tcp_debug ("tcp_process: unacceptable reset seqno %lu rcv_nxt %lu\n",
-				s->ip->tcp_input_seqno, s->rcv_nxt);
+				ip->tcp_input_seqno, s->rcv_nxt);
 			tcp_debug ("tcp_process: unacceptable reset seqno %lu rcv_nxt %lu\n",
-				s->ip->tcp_input_seqno, s->rcv_nxt);
+				ip->tcp_input_seqno, s->rcv_nxt);
 			return 1;
 		}
 		tcp_debug ("tcp_process: Connection RESET\n");
 		assert (s->state != CLOSED);
 
 		/* Connection was reset by the other end. Notify a user. */
-		tcp_socket_remove (&s->ip->tcp_sockets, s);
+		tcp_socket_remove (&ip->tcp_sockets, s);
 		s->flags &= ~TF_ACK_DELAY;
 		return 0;
 	}
 
 	/* Update the PCB (in)activity timer. */
-	s->tmr = s->ip->tcp_ticks;
+	s->tmr = ip->tcp_ticks;
 
 	/* Do different things depending on the TCP state. */
 	switch (s->state) {
 	case SYN_SENT:
 		tcp_debug ("SYN-SENT: ackno %lu s->snd_nxt %lu unacked %lu\n",
-			s->ip->tcp_input_ackno, s->snd_nxt,
+			ip->tcp_input_ackno, s->snd_nxt,
 			tcp_segment_seqno(s->unacked));
-		if (s->ip->tcp_input_flags & (TCP_ACK | TCP_SYN) &&
-		    s->ip->tcp_input_ackno == tcp_segment_seqno(s->unacked) + 1) 
+		if (ip->tcp_input_flags & (TCP_ACK | TCP_SYN) &&
+		    ip->tcp_input_ackno == tcp_segment_seqno(s->unacked) + 1) 
 		{
-			s->rcv_nxt = s->ip->tcp_input_seqno + 1;
-			s->lastack = s->ip->tcp_input_ackno;
+			s->rcv_nxt = ip->tcp_input_seqno + 1;
+			s->lastack = ip->tcp_input_ackno;
 			s->snd_wnd = s->snd_wl1 = h->wnd;
 			s->cwnd = s->mss;
 			--s->snd_queuelen;
@@ -525,10 +527,10 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		break;
 
 	case SYN_RCVD:
-		if ((s->ip->tcp_input_flags & TCP_ACK) &&
-		    ! (s->ip->tcp_input_flags & TCP_RST)) {
-			if (TCP_SEQ_LT (s->lastack, s->ip->tcp_input_ackno) &&
-			    TCP_SEQ_LEQ (s->ip->tcp_input_ackno, s->snd_nxt)) {
+		if ((ip->tcp_input_flags & TCP_ACK) &&
+		    ! (ip->tcp_input_flags & TCP_RST)) {
+			if (TCP_SEQ_LT (s->lastack, ip->tcp_input_ackno) &&
+			    TCP_SEQ_LEQ (ip->tcp_input_ackno, s->snd_nxt)) {
 				tcp_debug ("TCP connection established %u -> %u.\n",
 					inseg->tcphdr->src, inseg->tcphdr->dest);
 				/* Notify user. */
@@ -547,7 +549,7 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		/* FALLTHROUGH */
 	case ESTABLISHED:
 		tcp_receive (s, inseg, h);
-		if (s->ip->tcp_input_flags & TCP_FIN) {
+		if (ip->tcp_input_flags & TCP_FIN) {
 			tcp_ack_now (s);
 			tcp_set_socket_state (s, CLOSE_WAIT);
 		}
@@ -555,47 +557,47 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 	case FIN_WAIT_1:
 		tcp_receive (s, inseg, h);
-		if (s->ip->tcp_input_flags & TCP_FIN) {
-			if ((s->ip->tcp_input_flags & TCP_ACK) &&
-			    s->ip->tcp_input_ackno == s->snd_nxt)
+		if (ip->tcp_input_flags & TCP_FIN) {
+			if ((ip->tcp_input_flags & TCP_ACK) &&
+			    ip->tcp_input_ackno == s->snd_nxt)
 				goto close_time_wait;
 
 			tcp_ack_now (s);
 			tcp_set_socket_state (s, CLOSING);
 
-		} else if ((s->ip->tcp_input_flags & TCP_ACK) &&
-		    s->ip->tcp_input_ackno == s->snd_nxt && ! s->unsent) {
+		} else if ((ip->tcp_input_flags & TCP_ACK) &&
+		    ip->tcp_input_ackno == s->snd_nxt && ! s->unsent) {
 			tcp_set_socket_state (s, FIN_WAIT_2);
 		}
 		break;
 
 	case FIN_WAIT_2:
 		tcp_receive (s, inseg, h);
-		if (s->ip->tcp_input_flags & TCP_FIN)
+		if (ip->tcp_input_flags & TCP_FIN)
 			goto close_time_wait;
 		break;
 
 	case CLOSING:
 		tcp_receive (s, inseg, h);
-		if ((s->ip->tcp_input_flags & TCP_ACK) &&
-		    s->ip->tcp_input_ackno == s->snd_nxt) {
+		if ((ip->tcp_input_flags & TCP_ACK) &&
+		    ip->tcp_input_ackno == s->snd_nxt) {
 close_time_wait:	tcp_debug ("TCP connection closed %u -> %u.\n",
 				inseg->tcphdr->src, inseg->tcphdr->dest);
 			tcp_ack_now (s);
-			tcp_list_remove (&s->ip->tcp_sockets, s);
+			tcp_list_remove (&ip->tcp_sockets, s);
 			tcp_set_socket_state (s, TIME_WAIT);
-			tcp_list_add (&s->ip->tcp_closing_sockets, s);
+			tcp_list_add (&ip->tcp_closing_sockets, s);
 		}
 		break;
 
 	case LAST_ACK:
 		tcp_receive (s, inseg, h);
-		if ((s->ip->tcp_input_flags & TCP_ACK) &&
-		    s->ip->tcp_input_ackno == s->snd_nxt) {
+		if ((ip->tcp_input_flags & TCP_ACK) &&
+		    ip->tcp_input_ackno == s->snd_nxt) {
 			/* The connection has been closed. Notify a user. */
 			tcp_debug ("TCP connection closed %u -> %u.\n",
 				inseg->tcphdr->src, inseg->tcphdr->dest);
-			tcp_socket_remove (&s->ip->tcp_sockets, s);
+			tcp_socket_remove (&ip->tcp_sockets, s);
 		}
 		break;
 
