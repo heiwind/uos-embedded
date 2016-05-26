@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,6 +84,13 @@ int argc; char **argv;
 		exit(1);
 	}
 
+#ifdef TCP_SOCKET
+    int sockopt_flag = 1;
+    setsockopt(sd, IPPROTO_TCP, TCP_NODELAY
+                ,(char *)&sockopt_flag,sizeof(sockopt_flag)
+                );
+#endif
+	
 	printf("Connected to server\n");
 	
 	volatile unsigned cnt;
