@@ -255,6 +255,7 @@ const unsigned char *route_lookup_ipaddr (ip_t *ip, ip_addr_const ipaddr,
 	best = 0;
 	ROUTE_printf ("route: lookup ipaddr %@.4D for %s\n", ipref_as_ucs(ipaddr), netif->name);
 	for (r=ip->route; r; r=r->next) {
+	    assert( r != r->next );
 	    ROUTE_printf ("route: lookup gateaway %@.4D for %s\n",
 	                        r->gateway.ucs , r->netif->name);
 		/* Search through all interface records. */

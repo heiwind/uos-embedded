@@ -342,6 +342,7 @@ ip_main (void *arg)
 	netif_t *netif;
 	buf_t *p;
 
+	assert (ip->netif_group->num > 0);
 	mutex_group_listen (ip->netif_group);
 	for (;;) {
 		mutex_group_wait (ip->netif_group, &m, 0);
