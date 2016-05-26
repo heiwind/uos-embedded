@@ -113,6 +113,11 @@ typedef enum _tcp_state_t {
 #   endif
 #endif
 
+//* TCP_IP_HCACHE - активирует опцию TF_IP_NOCACHE, включает кеширование заголовка
+//*     IP-пакета для ТСП сокетов. добавляет 7-10% производительности за счет расхода памяти
+//*     и раздувания кода
+//#define TCP_IP_HCACHE 0
+
 /*
  * TCP header.
  */
@@ -223,6 +228,11 @@ typedef enum{
     , TCP_SOCK_LOCK = TF_SOCK_LOCK
     , TF_NOBLOCK    = 0x400       //*< tcp_write/read returns imidiately, not waiting for all data enqueued
 
+#if TCP_IP_HCACHE > 0
+    , TF_IP_NOCACHE = 0x4000      //* disables ip router resolution cache, always route ip-frames
+#else
+    , TF_IP_NOCACHE = 0           //* disables ip router resolution cache, always route ip-frames
+#endif
     //*< emulates segment loose - with tcp_write_buf post segment, 
     //*     that not actualy transmited 
     , TF_TRAP_LOOSE = 0x8000
@@ -304,6 +314,8 @@ struct _tcp_socket_t {//: base_socket_t
 	/* These are ordered by sequence number: */
 	tcp_segment_t *unsent;		/* Unsent (queued) segments. */
 	tcp_segment_t *unacked;		/* Sent but unacknowledged segments. */
+	
+	ip_header_cache*    iph_cache;
 };
 
 

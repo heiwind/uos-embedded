@@ -488,6 +488,9 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
 #endif
 
+    if ( (TF_IP_NOCACHE) && ((s->flags & TF_IP_NOCACHE) == 0) && (s->iph_cache) )
+        res = ip_output_withheader(s->ip, p, s->iph_cache);
+    else
 	res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
 
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED2
@@ -542,6 +545,16 @@ void tcp_output_segment_arm_handle(buf_t *p, unsigned arg){
                 , s, seg
                 , (int)over->status, over->arg2
                 );
+
+    if ((over->status & nios_IPOK) != 0)
+    if (TF_IP_NOCACHE && ((s->flags & TF_IP_NOCACHE) == 0))
+    {
+        unsigned len = ((unsigned char*)seg->tcphdr - p->payload);
+        if (s->iph_cache == 0){
+            s->iph_cache = buf_alloc(s->ip->pool, 0, IPH_CACHE_HRESERVE(len));
+        }
+        ip_refresh_hcache(s->ip, 0, s->iph_cache, p, len);
+    }
 
     //* неотправленый сегмент будет останется в очереди отправки, и будет новая попытка отправки
     if ((over->status & nios_IPOK) != 0)

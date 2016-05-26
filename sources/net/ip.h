@@ -391,6 +391,7 @@ typedef struct _ip_t {
 	struct _mem_pool_t *pool;	/* pool for memory allocation */
 	struct _timer_t *timer;		/* timer driver */
 	struct _route_t *route;		/* routing table */
+	unsigned         route_stamp;
 	struct _arp_t	*arp;		/* ARP protocol data */
 	bool_t		forwarding;	/* forwarding enabled */
 	small_uint_t	default_ttl;	/* default time-to-live value */
@@ -563,7 +564,7 @@ typedef struct __attribute__ ((packed)) _icmp_hdr_t {
 	unsigned short	seqno;
 } icmp_hdr_t;
 
-struct _buf_t;
+#include <buf/buf.h>
 struct _netif_t;
 
 void ip_init (ip_t *ip, struct _mem_pool_t *pool, int prio,
@@ -576,6 +577,33 @@ bool_t ip_output_netif (ip_t *ip, struct _buf_t *p
         , small_uint_t proto
         , ip_addr_const gateway
         , struct _netif_t *netif, ip_addr_const netif_ipaddr);
+
+
+#define IPH_MAC_LEN     14
+#define IP_CAPLEN       (IP_HLEN + IPH_MAC_LEN)
+#define IP_HRESERVE     IP_ALIGNED(IP_CAPLEN)
+
+//* \~russian использую кеш заголовка ip, для быстрой подготовки пакета к отправке.
+//*   исходя из предпосылки что тамбица маршрутизации и АРП меняются редко
+//*   делать всегда полное разрешение адресата излишне.
+//*   буффер кеша хранит в параметрах оверлея штамп АРМ+route - arg2
+//*     , и уже выбраный интерфейс netif - arg
+//*     , полная длина заголовка ip + нижележащие -  arg3
+typedef buf_t ip_header_cache;
+#define IPH_CACHE_HRESERVE(hlen)  IP_ALIGNED(hlen+NETIO_OVERLAP_HLEN)
+
+//* \arg p - буффер данных, должен иметь IPH_CACHE_HRESERVE резервированого места для заголовка
+//* \arg iph - буффер с образцовым заголовком ip, ранее закешированным.
+//*             если заголовок устарел, используются адресаты и идентификаторы протокола из него 
+//*             чтобы построить новый 
+bool_t ip_output_withheader(ip_t *ip, buf_t *p, ip_header_cache* iph);
+
+//* \arg netif - [может == 0] - интерфейс на который направил роутер
+bool_t ip_refresh_hcache(ip_t *ip, struct _netif_t *netif
+                        , ip_header_cache* iph, buf_t *p, unsigned hlen
+                        );
+
+
 
 void icmp_echo_request (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
 void icmp_dest_unreach (ip_t *ip, struct _buf_t *p, small_uint_t op);

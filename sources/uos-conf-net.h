@@ -120,6 +120,11 @@
 //#define TCP_LOCAL_PORT_RANGE_START 4096
 //#define TCP_LOCAL_PORT_RANGE_END   0x7fff
 
+//* TCP_IP_HCACHE - активирует опцию TF_IP_NOCACHE, включает кеширование заголовка
+//*     IP-пакета для ТСП сокетов. добавляет 7-10% производительности за счет расхода памяти
+//*     и раздувания кода
+//#define TCP_IP_HCACHE 1
+
 /**
  * tcp_enqueue, tcp_output affects an socket internals vs ip-input thread
  * by TCP_LOCK_LEGACY  - ones routines requres locked ip, and rely on assumption 

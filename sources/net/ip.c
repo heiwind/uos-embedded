@@ -345,6 +345,132 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	        );
 }
 
+unsigned iph_stamp(ip_t *ip, netif_t* u){
+    unsigned now = ip->route_stamp;
+    if (ip->arp)
+        now += ip->arp->stamp;
+    if (u->arp)
+        now += u->arp->stamp;
+    return now;
+}
+
+bool_t ip_hcache_is_fresh(ip_t *ip, ip_header_cache* iph)
+{
+    if (iph->tot_len < IP_CAPLEN)
+        return 0;
+    netif_io_overlap* over = netif_is_overlaped(iph);
+    if (over == 0)
+        return 0;
+    netif_t* u = (netif_t*)(over->arg);
+    if (u == 0)
+        return 0; 
+    unsigned now = iph_stamp(ip, u);
+    unsigned stamp = over->arg2;
+    return (stamp == now)? 1: 0;
+}
+
+//* \arg p - буффер данных, должен иметь IP_HRESERVE резервированого места для заголовка
+//* \arg iph - буффер с образцовым заголовком ip, ранее закешированным.
+//*             если заголовок устарел, используются адресаты и идентификаторы протокола из него 
+//*             чтобы построить новый 
+bool_t ip_output_withheader(ip_t *ip, buf_t *p, ip_header_cache* iph)
+{
+    assert(iph != 0);
+    //this is minimal header len
+    assert(iph->tot_len >= IP_CAPLEN);
+
+    if (ip_hcache_is_fresh(ip, iph)) {
+        netif_io_overlap* over = netif_is_overlaped(iph);
+        netif_t* netif = (netif_t*)(over->arg);
+        ip_hdr_t* iphdr = (ip_hdr_t*) (p->payload - IP_HLEN);
+        //IP_printf ("ip out cached:...");
+    
+        unsigned ipframe_len = p->tot_len + IP_HLEN;
+
+        if (! buf_add_header (p, iph->tot_len)) {
+            /* Not enough room for IP header. */
+            /*debug_printf ("ip_output_netif: no space for header\n");*/
+            //mutex_t* iplock = iptx_lock_ensure(ip);
+            ++ip->out_requests;
+            ++ip->out_discards;
+            //iptx_unlock_ensure(iplock);
+            netif_free_buf (netif, p);
+            return 0;
+        }
+        memcpy(p->payload, iph->payload, iph->tot_len);
+
+        //mutex_t* iplock = iptx_lock_ensure(ip);
+        ++ip->out_requests;
+        /*
+         * Refresh an IP header.
+         */
+        iphdr->ttl = ip->default_ttl;
+        iphdr->len_h = ipframe_len >> 8;
+        iphdr->len_l = ipframe_len;
+        ++ip->id;
+        iphdr->id_h = ip->id >> 8;
+        iphdr->id_l = ip->id;
+        //iptx_unlock_ensure(iplock);
+    
+        iphdr->chksum_h = 0;
+        iphdr->chksum_l = 0;
+        unsigned short chksum;
+        chksum = ~crc16_inet (0, iphdr, IP_HLEN);
+    #if HTONS(1) == 1
+        iphdr->chksum_h = chksum >> 8;
+        iphdr->chksum_l = chksum;
+    #else
+        iphdr->chksum_h = chksum;
+        iphdr->chksum_l = chksum >> 8;
+    #endif
+        IP_printf ("ip: netif %s output %d bytes to %@.4D, cached\n"
+                ,netif->name, p->tot_len
+                , iphdr->dest.ucs
+                );
+        netif_io_overlap* overp = netif_is_overlaped(p);
+        if (overp)
+            overp->status |= nios_IPOK;
+        return netif->interface->output (netif, p, 0);
+    }
+    else{ //if (ip_hcache_is_fresh(ip, iph))
+        ip_hdr_t* iphdr = (ip_hdr_t*) (iph->payload + iph->tot_len - IP_HLEN);
+        return ip_output(ip, p, iphdr->dest.ucs, iphdr->src.ucs, iphdr->proto);
+    }
+}
+
+bool_t ip_refresh_hcache(ip_t *ip, struct _netif_t *netif
+                        , ip_header_cache* iph, buf_t *p, unsigned hlen
+                        )
+{
+    if (ip_hcache_is_fresh(ip, iph))
+        return 1;
+
+    //IP_printf ("ip hcache: assign header cache[%d] ... ", hlen);
+
+    //just reset cache to clean state
+    buf_add_header(iph, -iph->tot_len);
+
+    ip_hdr_t* iphdr = (ip_hdr_t*)(p->payload+hlen-IP_HLEN);
+    if (netif == 0){
+        /* Find the outgoing network interface. */
+        netif = route_lookup (ip, iphdr->dest.var, 0, 0);
+        if (netif == 0){
+            return 0;
+        }
+    }
+    IP_printf ("ip hcache: %S -> %@.4D\n", netif->name, iphdr->dest.ucs);
+
+    if(!buf_add_header(iph, hlen))
+        return 0;
+    memcpy(iph->payload, p->payload, hlen);
+
+    netif_io_overlap* over = netif_overlap_init(iph);
+    over->arg = (unsigned)netif;
+    unsigned now = iph_stamp(ip, netif);
+    over->arg2 = now;
+    return 1;
+}
+
 /*
  * Listener task. Get a lock group as an argument.
  * Waits for signals on the group, and prints them.

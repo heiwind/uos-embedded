@@ -143,6 +143,7 @@ void route_add_netif (ip_t *ip, route_t *r, const unsigned char *ipaddr,
 	r->netif = netif;
 	r->next = ip->route;
 	ip->route = r;
+    ++(ip->route_stamp);
     ROUTE_printf ("route: add netif on %@.4D for %s\n", r->ipaddr.ucs, r->netif->name);
 }
 
@@ -163,6 +164,7 @@ bool_t route_add_gateway (ip_t *ip, route_t *r,
 
 	r->next = ip->route;
 	ip->route = r;
+	++(ip->route_stamp);
 	return 1;
 }
 

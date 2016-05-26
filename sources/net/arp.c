@@ -46,6 +46,7 @@ arp_init (array_t *buf, unsigned bytes, struct _ip_t *ip)
 	arp = (arp_t*) buf;
 	arp->ip = ip;
 	arp->timer = 0;
+	arp->stamp = 0;
 	arp->size = 1 + (bytes - sizeof(arp_t)) / sizeof(arp_entry_t);
 	/*debug_printf ("arp_init: %d entries\n", arp->size);*/
 	return arp;
@@ -113,6 +114,7 @@ arp_add_entry (netif_t *netif, ip_addr_const ipaddr, const unsigned char *_ethad
 					ethaddr, netif->name);
 				macadr_assign(&e->ethaddr, &ethaddr);
 				e->netif = netif;
+				++(arp->stamp);
 			}
 			e->age = 0;
 			return;
@@ -145,6 +147,7 @@ arp_add_entry (netif_t *netif, ip_addr_const ipaddr, const unsigned char *_ethad
 	macadr_assign(&e->ethaddr, &ethaddr);
 	e->netif = netif;
 	e->age = 0;
+    ++(arp->stamp);
 	ARPTABLE_printf ("arp: create entry %@.4D %#6D netif %s\n",
         e->ipaddr.ucs, e->ethaddr.ucs, e->netif->name);
 }

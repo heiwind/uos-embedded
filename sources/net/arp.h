@@ -202,6 +202,8 @@ typedef struct _arp_entry_t {
 
 typedef struct _arp_t {
 	struct _ip_t	*ip;
+	//changes on every table change
+	unsigned        stamp;
 	unsigned char	size;
 	unsigned char	timer;
 	arp_entry_t	table [1];

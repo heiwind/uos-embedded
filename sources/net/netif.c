@@ -65,8 +65,11 @@ netif_input (netif_t *netif)
 void
 netif_set_address (netif_t *netif, unsigned char *ethaddr)
 {
-	if (netif->interface->set_address)
+	if (netif->interface->set_address){
 		netif->interface->set_address (netif, ethaddr);
+		if (netif->arp)
+		    ++(netif->arp->stamp);
+	}
 }
 
 

@@ -255,6 +255,9 @@ tcp_socket_purge (tcp_socket_t *s)
 	    }
 	}
 	s->snd_queuelen = 0;
+	
+	buf_free(s->iph_cache);
+	s->iph_cache = 0;
 }
 
 /*
