@@ -19,9 +19,9 @@
  * Use 0 as the initial sum value.
  * Do not forget to invert the final checksum value.
  */
-unsigned short
-crc16_inet (unsigned short sum, unsigned const char *buf, unsigned short len)
+crc16_inet_t crc16_inet (crc16_inet_t sum, const void *vbuf, unsigned len)
 {
+    unsigned const char *buf = (unsigned const char *)vbuf;
 	/*debug_printf ("crc16_inet (sum=%#04x, len=%d)", sum, len);*/
 #if __AVR__
 	/* Taken from Liquorice.
@@ -191,9 +191,12 @@ crc16_inet (unsigned short sum, unsigned const char *buf, unsigned short len)
 
 /* makes memcpy dst<-src and crc16_inet check sum calculates at once 
  * */
-unsigned short memcpy_crc16_inet (unsigned short sum
-        , unsigned char *dst, unsigned const char *buf, unsigned len)
+crc16_inet_t memcpy_crc16_inet (crc16_inet_t sum
+                            , void* vdst, const void* vbuf
+                            , unsigned len)
 {
+    unsigned char *dst = (unsigned char *)vdst;
+    unsigned const char *buf = (unsigned const char *)vbuf;
     /*
      * Optimized for 32-bit architectures: ARM/Thumb and MIPS.
      */
@@ -286,10 +289,12 @@ unsigned short memcpy_crc16_inet (unsigned short sum
 }
 
 
-unsigned short
-crc16_inet_header (const unsigned char *src, const unsigned char *dest,
-	unsigned char proto, unsigned short proto_len)
+crc16_inet_t crc16_inet_header (const void* vsrc, const void* vdst
+                                , unsigned char proto
+                                , unsigned proto_len)
 {
+    const unsigned char *src = (const unsigned char *)vsrc;
+    const unsigned char *dest = (const unsigned char *)vdst;
 	unsigned short sum;
 
 	/*debug_printf ("crc16_inet_header (src=%#02x.%#02x.%#02x.%#02x, dest=%#02x.%#02x.%#02x.%#02x, proto=%#02x, proto_len=%#02x)",
@@ -389,8 +394,7 @@ crc16_inet_header (const unsigned char *src, const unsigned char *dest,
  * Use 0 as the initial sum value.
  * Do not forget to invert the final checksum value.
  */
-unsigned short
-crc16_inet_byte (unsigned short sum, unsigned char data)
+crc16_inet_t crc16_inet_byte (crc16_inet_t sum, unsigned char data)
 {
 #if __AVR__
 	asm volatile (
