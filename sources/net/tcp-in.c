@@ -705,7 +705,7 @@ tcp_input (ip_t *ip, buf_t *p, netif_t *netif, ip_hdr_t *iph)
 		/* Bad TCP packet received. */
 		tcp_debug ("tcp_input: too short packet (hlen=%d bytes)\n", p->tot_len);
 		++ip->tcp_in_errors;
-drop:		buf_free (p);
+drop:		netif_free_buf(netif, p);//buf_free (p);
 		return;
 	}
 	tcp_debug ("tcp_input: driver %s received %d bytes\n",
