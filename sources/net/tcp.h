@@ -184,6 +184,7 @@ typedef void (*tcp_callback)(tcp_cb_event ev
 struct _tcp_segment_t {
 	struct _tcp_segment_t *next; /* used when putting segements on a queue */
 	struct _buf_t *p;	/* buffer containing data + TCP header */
+	//! TF_TRAP_LOOSE use this pointer =NULL, to denote that frame should be loose
 	void *dataptr;		/* pointer to the TCP data in the buf_t */
 	tcp_hdr_t *tcphdr;	/* the TCP header */
 	small_uint_t len;	/* the TCP length of this segment */
@@ -213,6 +214,10 @@ typedef enum{
     , TF_SOCK_LOCK  = 0x200       //*< tcp_enqueue leaves socket locked after return, (so propagated with tcp_write)
     , TCP_SOCK_LOCK = TF_SOCK_LOCK
     , TF_NOBLOCK    = 0x400       //*< tcp_write/read returns imidiately, not waiting for all data enqueued
+
+    //*< emulates segment loose - with tcp_write_buf post segment, 
+    //*     that not actualy transmited 
+    , TF_TRAP_LOOSE = 0x8000
 } tcps_flags;
 typedef unsigned short tcps_flag_set;
 typedef tcps_flag_set  tcph_flag_set;

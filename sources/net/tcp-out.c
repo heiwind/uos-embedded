@@ -339,6 +339,10 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
         tcp_debug ("tcp_enqueue: queueing %lu:%lu (flags 0x%x)\n"
                 , tcp_segment_seqno(useg), tcp_segment_seqafter(useg)
                 , flags);
+        if (flags & TF_TRAP_LOOSE){
+            tcp_debug ("tcp_enqueue: loose seg seq %lu\n", seqno);
+            useg->dataptr = 0;
+        }
         seqno   += useg->len;
         len     += useg->len;
         useg    = useg->next;
@@ -430,7 +434,11 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 
     tcp_event_seg_prepare(seg, s);
 	
-	p = seg->p;
+    bool_t res;
+
+    if (seg->dataptr != 0){
+
+    p = seg->p;
 
 	n = (unsigned int) ((unsigned char*) tcphdr -
 		(unsigned char*) p->payload);
@@ -478,11 +486,20 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
 #endif
 
-	bool_t res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+	res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
 
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED2
 	tcpo_unlock_ensure(s_locked);
 #endif
+
+    }
+    else { //if (seg->dataptr != 0){
+        // suspects that TF_TRAP_LOOSE
+        tcp_debug ("!!!tcp_output_segment: drop segment as TF_TRAP_LOOSE\n"); 
+        netif_free_buf(0, seg->p);
+        res = 1;
+    }
+
 
 	if (res){
 	    ++s->ip->tcp_out_datagrams;
@@ -858,7 +875,7 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
      * length. If so, we return an error. */
     queuelen = s->snd_queuelen;
     if (queuelen >= TCP_SND_QUEUELEN) {
-        tcp_debug ("tcp_enqueue: too long queue %u (max %u)\n",
+        tcp_debug ("tcp_write_buf: too long queue %u (max %u)\n",
             queuelen, TCP_SND_QUEUELEN);
         if (flags & TF_NOBLOCK)
             return 0;
@@ -880,7 +897,7 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
         /* Allocate memory for tcp_segment, and fill in fields. */
         seg = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
         if (seg == 0) {
-            tcp_debug ("tcp_enqueue_option: cannot allocate tcp_segment\n");
+            tcp_debug ("tcp_write_buf: cannot allocate tcp_segment\n");
             return 0;
         }
 
