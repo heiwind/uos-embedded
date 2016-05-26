@@ -12,12 +12,23 @@
 static void
 stream_flush (tcp_stream_t *u)
 {
-	int len = u->outptr - u->outdata;
-
 /*debug_printf ("tstream output"); buf_print_data (u->outdata, len);*/
-	while (! tcp_enqueue (u->socket, (void*) u->outdata, len, 0, 0, 0))
-		mutex_wait (&u->socket->lock);
-	u->outptr = u->outdata;
+    tcp_socket_t*  s = u->socket;
+	while (u->outptr != u->outdata){
+	    int len = u->outptr - u->outdata;
+	    int sent = tcp_enqueue (u->socket, (void*) u->outdata, len, 0);
+	    u->outptr   += sent;
+	    if (sent != len) {
+#         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+	        mutex_unlock (&s->lock);
+#         endif
+	        tcp_output (s);
+#         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+	        mutex_lock (&s->lock);
+#         endif
+	        mutex_wait (&s->lock);
+	    }
+	}
 }
 
 static void

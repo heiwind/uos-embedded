@@ -168,6 +168,8 @@ typedef enum{
     , TF_CLOSED     = 0x10        /* Connection was sucessfully closed. */
     , TF_GOT_FIN    = 0x20        /* Connection closed by remote end. */
     , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - don`t combine small segments into big one
+    , TF_SOCK_LOCK  = 0x200       //*< tcp_enqueue leaves socket locked after return, (so propagated with tcp_write)
+    , TCP_SOCK_LOCK = TF_SOCK_LOCK
 } tcps_flags;
 typedef unsigned short tcps_flag_set;
 typedef tcps_flag_set  tcph_flag_set;
@@ -496,9 +498,21 @@ tcp_next_seqno (ip_t *ip)
 	return ip->tcp_seqno;
 }
 
-int tcp_enqueue (tcp_socket_t *s, void *dataptr, small_uint_t len
-                 , tcph_flag_set flags
-                 , unsigned char *optdata, unsigned char optlen);
+/** !!! it ensures that socket is lock, and leave it locked after return!
+ *  \arg flags - TCP_FLAGS and if TCP_SOCK_LOCK - leaves s locked after return  
+ * \return  = amount of passed data
+*/
+int tcp_enqueue (tcp_socket_t *s
+                , const void *dataptr, small_uint_t len
+                , tcph_flag_set flags);
+
+/** !!! it ensures that socket is lock, and leave it locked after return!
+ *  \arg flags - TCP_FLAGS and if TCP_SOCK_LOCK - leaves s locked after return  
+ * \return  = amount of passed data
+*/
+int tcp_enqueue_option4 (tcp_socket_t *s
+                , tcph_flag_set flags
+                , unsigned long optdata);
 
 void tcp_rexmit_seg (tcp_socket_t *s, tcp_segment_t *seg);
 

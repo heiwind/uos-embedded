@@ -83,7 +83,7 @@ tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 		(((unsigned long)s->mss / 256) << 8) |
 		(s->mss & 255));
 
-	if (! tcp_enqueue (s, 0, 0, TCP_SYN, (unsigned char*) &optdata, 4)) {
+	if (! tcp_enqueue_option4 (s, TCP_SYN, optdata)) {
 		mem_free (s);
 		mutex_unlock (&ip->lock);
 		return 0;
@@ -134,53 +134,57 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 {
 	tcp_debug ("tcp_write(s=%p, arg=%p, len=%u)\n",
 		(void*) s, arg, len);
-	mutex_lock (&s->lock);
 
 	if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
-		mutex_unlock (&s->lock);
 		tcp_debug ("tcp_write() called in invalid state\n");
 		return -1;
 	}
 	if (len == 0) {
-		mutex_unlock (&s->lock);
 		return -1;
 	}
 	mutex_group_t *g = 0;
 	ARRAY (group, sizeof(mutex_group_t) + 2 * sizeof(mutex_slot_t));
 
-	while (tcp_enqueue (s, (void*) arg, len, 0, 0, 0) == 0) {
-		/* Не удалось поставить пакет в очередь - мало памяти. */
-		if (! g) {
-			memset (group, 0, sizeof(group));
-			g = mutex_group_init (group, sizeof(group));
-			mutex_group_add (g, &s->lock);
-			mutex_group_add (g, &s->ip->timer->decisec);
-			mutex_group_listen (g);
-		}
-		/* Каждые 100 мсек делаем повторную попытку. */
-		mutex_unlock (&s->lock);
-		mutex_group_wait (g, 0, 0);
-		mutex_lock (&s->lock);
+	const char* ptr = (const char*)arg;
+	unsigned left = len;
+	while (left > 0){
 
-		/* Проверим, не закрылось ли соединение. */
-		if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
-			mutex_unlock (&s->lock);
-			if (g)
-				mutex_group_unlisten (g);
-			return -1;
-		}
+	    int sent = tcp_enqueue (s, ptr, len, TCP_SOCK_LOCK);
+	    left    -= sent;
+        ptr     += sent;
+#       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        mutex_unlock (&s->lock);
+        tcp_output (s);
+#       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
+        tcp_output (s);
+        mutex_unlock (&s->lock);
+#       endif
+
+        if (left == 0)
+            break;
+
+        /* Не удалось поставить пакет в очередь - мало памяти. */
+        if (! g) {
+            memset (group, 0, sizeof(group));
+            g = mutex_group_init (group, sizeof(group));
+            mutex_group_add (g, &s->lock);
+            mutex_group_add (g, &s->ip->timer->decisec);
+            mutex_group_listen (g);
+        }
+        /* Каждые 100 мсек делаем повторную попытку. */
+        mutex_group_wait (g, 0, 0);
+        /* Проверим, не закрылось ли соединение. */
+        if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
+            if (g)
+                mutex_group_unlisten (g);
+            return -1;
+        }
 	}
-	mutex_unlock (&s->lock);
+
 	if (g)
 		mutex_group_unlisten (g);
-
-	mutex_lock (&s->ip->lock);
-	tcp_output (s);
-	mutex_unlock (&s->ip->lock);
 	return len;
 }
-
-#include <stdbool.h>
 
 /* \~russian ожидает появления данных в приемнике сокета
  * \return = 0 - if socket have some dats in receiver
@@ -453,7 +457,7 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
 	buf_free (p);
 
 	/* Send a SYN|ACK together with the MSS option. */
-	tcp_enqueue (ns, 0, 0, TCP_SYN | TCP_ACK, (unsigned char*) &optdata, 4);
+	tcp_enqueue_option4 (ns, TCP_SYN | TCP_ACK, optdata);
 #if TCP_LOCK_STYLE <= TCP_LOCK_SURE
     tcp_output (ns);
     mutex_unlock (&ns->ip->lock);
@@ -495,7 +499,7 @@ tcp_close (tcp_socket_t *s)
 		break;
 	}
 	for (;;) {
-		if (tcp_enqueue (s, 0, 0, TCP_FIN, 0, 0))
+		if (tcp_enqueue_option4 (s, TCP_FIN, 0))
 			break;
 		mutex_wait (&s->lock);
 	}

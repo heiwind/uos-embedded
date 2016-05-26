@@ -764,6 +764,7 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 			if (ip->tcp_input_len > 0) {
 				tcp_ack_now (s);
 			}
+            //! TODO WARNING nonsafe scoket access
 			tcp_output (s);
 			goto drop;
 		}
@@ -795,6 +796,7 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 				goto drop;
 			}
 			p->payload = (unsigned char*) h;
+			//! TODO WARNING nonsafe scoket access
 			tcp_queue_put (s, p);
 			mutex_signal (&s->lock, s);
 			return;
@@ -811,7 +813,18 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 		}
 		goto drop;
 	}
+#if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
 	mutex_lock (&s->lock);
+#else
+	//in RELAXED mode sockets are locked at tcp_output, so to escape deadlocks
+	// via concurense on ip->lock, need a bit smarter lock
+	if (mutex_trylock (&s->lock));
+	else {
+	    mutex_unlock(&ip->lock);
+        mutex_lock(&s->lock);
+        mutex_lock(&ip->lock);
+	}
+#endif
     tcp_debug ("tcp_input: flags =%b , state=%S\n"
             , h->flags, tcp_flags_dumpfmt
             , tcp_state_name (s->state)

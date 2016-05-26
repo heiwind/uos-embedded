@@ -43,7 +43,7 @@ INLINE void tcpo_unlock_ensure(mutex_t* m){
 
 /* alloc tcp seg and eth-frame buffer with <len> data allocated  
  * */
-tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
+tcp_segment_t * tcp_segment_new(tcp_socket_t *s, const void *arg, small_uint_t seglen)
 {
     tcp_segment_t * seg;
     /* Allocate memory for tcp_segment, and fill in fields. */
@@ -97,21 +97,34 @@ tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
     return seg;
 }
 
+int
+tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags);
+
+
+inline 
+int tcp_pass_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags)
+{
+    int res = tcp_enqueue_segments(s, queue, flags);
+    if (res != 0)
+       return res;
+    else
+       tcp_segments_free(queue);
+    return 0;
+}
+
 /*
  * Send data or options or flags.
  * Allocate a new buf and append it to socket send queue.
- * Must be called with socket locked.
- * Return 0 on error.
+ * !!! it ensures that socket is lock, and leave it locked after return! 
+ * \return  = amount of passed data
  */
 int
-tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
-            , tcph_flag_set flags
-            , unsigned char *optdata, unsigned char optlen)
+tcp_enqueue (tcp_socket_t *s, const void *arg, small_uint_t len, tcph_flag_set flags)
 {
 	tcp_segment_t *seg, *useg, *queue;
-	unsigned long left, seqno;
+	unsigned long left;
 	unsigned short seglen;
-	void *ptr;
+	const void *ptr;
 	unsigned char queuelen;
 
     assert_task_good_stack(task_current);
@@ -129,21 +142,15 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 	/* Check if the queue length exceeds the configured maximum queue
 	 * length. If so, we return an error. */
 	queue = 0;
-	queuelen = s->snd_queuelen;
-	if (queuelen >= TCP_SND_QUEUELEN) {
+	queuelen = 0;
+	if (s->snd_queuelen >= TCP_SND_QUEUELEN) {
 		tcp_debug ("tcp_enqueue: too long queue %u (max %u)\n",
 			queuelen, TCP_SND_QUEUELEN);
 		return 0;
 	}
-	if (queuelen != 0) {
-		assert (s->unacked != 0 || s->unsent != 0);
-	}
+
 	seg = 0;
 	seglen = 0;
-
-	/* seqno will be the sequence number of the first segment enqueued
-	 * by the call to this function. */
-	seqno = s->snd_lbb;
 
 	/* First, break up the data into segments and tuck them together in
 	 * the local "queue" variable. */
@@ -154,48 +161,151 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 		seglen = left > s->mss ? s->mss : left;
 
 		/* Allocate memory for tcp_segment, and fill in fields. */
-		seg = tcp_segment_new(s, ((arg!=0)? ptr : 0), (arg!=0)? seglen : optlen);
+		seg = tcp_segment_new(s, ptr, seglen);
 		if (seg == 0) {
 			tcp_debug ("tcp_enqueue: cannot allocate tcp_segment\n");
-			goto memerr;
+			break;
 		}
 
 		/* Build TCP header. */
 		tcp_hdr_t* tcphdr = (tcp_hdr_t*) seg->p->payload;
-		tcphdr->seqno = HTONL (seqno);
 		tcphdr->urgp = 0;
 		tcphdr->flags = flags;
 		/* don't fill in tcphdr->ackno and tcphdr->wnd until later */
 
-		if (optdata) {
-			/* Copy options into data portion of segment.
-			 * Options can thus only be sent in non data carrying
-			 * segments such as SYN|ACK. */
-			memcpy (seg->dataptr, optdata, optlen);
-			tcphdr->offset = (5 + optlen / 4) << 4;
-		} else {
 			tcphdr->offset = 5 << 4;
-		}
-		tcp_debug ("tcp_enqueue: queueing %lu:%lu (flags 0x%x)\n",
-			NTOHL (tcphdr->seqno),
-			NTOHL (tcphdr->seqno) + TCP_TCPLEN (seg),
-			flags);
 
+        left -= seglen;
+        ptr = (const void*) ((char*) ptr + seglen);
+
+	    ++queuelen;
         if (queue == 0) {
             queue = seg;
+            //! to enforce faster start of tcp transmission, just stops on 1st segment
+            // for pass it to tcp_output
+            break;
         } else {
             /* Attach the segment to the end of the queued segments. */
             for (useg = queue; useg->next != 0; useg = useg->next)
                 ;
             useg->next = seg;
         }
-        ++queuelen;
+        int qlen_actual = *(volatile unsigned char*)(&s->snd_queuelen);
+        if ((qlen_actual+queuelen) >= TCP_SND_QUEUELEN) 
+            break;
+	}//while (queue == 0 || left > 0)
+	
+	len -= left;
 
-		left -= seglen;
-		seqno += seglen;
-		ptr = (void*) ((char*) ptr + seglen);
-	}
+    if (queue == 0) {
+        ++s->ip->tcp_out_errors;
+        tcp_debug ("tcp_enqueue: no allocated tcp_segments\n");
+        return 0;
+    }
 
+    /* Set the PSH flag in the last segment that we enqueued, but only
+    if the segment has data (indicated by seglen > 0). */
+    if (seg != 0 && seglen > 0 && seg->tcphdr != 0) {
+        seg->tcphdr->flags |= TCP_PSH;
+    }
+
+    return (tcp_pass_segments(s, queue, flags) != 0)? len : 0;
+}
+
+/*
+ * Send options or flags.
+ * Allocate a new buf and append it to socket send queue.
+ * !!! it ensures that socket is lock, and leave it locked after return! 
+ * \return 0 on error.
+ */
+int
+tcp_enqueue_option4 (tcp_socket_t *s
+                , tcph_flag_set flags
+                , unsigned long optdata)
+{
+    const unsigned optlen = 4;
+    tcp_segment_t *seg, *queue;
+    unsigned char queuelen;
+
+    tcp_debug ("tcp_enqueue_option(s=%p, flags=%x, op=0x%x) queuelen = %u\n",
+        (void*) s, flags, optdata,s->snd_queuelen);
+
+    /* Check if the queue length exceeds the configured maximum queue
+     * length. If so, we return an error. */
+    queue = 0;
+    queuelen = s->snd_queuelen;
+    if (queuelen >= TCP_SND_QUEUELEN) {
+        tcp_debug ("tcp_enqueue: too long queue %u (max %u)\n",
+            queuelen, TCP_SND_QUEUELEN);
+        return 0;
+    }
+
+    /* First, break up the data into segments and tuck them together in
+     * the local "queue" variable. */
+
+        /* Allocate memory for tcp_segment, and fill in fields. */
+        seg = tcp_segment_new(s,  0, optlen);
+        if (seg == 0) {
+            tcp_debug ("tcp_enqueue_option: cannot allocate tcp_segment\n");
+            return 0;
+        }
+
+        /* Build TCP header. */
+        tcp_hdr_t* tcphdr = (tcp_hdr_t*) seg->tcphdr;
+        tcphdr->urgp = 0;
+        tcphdr->flags = flags;
+        /* don't fill in tcphdr->ackno and tcphdr->wnd until later */
+
+            /* Copy options into data portion of segment.
+             * Options can thus only be sent in non data carrying
+             * segments such as SYN|ACK. */
+            //!assume we alloc aligned buffer 
+            //memcpy (seg->dataptr, optdata, optlen);
+            *(unsigned long*)seg->dataptr = optdata;
+            tcphdr->offset = (5 + optlen / 4) << 4;
+         queue = seg;
+
+         return tcp_pass_segments(s, queue, flags);
+}
+
+/*
+ * Send data or options or flags.
+ * Allocate a new buf and append it to socket send queue.
+ * ensures socket locked in operation. !!!! socket leave locked after return! 
+ * \return  = 0 on error
+ */
+int
+tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags)
+{
+    tcp_segment_t *useg;
+    unsigned long seqno;
+    unsigned len = 0;
+    unsigned queuelen;
+
+    mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
+
+    queuelen = s->snd_queuelen;
+    if (queuelen != 0) {
+        assert (s->unacked != 0 || s->unsent != 0);
+    }
+
+    /* seqno will be the sequence number of the first segment enqueued
+     * by the call to this function. */
+    seqno = s->snd_lbb;
+    useg = queue;
+    while(useg != 0) {
+        tcp_hdr_t* tcphdr = useg->tcphdr;
+        tcphdr->seqno = HTONL (seqno);
+        tcp_debug ("tcp_enqueue: queueing %lu:%lu (flags 0x%x)\n",
+            NTOHL (tcphdr->seqno),
+            NTOHL (tcphdr->seqno) + TCP_TCPLEN (useg),
+            flags);
+        seqno   += useg->len;
+        len     += useg->len;
+        useg    = useg->next;
+        queuelen++;
+    }  
+	
 	/* Now that the data to be enqueued has been broken up into TCP
 	segments in the queue variable, we add them to the end of the
 	s->unsent queue. */
@@ -208,7 +318,7 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 
 	/* If there is room in the last buf on the unsent queue,
 	chain the first buf on the queue together with that. */
-	if (useg != 0 && TCP_TCPLEN (useg) != 0
+	if (useg != 0 && TCP_TCPLEN(useg) != 0
 	    && !((flags | s->flags) & TF_NOCORK)
 	    && ! (useg->tcphdr->flags & (TCP_SYN | TCP_FIN)) &&
 	    ! (flags & (TCP_SYN | TCP_FIN)) &&
@@ -221,11 +331,7 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 		useg->len += queue->len;
 		useg->next = queue->next;
 
-		tcp_debug ("tcp_enqueue: chaining, new len %u\n",
-			useg->len);
-		if (seg == queue) {
-			seg = 0;
-		}
+		tcp_debug ("tcp_enqueue: chaining, new len %u\n", useg->len);
 		mem_free (queue);
 	} else {
 		if (useg == 0) {
@@ -245,24 +351,10 @@ tcp_enqueue (tcp_socket_t *s, void *arg, small_uint_t len
 		assert (s->unacked != 0 || s->unsent != 0);
 	}
 
-	/* Set the PSH flag in the last segment that we enqueued, but only
-	if the segment has data (indicated by seglen > 0). */
-	if (seg != 0 && seglen > 0 && seg->tcphdr != 0) {
-		seg->tcphdr->flags |= TCP_PSH;
-	}
-	return 1;
 
-memerr:
-	++s->ip->tcp_out_errors;
-	if (queue != 0) {
-		tcp_segments_free (queue);
-	}
-	if (s->snd_queuelen != 0) {
-		assert (s->unacked != 0 || s->unsent != 0);
-	}
-	tcp_debug ("tcp_enqueue: %d (with mem err)\n",
-		s->snd_queuelen);
-	return 0;
+	if ((flags & TCP_SOCK_LOCK) == 0)
+	    tcpo_unlock_ensure(s_locked);
+	return 1;
 }
 
 // overlaped buffer seg->p seems shouldn`t be sopy, caller responded on it`s life
