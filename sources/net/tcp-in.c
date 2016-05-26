@@ -154,9 +154,6 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 					NTOHL (s->unacked->tcphdr->seqno) +
 					TCP_TCPLEN (s->unacked));
 
-				tcp_debug ("tcp_receive: queuelen %u ... ",
-					(unsigned int) s->snd_queuelen);
-
 				next = s->unacked;
                 s->unacked = next->next;
                 --(s->snd_queuelen);
@@ -164,8 +161,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 			}
 			if (next != 0){
-                tcp_debug ("%u (after freeing unacked)\n",
-                    (unsigned int) s->snd_queuelen);
+                tcp_debug ("tcp_receive: unack queuelen %u, snd_nxt = %u (after freeing unacked)\n",
+                    (unsigned int) s->snd_queuelen, s->snd_nxt);
                 if (s->snd_queuelen != 0) {
                     assert (s->unacked != 0 || s->unsent != 0);
                 }
@@ -204,7 +201,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			}
 		}
         if (next != 0){
-            tcp_debug ("tcp_receive: queuelen = %u, snd_nxt = %u\n",
+            tcp_debug ("tcp_receive: unsent queuelen = %u, snd_nxt = %u\n",
                 s->snd_queuelen, s->snd_nxt);
             /* Send a signal for tcp_write when
              * s->snd_queuelen is decreased. */
@@ -616,9 +613,7 @@ find_active_socket (ip_t *ip, tcp_hdr_t *h, ip_hdr_t *iph)
 
 	prev = 0;
 	for (s=ip->tcp_sockets; s; prev=s, s=s->next) {
-		assert (s->state != CLOSED);
-		assert (s->state != TIME_WAIT);
-		assert (s->state != LISTEN);
+		assert (! tcp_socket_is_state(s, tcpfCLOSED| tcpfTIME_WAIT | tcpfLISTEN) );
 
 		if (s->local_port != h->dest || s->remote_port != h->src ||
 		    !ipadr_is_same(s->remote_ip.var, iph->src.var) ||
