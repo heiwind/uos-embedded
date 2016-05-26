@@ -30,6 +30,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 	int m;
 	unsigned long right_wnd_edge;
     ip_t *ip = s->ip;
+    bool_t      signal_sock = 0;
 
 	if (ip->tcp_input_flags & TCP_ACK) {
 		right_wnd_edge = s->snd_wnd + s->snd_wl1;
@@ -107,9 +108,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			s->acked = ip->tcp_input_ackno - s->lastack;
 			if (s->acked > 0) {
 				s->snd_buf += s->acked;
-				/* Send a signal for tcp_write when
-				 * s->snd_queuelen is decreased. */
-				mutex_signal (&s->lock, s);
+				/* Send a signal for tcp_write when s->snd_queuelen is decreased. */
+				signal_sock = 1;
 			}
 			/* Reset the fast retransmit variables. */
 			s->dupacks = 0;
@@ -158,6 +158,9 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 				next = s->unacked;
                 s->unacked = next->next;
                 --(s->snd_queuelen);
+                if (s->snd_queuelen != 0) {
+                    assert (s->unacked != 0 || s->unsent != 0);
+                }
 				tcp_segment_free (next);
 
 			}
@@ -167,9 +170,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
                 if (s->snd_queuelen != 0) {
                     assert (s->unacked != 0 || s->unsent != 0);
                 }
-                /* Send a signal for tcp_write when
-                 * s->snd_queuelen is decreased. */
-                mutex_signal (&s->lock, s);
+                /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
+                signal_sock = 1;
 			}
 		}
 
@@ -203,9 +205,8 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
         if (next != 0){
             tcp_debug ("tcp_receive: unsent queuelen = %u, snd_nxt = %u\n",
                 s->snd_queuelen, s->snd_nxt);
-            /* Send a signal for tcp_write when
-             * s->snd_queuelen is decreased. */
-            mutex_signal (&s->lock, s);
+            /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
+            signal_sock = 1;
         }
 
 		/* End of ACK for new data processing. */
@@ -239,6 +240,9 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			s->rttest = 0;
 		}
 	}
+
+    if (signal_sock)
+            mutex_signal (&s->lock, s);
 
 	/* Segments with length 0 is taken care of here. */
 	if (ip->tcp_input_len == 0) {
@@ -348,6 +352,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			} else {
 				s->rcv_wnd -= ip->tcp_input_len;
 			}
+            signal_sock = 0;
 
 			/* If there is data in the segment, we make
 			 * preparations to pass this up to the
@@ -367,7 +372,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 					++ip->tcp_in_errors;
 				} else {
 					tcp_queue_put (s, inseg->p);
-					mutex_signal (&s->lock, s);//inseg->p
+                    signal_sock = 1;
 					inseg->p = 0;
 				}
 			}
@@ -384,10 +389,12 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 						++ip->tcp_in_errors;
 					} else {
 						tcp_queue_put (s, p);
-						mutex_signal (&s->lock, s); //p
+                        signal_sock = 1;
 					}
 				}
 			}
+            if (signal_sock)
+                    mutex_signal (&s->lock, s);
 
 			/* Acknowledge the segment(s). */
 			tcp_ack (s);
