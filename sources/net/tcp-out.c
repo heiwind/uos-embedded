@@ -17,6 +17,30 @@
 #define tcp_debug			wdog_alive(); debug_printf
 */
 
+#if RECURSIVE_LOCKS > 0
+INLINE mutex_t* tcpo_lock_ensure(mutex_t* m){
+    mutex_lock(s->lock);
+    return 1;
+}
+INLINE void tcpo_unlock_ensure(mutex_t* m){
+    if (m)
+        mutex_unlock(m);
+}
+#else
+INLINE mutex_t* tcpo_lock_ensure(mutex_t* m){
+    if (mutex_is_my(m))
+        return (mutex_t*)0;
+    mutex_lock(m);
+    return m;
+}
+INLINE void tcpo_unlock_ensure(mutex_t* m){
+    if (m != 0)
+    mutex_unlock(m);
+}
+#endif
+
+
+
 /* alloc tcp seg and eth-frame buffer with <len> data allocated  
  * */
 tcp_segment_t * tcp_segment_new(tcp_socket_t *s, void *arg, small_uint_t seglen)
@@ -330,13 +354,24 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     }//if (over == 0)
 /*	buf_print_tcp (p);*/
 
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+    mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
+#endif
+
 	++s->ip->tcp_out_datagrams;
-	return ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+	bool_t res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+	tcpo_unlock_ensure(s_locked);
+#endif
+
+	return  res;
 }
 
 /*
  * Find out what we can send and send it.
- * Must be called with ip locked.
+ * Must be called with ip locked        if TCP_LOCK_LEGACY.
+ * or ensures that socket locked        if TCP_LOCK_RELAXED
  * Return 0 on error.
  */
 //empty overlaped buffer seg->p managed by netif_output to free or hold in segment
@@ -358,6 +393,12 @@ tcp_output (tcp_socket_t *s)
 
     assert_task_good_stack(task_current);
 
+#if TCP_LOCK_STYLE == TCP_LOCK_RELAXED
+	mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
+#elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
+#endif
+	
 	wnd = (s->snd_wnd < s->cwnd) ? s->snd_wnd : s->cwnd;
 	seg = s->unsent;
 
@@ -373,6 +414,7 @@ tcp_output (tcp_socket_t *s)
 		p = buf_alloc (s->ip->pool, TCP_HLEN, 16 + IP_HLEN);
 		if (p == 0) {
 			tcp_debug ("tcp_output: (ACK) could not allocate buf\n");
+	        tcpo_unlock_ensure(s_locked);
 			return 0;
 		}
 		tcp_debug ("tcp_output: sending ACK for %lu\n", s->rcv_nxt);
@@ -392,7 +434,14 @@ tcp_output (tcp_socket_t *s)
 			crc16_inet_header (ipref_as_ucs(s->local_ip),	s->remote_ip.ucs,
 			IP_PROTO_TCP, p->tot_len));
 
+      #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+		mutex_t* ip_locked = tcpo_lock_ensure(&s->ip->lock);
+      #endif
 		ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+      #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+		tcpo_unlock_ensure(ip_locked);
+      #endif
+	    tcpo_unlock_ensure(s_locked);
 		return 1;
 	}
 	if (seg == 0) {
@@ -425,7 +474,8 @@ tcp_output (tcp_socket_t *s)
 	        }
 		}
 
-		tcp_output_segment (seg, s);
+		if (!tcp_output_segment (seg, s))
+		    break;
 
 		/* put segment on unacknowledged list if length > 0 */
 		if (tcpseglen > 0) {
@@ -444,7 +494,10 @@ tcp_output (tcp_socket_t *s)
 			tcp_segment_free (seg);
 		}
 		seg = s->unsent;
-	}
+	}//while (seg != 0 
+	
+    tcpo_unlock_ensure(s_locked);
+
 	return 1;
 }
 

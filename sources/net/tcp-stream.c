@@ -24,9 +24,7 @@ static void
 socket_flush (tcp_socket_t *s)
 {
 	/* Force IP level to send a packet. */
-        mutex_lock (&s->ip->lock);
 	tcp_output (s);
-	mutex_unlock (&s->ip->lock);
 }
 
 static void

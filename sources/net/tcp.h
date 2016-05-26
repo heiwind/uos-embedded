@@ -88,6 +88,21 @@ typedef enum _tcp_state_t {
 #define TCP_LOCAL_PORT_RANGE_END   0x7fff
 #endif
 
+#ifndef TCP_LOCK_STYLE
+/**
+ * tcp_enqueue, tcp_output affects an socket internals vs ip-input thread
+ * by TCP_LOCK_LEGACY  - ones routines requres locked ip, and rely on assumption 
+ *              that in locked ip, socket is not concurented by other threads
+ *              it is for selfcommenting code (same as TCP_LOCK_STYLE not defined) - not actualy used
+ * by TCP_LOCK_SURE    - tcp_output unsures that it have locks ip 
+ * by TCP_LOCK_RELAXED - lock ip less time only if some segments are posted,
+ * */
+#define TCP_LOCK_LEGACY     -1
+#define TCP_LOCK_SURE       0
+#define TCP_LOCK_RELAXED    1
+#define TCP_LOCK_STYLE      TCP_LOCK_SURE
+#endif
+
 /*
  * TCP header.
  */

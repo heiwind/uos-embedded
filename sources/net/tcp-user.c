@@ -89,8 +89,13 @@ tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 		return 0;
 	}
 	tcp_list_add (&ip->tcp_sockets, s);
-	tcp_output (s);
-	mutex_unlock (&ip->lock);
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    tcp_output (s);
+    mutex_unlock (&ip->lock);
+#elif TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+    mutex_unlock (&ip->lock);
+    tcp_output (s);
+#endif
 	return s;
 }
 
@@ -449,8 +454,13 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
 
 	/* Send a SYN|ACK together with the MSS option. */
 	tcp_enqueue (ns, 0, 0, TCP_SYN | TCP_ACK, (unsigned char*) &optdata, 4);
-	tcp_output (ns);
-	mutex_unlock (&s->ip->lock);
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    tcp_output (ns);
+    mutex_unlock (&ns->ip->lock);
+#elif TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+    mutex_unlock (&ns->ip->lock);
+    tcp_output (ns);
+#endif
 	return ns;
 }
 
@@ -490,14 +500,17 @@ tcp_close (tcp_socket_t *s)
 		mutex_wait (&s->lock);
 	}
 	s->state = (s->state == CLOSE_WAIT) ? LAST_ACK : FIN_WAIT_1;
-	mutex_unlock (&s->lock);
 
-	mutex_lock (&s->ip->lock);
-	if (s->unsent || (s->flags & TF_ACK_NOW))
-		tcp_output (s);
-	mutex_unlock (&s->ip->lock);
+    if (s->unsent || (s->flags & TF_ACK_NOW)) {
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    mutex_unlock (&s->lock);
+#endif
+	tcp_output (s);
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    mutex_lock (&s->lock);
+#endif
+    }//if (s->unsent || (s->flags & TF_ACK_NOW))
 
-	mutex_lock (&s->lock);
 	while (s->state != CLOSED) {
 		if (s->state == TIME_WAIT && ! s->unsent) {
 			tcp_queue_free (s);
