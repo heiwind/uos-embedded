@@ -28,10 +28,14 @@
 #include <elvees/eth.h>
 #include <elvees/ks8721bl.h>
 
+#ifndef ETH_PRINTF
+#define ETH_PRINTF(...) debug_printf(__VA_ARGS__)
+#endif
+
 #ifdef DEBUG_NET_ETH
-#define ETH_printf(...) debug_printf(__VA_ARGS__)
-#define EDMA_printf(...)
-#define ETH_printf2(...)
+#define ETH_printf(...) ETH_PRINTF(__VA_ARGS__)
+#define EDMA_printf(...) ETH_PRINTF(__VA_ARGS__)
+#define ETH_printf2(...) ETH_PRINTF(__VA_ARGS__)
 #else
 #define ETH_printf(...)
 #define ETH_printf2(...)
@@ -39,13 +43,13 @@
 #endif
 
 #ifdef DEBUG_NET_ETH_FAIL
-#define ETHFAIL_printf(...) debug_printf(__VA_ARGS__)
+#define ETHFAIL_printf(...) ETH_PRINTF(__VA_ARGS__)
 #else
 #define ETHFAIL_printf(...)
 #endif
 
 #ifdef DEBUG_NET_PHY
-#define PHY_printf(...) debug_printf(__VA_ARGS__)
+#define PHY_printf(...) ETH_PRINTF(__VA_ARGS__)
 #else
 #define PHY_printf(...)
 #endif
@@ -774,13 +778,11 @@ chip_transmit_packet (eth_t *u, buf_t *p)
 	 * one buf at a time. The size of the data in each
 	 * buf is kept in the ->len variable. */
 	buf_t *q;
-    if (1)
-    {
-        ETH_printf ("eth_send_data: length %d bytes %#12.6D %#2D\n"
+
+    ETH_printf ("eth_send_data: length %d bytes %#12.6D %#2D\n"
                 , p->tot_len
                 , p->payload, p->payload+12
                 );
-    }
 
     //запрошу статус PHY, за время отсылки пакета, возможно успеем считать его, и 
     //  по окончании отсылки фрейма вероятно поимеем актуальный статус 
@@ -985,14 +987,15 @@ eth_output (eth_t *u, buf_t *p, small_uint_t prio)
     }
     #endif
 
-    bool_t isbusy = ((MC_MAC_STATUS_TX & STATUS_TX_ONTX_REQ) != 0);
+    unsigned status_tx = MC_MAC_STATUS_TX;
+    bool_t isbusy = ((status_tx & STATUS_TX_ONTX_REQ) != 0);
     bool_t is_clean = buf_queueh_is_empty (&u->outq);
 
     if (!is_clean || (isbusy))
         buf_queueh_put (&u->outq, p);
 
     else {
-	    ETH_printf ("eth_output: tx %d bytes\n", p->tot_len);
+	    ETH_printf ("eth_output:(tx status $%x) tx %d bytes\n", status_tx, p->tot_len);
 		/* Смело отсылаем. */
 		chip_transmit_packet (u, p);
 		mutex_unlock (&u->tx_lock);
@@ -1113,13 +1116,13 @@ eth_receive_frame (eth_t *u)
 #       else
         buf_queue_put (&u->inq, p);
 #       endif
+        ETH_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
     }
 //    else
 //        debug_putchar(0, '#');
 
     if (0)
     {
-        ETH_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
         ETH_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
     }
 
@@ -1202,6 +1205,8 @@ handle_receive_interrupt (eth_t *u)
 				u->netif.in_discards++;
 			MC_MAC_STATUS_RX = 0;
 		}
+	    ETH_printf("eth_recv status %x\n", status_rx);
+
 		/* Check if a packet has been received and buffered. */
 		if (! (status_rx & STATUS_RX_DONE)) {
 			/* All interrupts processed. */
@@ -1228,7 +1233,7 @@ handle_transmit_interrupt (eth_t *u)
 	unsigned status_tx = MC_MAC_STATUS_TX;
 	if (status_tx & STATUS_TX_ONTX_REQ) {
 		/* Передачик пока не закончил. */
-/*debug_printf ("eth tx irq: ONTX_REQ, STATUS_TX = %08x\n", status_tx);*/
+	    ETH_printf2 ("eth tx irq: ONTX_REQ, STATUS_TX = %08x\n", status_tx);
 		return;
 	}
 	MC_MAC_STATUS_TX = 0;
@@ -1244,14 +1249,14 @@ handle_transmit_interrupt (eth_t *u)
 	/* Извлекаем следующий пакет из очереди. */
 	buf_t *p = buf_queueh_get (&u->outq);
 	if (! p) {
-/*debug_printf ("eth tx irq: done, STATUS_TX = %08x\n", status_tx);*/
+	    ETH_printf2 ("eth tx irq: done, STATUS_TX = %08x\n", status_tx);
 /*debug_printf ("#");*/
 		return;
 	}
 	mutex_signal(&u->tx_lock, 0);
 
 	/* Передаём следующий пакет. */
-/*debug_printf ("eth tx irq: send next packet, STATUS_TX = %08x\n", status_tx);*/
+	ETH_printf2 ("eth tx irq: send next packet, STATUS_TX = %08x\n", status_tx);
 	chip_transmit_packet (u, p);
 	netif_free_buf (&u->netif, p);
 }
