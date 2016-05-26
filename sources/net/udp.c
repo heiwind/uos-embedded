@@ -255,6 +255,7 @@ udp_send_netif (udp_socket_t *s, buf_t *p
 	}
 	}
 #endif
+	// TODO this should be atomic - protected for thread safe
 	++s->ip->udp_out_datagrams;
 
     return ip_output_netif (s->ip, p, dest, ipref_as_ucs(local_ip), IP_PROTO_UDP,

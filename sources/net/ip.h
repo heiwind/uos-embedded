@@ -37,7 +37,20 @@ extern "C" {
 #   endif
 #endif
 
-
+#ifndef IP_LOCK_STYLE
+/* \~russian это стиль работы с доступом к ip_t:
+ * IP_LOCK_STYLE_BASE - унаследован простейший стиль: всякая операция с ip требует захвата ip->lock
+ * IP_LOCK_STYLE_DEPOUT - если раотаем с отправкой пакетов, и собираемся обновлять переменные xxx_out_xxx
+ *                      надо захватить ip->lock_tx
+ * IP_LOCK_STYLE_OUT1 - в системе только один трансмитер, поэтому обновление полей xxx_out_xxx
+ *                      конкурентно-безопасно, ничего захватывать ненужно
+ * */
+#define IP_LOCK_STYLE_LEGACY    -1
+#define IP_LOCK_STYLE_BASE      0
+#define IP_LOCK_STYLE_OUT1      1
+#define IP_LOCK_STYLE_DEPOUT    2
+#define IP_LOCK_STYLE IP_LOCK_STYLE_OUT1
+#endif
 
 //*****************************************************************************
 //                               IP4 adress
@@ -367,6 +380,9 @@ typedef struct _base_socket_t {
 
 typedef struct _ip_t {
 	mutex_t		lock;
+#if IP_LOCK_STYLE >= IP_LOCK_STYLE_DEPOUT
+    mutex_t     lock_tx;
+#endif
 	mutex_group_t	*netif_group;	/* list of network drivers */
 	struct _mem_pool_t *pool;	/* pool for memory allocation */
 	struct _timer_t *timer;		/* timer driver */
@@ -562,6 +578,43 @@ void icmp_dest_unreach (ip_t *ip, struct _buf_t *p, small_uint_t op);
 void icmp_time_exceeded (ip_t *ip, struct _buf_t *p);
 
 
+
+//***********************    ip internals      *****************************
+#if IP_LOCK_STYLE <= IP_LOCK_STYLE_BASE
+#define IP_TX_LOCK(ip)  (&ip->lock)
+#elif IP_LOCK_STYLE == IP_LOCK_STYLE_OUT1
+#define IP_TX_LOCK(ip)  0
+#elif IP_LOCK_STYLE >= IP_LOCK_STYLE_DEPOUT
+#define IP_TX_LOCK(ip)  (&ip->lock_tx)
+#endif
+
+
+#if RECURSIVE_LOCKS > 0
+INLINE mutex_t* iptx_lock_ensure(ip_t *ip){
+    mutex_t* m = IP_TX_LOCK(ip);
+    if (m)
+        mutex_lock(m);
+    return m;
+}
+INLINE void iptx_unlock_ensure(mutex_t* m){
+    if (m)
+        mutex_unlock(m);
+}
+#else
+INLINE mutex_t* iptx_lock_ensure(ip_t *ip){
+    mutex_t* m = IP_TX_LOCK(ip);
+    if (m == 0)
+        return 0;
+    if (mutex_is_my(m))
+        return (mutex_t*)0;
+    mutex_lock(m);
+    return m;
+}
+INLINE void iptx_unlock_ensure(mutex_t* m){
+    if (m != 0)
+        mutex_unlock(m);
+}
+#endif
 
 #ifdef __cplusplus
 }

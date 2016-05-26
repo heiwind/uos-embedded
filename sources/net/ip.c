@@ -248,12 +248,14 @@ ip_output_netif (ip_t *ip, buf_t *p
 {
 	ip_hdr_t *iphdr;
 	unsigned short chksum;
+    //mutex_t* iplock = iptx_lock_ensure(ip);
 
 	++ip->out_requests;
 	if (! buf_add_header (p, IP_HLEN)) {
 		/* Not enough room for IP header. */
 		/*debug_printf ("ip_output_netif: no space for header\n");*/
 		++ip->out_discards;
+		//iptx_unlock_ensure(iplock);
 		netif_free_buf (netif, p);
 		return 0;
 	}
@@ -273,6 +275,8 @@ ip_output_netif (ip_t *ip, buf_t *p
 	++ip->id;
 	iphdr->id_h = ip->id >> 8;
 	iphdr->id_l = ip->id;
+
+	//iptx_unlock_ensure(iplock);
 
 	iphdr->dest = ipadr_4ucs(dest);
 	if (src)
@@ -318,10 +322,11 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	netif = route_lookup (ip, ipref_4ucs(dest), &gateway, &netif_ipaddr);
 	if (! netif) {
 		/* No route to host. */
-		/*debug_printf ("ip_output: no route to host %d.%d.%d.%d\n",
-			dest[0], dest[1], dest[2], dest[3]);*/
+	    IP_printf("ip_output: no route to host %@.4D\n", dest);
+	    //mutex_t* iplock = iptx_lock_ensure(ip);
 		++ip->out_requests;
 		++ip->out_no_routes;
+		//iptx_unlock_ensure(iplock);
 		netif_free_buf (0, p);
 		return 0;
 	}
@@ -401,6 +406,11 @@ ip_init (ip_t *ip, mem_pool_t *pool, int prio,
 	/* Initialize the TCP layer. */
 	ip->tcp_seqno = 6510;
 	ip->tcp_port = TCP_LOCAL_PORT_RANGE_START;
+
+    mutex_init(&ip->lock);
+#if IP_LOCK_STYLE >= IP_LOCK_STYLE_DEPOUT
+    mutex_init(&ip->lock_tx);
+#endif
 
 	task_create (ip_main, ip, "ipv4", prio, ip->stack, sizeof (ip->stack));
 }

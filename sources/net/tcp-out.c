@@ -28,6 +28,8 @@ INLINE void tcpo_unlock_ensure(mutex_t* m){
 }
 #else
 INLINE mutex_t* tcpo_lock_ensure(mutex_t* m){
+    if (m == 0)
+        return 0;
     if (mutex_is_my(m))
         return (mutex_t*)0;
     mutex_lock(m);
@@ -593,7 +595,7 @@ tcp_output_poll (tcp_socket_t *s)
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
 	mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
 #elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
-    mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
+    mutex_t* s_locked = tcpo_lock_ensure(IP_TX_LOCK(s->ip));
 #endif
     
     wnd = (s->snd_wnd < s->cwnd) ? s->snd_wnd : s->cwnd;
@@ -631,15 +633,15 @@ tcp_output_poll (tcp_socket_t *s)
 			crc16_inet_header (ipref_as_ucs(s->local_ip),	s->remote_ip.ucs,
 			IP_PROTO_TCP, p->tot_len));
 
-      #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
-		mutex_t* ip_locked = tcpo_lock_ensure(&s->ip->lock);
+      #if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) && (IP_LOCK_STYLE != IP_LOCK_STYLE_OUT1)
+		mutex_t* ip_locked = iptx_lock_ensure(s->ip);
       #endif
 		if (ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP) != 0)
 		{
 		    s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
 		}
-      #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
-		tcpo_unlock_ensure(ip_locked);
+      #if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) && (IP_LOCK_STYLE != IP_LOCK_STYLE_OUT1)
+		iptx_unlock_ensure(ip_locked);
       #endif
 	    tcpo_unlock_ensure(s_locked);
 		return 1;
@@ -652,7 +654,7 @@ tcp_output_poll (tcp_socket_t *s)
 	else {
 
 #if TCP_LOCK_STYLE == TCP_LOCK_RELAXED
-	mutex_t* ip_locked = tcpo_lock_ensure(&s->ip->lock);
+	mutex_t* ip_locked = iptx_lock_ensure(s->ip);
 #endif
 	
 	while (seg != 0) 
@@ -724,7 +726,7 @@ tcp_output_poll (tcp_socket_t *s)
 	}//while (seg != 0 
 	
 #if TCP_LOCK_STYLE == TCP_LOCK_RELAXED
-	tcpo_unlock_ensure(ip_locked);
+	iptx_unlock_ensure(ip_locked);
 #endif
 	
 	} //else if (seg == 0)
@@ -738,6 +740,8 @@ tcp_output_poll (tcp_socket_t *s)
 /*
  * Find out what we can send and send it. poll sending until unsent queue empty.
  * Must be called with ip locked        if TCP_LOCK_LEGACY.
+ * suposed that sock is unlocked        if TCP_LOCK_SURE
+ *      and suposed that socket lock ensures by locked ip
  * or ensures that socket locked        if TCP_LOCK_RELAXED
  * Return 0 on error.
  */
@@ -753,10 +757,10 @@ tcp_output (tcp_socket_t *s)
     if (s->unsent == 0)
         return 1;
 
-#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+#if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) || (IP_LOCK_STYLE == IP_LOCK_STYLE_OUT1)
     mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
 #elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
-    mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
+    mutex_t* s_locked = iptx_lock_ensure(s->ip);
 #endif
 
     while (s->unsent != 0){
@@ -764,15 +768,15 @@ tcp_output (tcp_socket_t *s)
         if (s->unsent == 0)
             break;
 
-#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+#if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) || (IP_LOCK_STYLE == IP_LOCK_STYLE_OUT1)
         mutex_wait(&s->lock);
 #elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
         mutex_t* sock_locked = tcpo_lock_ensure(&s->lock);
         //if (!s_locked) //caller have alredy locked iplock
-        mutex_unlock(&s->ip->lock);
+        iptx_unlock_ensure(IP_TX_LOCK(s->ip));
         mutex_wait(&s->lock);
         tcpo_unlock_ensure(sock_locked);
-        mutex_lock(&s->ip->lock);
+        iptx_lock_ensure(s->ip);
 #endif
         /* TODO Может Проверим, не закрылось ли соединение??? */
     }

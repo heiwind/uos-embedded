@@ -50,6 +50,18 @@
 
 //#define UDP_CHECKSUM_DISABLE
 
+/* \~russian это стиль работы с доступом к ip_t:
+ * IP_LOCK_STYLE_BASE - унаследован простейший стиль: всякая операция с ip требует захвата ip->lock
+ *      styles below forced tcp operation at least TCP_LOCK_RELAXED
+ * IP_LOCK_STYLE_DEPOUT - если раотаем с отправкой пакетов, и собираемся обновлять переменные xxx_out_xxx
+ *                      надо захватить ip->lock_tx
+ * IP_LOCK_STYLE_OUT1 - в системе только один трансмитер, поэтому обновление полей xxx_out_xxx
+ *                      конкурентно-безопасно, ничего захватывать ненужно
+ * */
+#define IP_LOCK_STYLE_BASE      0
+#define IP_LOCK_STYLE_OUT1      1
+#define IP_LOCK_STYLE_DEPOUT    2
+#define IP_LOCK_STYLE IP_LOCK_STYLE_DEPOUT
 
 
 /* **********************    ELVEES     ************************* */
@@ -112,8 +124,11 @@
  * tcp_enqueue, tcp_output affects an socket internals vs ip-input thread
  * by TCP_LOCK_LEGACY  - ones routines requres locked ip, and rely on assumption 
  *              that in locked ip, socket is not concurented by other threads
+ *              it was relyes that socked is unlocked at call,   and suposed that 
+ *                  socket lock ensures by locked ip
  *              it is for selfcommenting code (same as TCP_LOCK_STYLE not defined) - not actualy used
- * by TCP_LOCK_SURE    - tcp_output unsures that it have locks ip 
+ * by TCP_LOCK_SURE    - like a legacy + tcp_output ensures that it have locks ip
+ * !!!  styles above must be with IP_LOCK_STYLE_BASE 
  * by TCP_LOCK_RELAXED  - lock ip less time - only on group segments are posted,
  * by TCP_LOCK_RELAXED2 - lock ip less time - only on every segment posted to netif
  * */

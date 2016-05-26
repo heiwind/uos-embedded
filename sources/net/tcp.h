@@ -105,6 +105,14 @@ typedef enum _tcp_state_t {
 #define TCP_LOCK_STYLE      TCP_LOCK_SURE
 #endif
 
+#if (IP_LOCK_STYLE > IP_LOCK_STYLE_BASE)
+#   if (TCP_LOCK_STYLE < TCP_LOCK_RELAXED)
+#       warning "TCP_LOCK_STYLE forced to TCP_LOCK_RELAXED due inapropiate IP_LOCK_STYLE"
+#       undef TCP_LOCK_STYLE
+#       define TCP_LOCK_STYLE TCP_LOCK_RELAXED
+#   endif
+#endif
+
 /*
  * TCP header.
  */
