@@ -1098,7 +1098,9 @@ eth_receive_frame (eth_t *u)
     else {
         u->dma_rx.buf = 0;
         u->dma_rx.byf_phys = 0;
+        buf_free(p);
         p = 0;
+        ETHFAIL_printf("eth_recv_data: fifo lost\n");
     }
 #else
     chip_read_rxfifo(buf, len);
