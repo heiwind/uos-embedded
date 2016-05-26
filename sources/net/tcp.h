@@ -95,11 +95,13 @@ typedef enum _tcp_state_t {
  *              that in locked ip, socket is not concurented by other threads
  *              it is for selfcommenting code (same as TCP_LOCK_STYLE not defined) - not actualy used
  * by TCP_LOCK_SURE    - tcp_output unsures that it have locks ip 
- * by TCP_LOCK_RELAXED - lock ip less time only if some segments are posted,
+ * by TCP_LOCK_RELAXED  - lock ip less time - only on group segments are posted,
+ * by TCP_LOCK_RELAXED2 - lock ip less time - only on every segment posted to netif
  * */
 #define TCP_LOCK_LEGACY     -1
 #define TCP_LOCK_SURE       0
 #define TCP_LOCK_RELAXED    1
+#define TCP_LOCK_RELAXED2   2
 #define TCP_LOCK_STYLE      TCP_LOCK_SURE
 #endif
 

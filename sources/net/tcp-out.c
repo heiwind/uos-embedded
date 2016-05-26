@@ -432,13 +432,13 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     }//if (over == 0)
 /*	buf_print_tcp (p);*/
 
-#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED2
     mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
 #endif
 
 	bool_t res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
 
-#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED2
 	tcpo_unlock_ensure(s_locked);
 #endif
 
@@ -489,7 +489,7 @@ tcp_output (tcp_socket_t *s)
 
     assert_task_good_stack(task_current);
 
-#if TCP_LOCK_STYLE == TCP_LOCK_RELAXED
+#if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
 	mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
 #elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
     mutex_t* s_locked = tcpo_lock_ensure(&s->ip->lock);
@@ -546,6 +546,10 @@ tcp_output (tcp_socket_t *s)
 			s->snd_wnd, s->cwnd, wnd, s->lastack);
 	}
 
+#if TCP_LOCK_STYLE == TCP_LOCK_RELAXED
+	mutex_t* ip_locked = tcpo_lock_ensure(&s->ip->lock);
+#endif
+	
 	while (seg != 0 &&
 	    NTOHL (seg->tcphdr->seqno) - s->lastack + seg->len <= wnd) {
 		tcp_debug ("tcp_output: snd_wnd %lu, cwnd %lu, wnd %lu, effwnd %lu, seq %lu, ack %lu\n",
@@ -593,6 +597,9 @@ tcp_output (tcp_socket_t *s)
 		seg = s->unsent;
 	}//while (seg != 0 
 	
+#if TCP_LOCK_STYLE == TCP_LOCK_RELAXED
+	tcpo_unlock_ensure(ip_locked);
+#endif
     tcpo_unlock_ensure(s_locked);
 
 	return 1;
