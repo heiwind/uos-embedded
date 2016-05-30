@@ -161,7 +161,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
                 if (s->snd_queuelen != 0) {
                     assert (s->unacked != 0 || s->unsent != 0);
                 }
-				tcp_segment_free (next);
+				tcp_segment_free (s, next);
 
 			}
 			if (next != 0){
@@ -194,7 +194,7 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			next = s->unsent;
 			s->unsent = s->unsent->next;
 			--(s->snd_queuelen);
-			tcp_segment_free (next);
+			tcp_segment_free (s, next);
 			if (s->snd_queuelen != 0) {
 				assert (s->unacked != 0 || s->unsent != 0);
 			}
@@ -517,7 +517,7 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			tcp_debug ("tcp_process: queuelen = %u\n", s->snd_queuelen);
 			rseg = s->unacked;
 			s->unacked = rseg->next;
-			tcp_segment_free (rseg);
+			tcp_segment_free (s, rseg);
 
 			/* Parse any options in the SYNACK. */
 			tcp_parseopt (s, h);
@@ -821,7 +821,8 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 		}
 		goto drop;
 	}
-#if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+#if (TCP_LOCK_STYLE < TCP_LOCK_RELAXED) \
+	|| ((IP_LOCK_STYLE > IP_LOCK_STYLE_BASE) && 0)
 	mutex_lock (&s->lock);
 #else
 	//in RELAXED mode sockets are locked at tcp_output, so to escape deadlocks

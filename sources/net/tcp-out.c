@@ -43,6 +43,35 @@ INLINE void tcpo_unlock_ensure(mutex_t* m){
 
 
 
+//* забирает сегмент из кучи доступных сегментов (ранее созданных)
+//* \return NULL - нет свободных сегментов, !!! сокет может захватиться
+//* \return  - возвращает новый сегмент, и сокет (s->lock) в захваченом состоянии
+tcp_segment_t *tcp_segment_takespare_maylock (tcp_socket_t *s){
+    if (s->spare_segs == 0)
+        return NULL;
+    if (!mutex_is_my(&s->lock))
+        mutex_lock(&s->lock);
+    tcp_segment_t * seg = s->spare_segs;
+    if (seg != 0){
+        s->spare_segs = seg->next;
+        //tcp_debug("tcp_spare:get seg<< $%x\n", seg);
+        memsetw(seg, 0 ,sizeof(tcp_segment_t));
+    }
+    return seg;
+}
+
+//* берет свободный сегмент, или создает новый.
+//  !!! может вернуть сокет, может захваченым 
+tcp_segment_t *tcp_segment_alloc_maylock(tcp_socket_t *s){
+    tcp_segment_t *res = tcp_segment_takespare_maylock(s);
+    if (res != 0)
+        return res;
+    res = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
+    return res;
+}
+
+
+
 //***************************    TCP RAW handling   ***************************
 #ifdef UTCP_RAW
 void tcp_event_seg_prepare(tcp_segment_t* seg, tcp_socket_t* s)
@@ -100,28 +129,30 @@ int tcp_segment_assign_buf(tcp_socket_t *s, tcp_segment_t * seg, buf_t* p)
 }
 
 /* alloc tcp seg and eth-frame buffer with <len> data allocated  
+ * !!! may lock s->lock
  * */
 tcp_segment_t * tcp_segment_new(tcp_socket_t *s, const void *arg, small_uint_t seglen)
 {
     tcp_segment_t * seg;
-    /* Allocate memory for tcp_segment, and fill in fields. */
-    seg = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
-    if (seg == 0) {
-        return 0;
-    }
 
     /* Allocate memory and copy data into it.
      * If optdata is != NULL, we have options instead of data. */
     buf_t *p = buf_alloc (s->ip->pool, seglen, TCP_SEG_RESERVE );
-    seg->p = p;
     if (p == 0) {
         tcp_debug ("tcp_new_seg: could not allocate %u bytes\n", seglen);
-        tcp_segment_free(seg);
         return 0;
     }
 
+    /* Allocate memory for tcp_segment, and fill in fields. */
+    seg = tcp_segment_alloc_maylock(s);
+    if (seg == 0) {
+        buf_free(p);
+        return 0;
+    }
+    seg->p = p;
+
     if (tcp_segment_assign_buf(s, seg, p) == 0){
-        tcp_segment_free(seg);
+        tcp_segment_free(s, seg);
         return 0;
     }
 
@@ -144,15 +175,15 @@ int
 tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags);
 
 
+//* !!! it ensures that socket is lock, and leave it locked after return!
 inline 
 int tcp_pass_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags)
 {
     int res = tcp_enqueue_segments(s, queue, flags);
-    if (res != 0)
-       return res;
-    else
-       tcp_segments_free(queue);
-    return 0;
+    if ( __glibc_unlikely(res == 0) ){
+        tcp_segments_free(s, queue);
+    }
+    return res;
 }
 
 /*
@@ -160,6 +191,7 @@ int tcp_pass_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flag
  * Allocate a new buf and append it to socket send queue.
  * !!! it ensures that socket is lock, and leave it locked after return! 
  * \return  = amount of passed data
+ * !!!      = 0 - may leave by error with no locked socket !!! 
  */
 int
 tcp_enqueue (tcp_socket_t *s, const void *arg, small_uint_t len, tcph_flag_set flags)
@@ -323,8 +355,6 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
     unsigned len = 0;
     unsigned queuelen;
 
-    mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
-
     queuelen = s->snd_queuelen;
     if (queuelen != 0) {
         assert (s->unacked != 0 || s->unsent != 0);
@@ -396,9 +426,6 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
 		assert (s->unacked != 0 || s->unsent != 0);
 	}
 
-
-	if ((flags & TCP_SOCK_LOCK) == 0)
-	    tcpo_unlock_ensure(s_locked);
 	return 1;
 }
 
@@ -733,7 +760,7 @@ tcp_output_poll (tcp_socket_t *s)
 		    if (over != 0)
                 //empty overlaped buffer managed by netif_output to free it after tx
 		        seg->p = 0;
-			tcp_segment_free (seg);
+			tcp_segment_free (s, seg);
 		}
 		seg = s->unsent;
 	}//while (seg != 0 
@@ -905,15 +932,17 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
                 return -1;
             }
         }
-        tcpo_unlock_ensure(s_locked);
+        //tcpo_unlock_ensure(s_locked);
     }
 
     /* First, break up the data into segments and tuck them together in
      * the local "queue" variable. */
 
         /* Allocate memory for tcp_segment, and fill in fields. */
-        seg = (tcp_segment_t *)mem_alloc (s->ip->pool, sizeof (tcp_segment_t));
+        seg = tcp_segment_alloc_maylock(s);
         if (seg == 0) {
+            if (mutex_is_my(&s->lock))
+                mutex_unlock(&s->lock);
             tcp_debug ("tcp_write_buf: cannot allocate tcp_segment\n");
             return 0;
         }
@@ -922,7 +951,9 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
         seg->handle  = 0;
         if (tcp_segment_assign_buf(s, seg, p) == 0){
             seg->p = 0;
-            tcp_segment_free(seg);
+            tcp_segment_free(s, seg);
+            if (mutex_is_my(&s->lock))
+                mutex_unlock(&s->lock);
             return 0;
         }
 
@@ -937,16 +968,17 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
         if (evhandle)
             flags |= TF_NOCORK;
 
-        mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
+        tcpo_lock_ensure(&s->lock);
         int res = (tcp_pass_segments(s, seg, flags) != 0)? len : 0;
 
 #       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
-        tcpo_unlock_ensure(s_locked);
+        mutex_unlock(&s->lock);
         tcp_output (s);
 #       elif TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
         tcp_output (s);
-        tcpo_unlock_ensure(s_locked);
+        mutex_unlock(&s->lock);
 #       endif
+        //tcpo_unlock_ensure(s_locked);
 
         //assert (tcp_debug_verify (s->ip));
         return res;

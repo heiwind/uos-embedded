@@ -149,7 +149,7 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 	unsigned left = len;
 	while (left > 0){
 
-	    int sent = tcp_enqueue (s, ptr, len, TCP_SOCK_LOCK);
+	    int sent = tcp_enqueue (s, ptr, len, 0);
 	    left    -= sent;
         ptr     += sent;
 
@@ -157,6 +157,7 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
             break;
 
 #       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        if (mutex_is_my(&s->lock))
         mutex_unlock (&s->lock);
         tcp_output_poll (s);
 #       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED

@@ -202,6 +202,7 @@ struct _tcp_segment_t {
 	tcp_hdr_t *tcphdr;	/* the TCP header */
 	small_uint_t len;	/* the TCP length of this segment */
 	small_uint_t datacrc;// crc16_inet of data at dataptr, ==0 if no crc
+                         // spare_segs use it for segTimeLive ticks
 
 #ifdef UTCP_RAW
 	tcp_callback    handle;
@@ -224,8 +225,6 @@ typedef enum{
     , TF_CLOSED     = 0x10        /* Connection was sucessfully closed. */
     , TF_GOT_FIN    = 0x20        /* Connection closed by remote end. */
     , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - don`t combine small segments into big one
-    , TF_SOCK_LOCK  = 0x200       //*< tcp_enqueue leaves socket locked after return, (so propagated with tcp_write)
-    , TCP_SOCK_LOCK = TF_SOCK_LOCK
     , TF_NOBLOCK    = 0x400       //*< tcp_write/read returns imidiately, not waiting for all data enqueued
 
 #if TCP_IP_HCACHE > 0
@@ -314,6 +313,7 @@ struct _tcp_socket_t {//: base_socket_t
 	/* These are ordered by sequence number: */
 	tcp_segment_t *unsent;		/* Unsent (queued) segments. */
 	tcp_segment_t *unacked;		/* Sent but unacknowledged segments. */
+    tcp_segment_t *spare_segs;        /* segments not busy, and can be used for new data */
 	
 	ip_header_cache*    iph_cache;
 };
@@ -560,9 +560,15 @@ void tcp_socket_purge (tcp_socket_t *s);
 void tcp_socket_remove (tcp_socket_t **socklist, tcp_socket_t *s);
 void tcp_set_socket_state (tcp_socket_t *s, tcp_state_t newstate);
 
-unsigned char tcp_segments_free (tcp_segment_t *seg);
-unsigned char tcp_segment_free (tcp_segment_t *seg);
-tcp_segment_t *tcp_segment_copy (tcp_segment_t *seg);
+unsigned char tcp_segments_free (tcp_socket_t *s, tcp_segment_t *seg);
+unsigned char tcp_segment_free (tcp_socket_t *s, tcp_segment_t *seg);
+//* забирает сегмент из кучи доступных сегментов (ранее созданных)
+//* \return NULL - нет свободных сегментов, !!! сокет может захватиться
+//* \return  - возвращает новый сегмент, и сокет (s->lock) в захваченом состоянии
+tcp_segment_t *tcp_segment_takespare_maylock (tcp_socket_t *s);
+//* берет свободный сегмент, или создает новый.
+//  !!! может вернуть сокет, может захваченым 
+tcp_segment_t *tcp_segment_alloc_maylock(tcp_socket_t *s);
 
 #define TCP_TCPLEN(seg) ((seg)->len + (((seg)->tcphdr->flags & \
             (TCP_FIN | TCP_SYN)) ? 1 : 0))

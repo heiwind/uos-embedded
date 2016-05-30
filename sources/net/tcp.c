@@ -12,6 +12,8 @@
 #include <net/tcp.h>
 #include <net/netif.h>
 
+//checks spare segments for destroy to release memmory space
+void tcp_segments_timeout_spares(tcp_socket_t *s);
 /*
  * Called every 500 ms and implements the retransmission timer and the timer that
  * removes PCBs that have been in TIME-WAIT for enough time. It also increments
@@ -104,6 +106,7 @@ tcp_slowtmr (ip_t *ip)
 				ip->tcp_sockets = s->next;
 			}
 		} else {
+            tcp_segments_timeout_spares(s);
 			prev = s;
 		}
 		mutex_unlock (&s->lock);
@@ -136,6 +139,27 @@ tcp_slowtmr (ip_t *ip)
 	}
 }
 
+
+//checks spare segments for destroy to release memmory space
+void tcp_segments_timeout_spares(tcp_socket_t *s){
+    //резервирую пару сегментов под постоянную активность сокета 
+    unsigned preserve_hotready_spares = 2;
+    tcp_segment_t* useg;
+    tcp_segment_t* pred = 0;
+    for (useg = s->spare_segs; useg != 0; pred = useg, useg = useg->next){
+        ++useg->datacrc;
+        if (useg->datacrc > 2){
+            if (preserve_hotready_spares > 0)
+                --preserve_hotready_spares;
+            else {
+                pred->next = 0;
+                tcp_segments_free(0, useg);
+                return;
+            }
+        }
+    }
+}
+
 /*
  * Is called every TCP_FINE_TIMEOUT (100 ms) and sends delayed ACKs.
  */
@@ -163,14 +187,14 @@ tcp_fasttmr (ip_t *ip)
  * Deallocates a list of TCP segments (tcp_seg structures).
  */
 unsigned char
-tcp_segments_free (tcp_segment_t *seg)
+tcp_segments_free (tcp_socket_t *s, tcp_segment_t *seg)
 {
 	unsigned char count = 0;
 	tcp_segment_t *next;
 
 	for (count=0; seg != 0; seg = next) {
 		next = seg->next;
-		count += tcp_segment_free (seg);
+		count += tcp_segment_free (s, seg);
 	}
 	return count;
 }
@@ -179,7 +203,7 @@ tcp_segments_free (tcp_segment_t *seg)
  * Frees a TCP segment.
  */
 unsigned char
-tcp_segment_free (tcp_segment_t *seg)
+tcp_segment_free (tcp_socket_t *s, tcp_segment_t *seg)
 {
 	unsigned char count = 0;
 
@@ -190,7 +214,17 @@ tcp_segment_free (tcp_segment_t *seg)
 	    tcp_event_seg(teFREE, seg, 0);
 		count = buf_free (seg->p);
 	}
-	mem_free (seg);
+
+	if (s != 0){
+	    //drop seg buffer to spare pool
+	    //tcp_debug("tcp_spare:push >>seg $%x\n", seg);
+	    seg->datacrc = 0;
+	    seg->next = s->spare_segs;
+	    s->spare_segs = seg;
+	}
+	else
+	    mem_free (seg);
+
 	return count;
 }
 
@@ -239,7 +273,7 @@ tcp_socket_purge (tcp_socket_t *s)
 	tcp_debug ("tcp_socket_purge\n");
 	if (s->unsent != 0) {
 		tcp_debug ("tcp_socket_purge: not all data sent\n");
-		tcp_segments_free (s->unsent);
+		tcp_segments_free (0, s->unsent);
 		s->unsent = 0;
 	}
 	if (s->unacked != 0) {
@@ -250,9 +284,12 @@ tcp_socket_purge (tcp_socket_t *s)
 	        netif_terminate_buf(0, useg->p);
             s->unacked = useg->next;
 	        useg->p = 0;
-	        tcp_segment_free (useg);
+	        tcp_segment_free (0, useg);
 	        useg = s->unacked;
 	    }
+	}
+	if (s->spare_segs != 0){
+        tcp_segments_free (0, s->spare_segs);
 	}
 	s->snd_queuelen = 0;
 	
