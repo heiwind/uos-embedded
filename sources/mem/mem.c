@@ -90,7 +90,7 @@ void *mem_alloc (mem_pool_t *m, size_t required)
 
 	p = mem_alloc_dirty (m, required);
 	if (p && required > 0)
-		memset (p, 0, required);
+		memsetw (p, 0, required);
 	return p;
 }
 

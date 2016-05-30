@@ -41,6 +41,10 @@ memcpy (void *to, const void *from, size_t n);
 extern void *
 memset (void *s, unsigned char c, size_t n);
 
+//* set Nbytes sized area at S by word c
+extern 
+void * memsetw (void *s, unsigned c, size_t n);
+
 /* Compare N bytes of S1 and S2.  */
 extern small_int_t
 memcmp (const void *s1, const void *s2, size_t n);

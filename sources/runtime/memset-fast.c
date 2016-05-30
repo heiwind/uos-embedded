@@ -69,29 +69,8 @@ memset(void *m, unsigned char c, size_t n)
       if (LBLOCKSIZE > 4)
         buffer |= (buffer << 16) << 16;
 
-      while (n >= LBLOCKSIZE*4)
-        {
-#ifdef MIPS32
-          unsigned long* us = (unsigned long*)s;
-          us[0] = buffer;
-          us[1] = buffer;
-          us[2] = buffer;
-          us[3] = buffer;
-          s += 4*LBLOCKSIZE;
-#else
-          *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
-          *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
-          *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
-          *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
-#endif
-          n -= 4*LBLOCKSIZE;
-        }
-
-      while (n >= LBLOCKSIZE)
-        {
-          *((unsigned long*) s) = buffer;	s += LBLOCKSIZE;
-          n -= LBLOCKSIZE;
-        }
+      memsetw(s, buffer, n);
+      n &= (LBLOCKSIZE-1);
     }
 
   /* Pick up the remainder with a bytewise loop.  */
@@ -101,4 +80,35 @@ memset(void *m, unsigned char c, size_t n)
     }
 
   return m;
+}
+
+//* set Nbytes sized area at S by word c
+extern void *
+memsetw (void *m, unsigned buffer, size_t n)
+{
+    unsigned char *s = (unsigned char *)m;
+    while (n >= LBLOCKSIZE*4)
+      {
+#ifdef MIPS32
+        unsigned long* us = (unsigned long*)s;
+        us[0] = buffer;
+        us[1] = buffer;
+        us[2] = buffer;
+        us[3] = buffer;
+        s += 4*LBLOCKSIZE;
+#else
+        *((unsigned long*) s) = buffer;   s += LBLOCKSIZE;
+        *((unsigned long*) s) = buffer;   s += LBLOCKSIZE;
+        *((unsigned long*) s) = buffer;   s += LBLOCKSIZE;
+        *((unsigned long*) s) = buffer;   s += LBLOCKSIZE;
+#endif
+        n -= 4*LBLOCKSIZE;
+      }
+
+    while (n >= LBLOCKSIZE)
+      {
+        *((unsigned long*) s) = buffer;   s += LBLOCKSIZE;
+        n -= LBLOCKSIZE;
+      }
+    return m;
 }
