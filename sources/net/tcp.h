@@ -93,8 +93,13 @@ typedef enum _tcp_state_t {
  * tcp_enqueue, tcp_output affects an socket internals vs ip-input thread
  * by TCP_LOCK_LEGACY  - ones routines requres locked ip, and rely on assumption 
  *              that in locked ip, socket is not concurented by other threads
+ *              it was relyes that socked is unlocked at call,   and suposed that 
+ *                  socket lock ensures by locked ip
  *              it is for selfcommenting code (same as TCP_LOCK_STYLE not defined) - not actualy used
- * by TCP_LOCK_SURE    - tcp_output unsures that it have locks ip 
+ * by TCP_LOCK_SURE    - like a legacy + tcp_output ensures that it have locks ip
+ * !!!  styles above must be with IP_LOCK_STYLE_BASE 
+ * NOTE since it is use more locks for operation, modes below is slower vs TCP_LOCK_SURE
+ *      them interest if need more sockets or protocols concurence vs tcp 
  * by TCP_LOCK_RELAXED  - lock ip less time - only on group segments are posted,
  * by TCP_LOCK_RELAXED2 - lock ip less time - only on every segment posted to netif
  * */

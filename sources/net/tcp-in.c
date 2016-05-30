@@ -13,6 +13,32 @@
 #include <net/ip.h>
 #include <net/tcp.h>
 
+
+
+tcp_segment_t* tcp_release_window_segments(tcp_socket_t *s
+                    , tcp_segment_t* seg, unsigned long windowhi
+                    )
+{
+    tcp_segment_t* next;
+            while (seg != 0 &&
+                TCP_SEQ_LEQ (tcp_segment_seqafter(seg), windowhi)) 
+            {
+                tcp_debug ("tcp_receive: removing %lu:%lu\n"
+                        , tcp_segment_seqno(seg)
+                        , tcp_segment_seqafter(seg)
+                        );
+
+                next = seg;
+                seg = next->next;
+                --(s->snd_queuelen);
+                if (s->snd_queuelen != 0) {
+                    assert (s->unacked != 0 || s->unsent != 0);
+                }
+                tcp_segment_free (s, next);
+            }
+    return seg;
+}
+
 /*
  * Called by tcp_process. Checks if the given segment is an ACK for outstanding
  * data, and if so frees the memory of the buffered data. Next, it places the
@@ -145,33 +171,16 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 
 			/* Remove segment from the unacknowledged list if
 			 * the incoming ACK acknowlegdes them. */
-			next = 0;
-			while (s->unacked != 0 &&
-			    TCP_SEQ_LEQ (tcp_segment_seqafter(s->unacked)
-			               , ip->tcp_input_ackno)) 
-			{
-                tcp_debug ("tcp_receive: removing %lu:%lu from s->unacked\n"
-                        , tcp_segment_seqno(s->unacked)
-                        , tcp_segment_seqafter(s->unacked)
-                        );
-
-				next = s->unacked;
-                s->unacked = next->next;
-                --(s->snd_queuelen);
-                if (s->snd_queuelen != 0) {
-                    assert (s->unacked != 0 || s->unsent != 0);
-                }
-				tcp_segment_free (s, next);
-
-			}
-			if (next != 0){
-                tcp_debug ("tcp_receive: unack queuelen %u, snd_nxt = %u (after freeing unacked)\n",
-                    (unsigned int) s->snd_queuelen, s->snd_nxt);
+			next = tcp_release_window_segments(s, s->unacked, ip->tcp_input_ackno);
+			if (next != s->unacked){
+                s->unacked = next;
                 if (s->snd_queuelen != 0) {
                     assert (s->unacked != 0 || s->unsent != 0);
                 }
                 /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
                 signal_sock = 1;
+                tcp_debug ("tcp_receive: unack queuelen %u, snd_nxt = %u (after freeing unacked)\n",
+                    (unsigned int) s->snd_queuelen, s->snd_nxt);
 			}
 		}
 
@@ -181,32 +190,21 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		 * be acked. The rationale is that lwIP puts all outstanding
 		 * segments on the ->unsent list after a retransmission,
 		 * so these segments may in fact have been sent once. */
-        next = 0;
-		while (s->unsent != 0 
-		    && TCP_SEQ_LEQ (tcp_segment_seqafter(s->unsent), ip->tcp_input_ackno) 
-		    && TCP_SEQ_LEQ (ip->tcp_input_ackno, s->snd_max)) 
-		{
-            tcp_debug ("tcp_receive: removing %lu:%lu from s->unsent, queuelen = %u\n"
-                    , tcp_segment_seqno(s->unsent)
-                    , tcp_segment_seqafter(s->unsent)
-                    );
-
-			next = s->unsent;
-			s->unsent = s->unsent->next;
-			--(s->snd_queuelen);
-			tcp_segment_free (s, next);
-			if (s->snd_queuelen != 0) {
-				assert (s->unacked != 0 || s->unsent != 0);
-			}
-			if (s->unsent != 0) {
-				s->snd_nxt = tcp_segment_seqno(s->unsent);
-			}
-		}
-        if (next != 0){
-            tcp_debug ("tcp_receive: unsent queuelen = %u, snd_nxt = %u\n",
-                s->snd_queuelen, s->snd_nxt);
-            /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
-            signal_sock = 1;
+        if (TCP_SEQ_LEQ (ip->tcp_input_ackno, s->snd_max)) {
+            next = tcp_release_window_segments(s, s->unsent, ip->tcp_input_ackno);
+            if (next != s->unsent){
+                s->unsent = next;
+                if (s->unsent != 0) {
+                    s->snd_nxt = tcp_segment_seqno(s->unsent);
+                }
+                if (s->snd_queuelen != 0) {
+                    assert (s->unacked != 0 || s->unsent != 0);
+                }
+                /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
+                signal_sock = 1;
+                tcp_debug ("tcp_receive: unsent queuelen = %u, snd_nxt = %u\n",
+                    s->snd_queuelen, s->snd_nxt);
+            }
         }
 
 		/* End of ACK for new data processing. */

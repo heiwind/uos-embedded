@@ -39,9 +39,7 @@ tcp_slowtmr (ip_t *ip)
 		if (!mutex_trylock (&s->lock))
 		    continue;
 	    tcp_debug ("tcp_slowtmr: processing active socket $%p\n",s);
-		assert (s->state != CLOSED);
-		assert (s->state != LISTEN);
-		assert (s->state != TIME_WAIT);
+		assert ( !tcp_socket_is_state(s, tcpfCLOSED| tcpfTIME_WAIT | tcpfLISTEN) );
 		s_remove = 0;
 
 		if (s->state == SYN_SENT && s->nrtx == TCP_SYNMAXRTX) {
