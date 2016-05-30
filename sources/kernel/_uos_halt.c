@@ -58,12 +58,21 @@ void uos_debug_dump(){
  */
 #undef uos_halt
 
+#ifndef UOS_ON_HALT
+#define UOS_ON_HALT(errcode)
+#else
+__attribute__((weak, noinline)) 
+void uos_on_halt(int errcode)
+{}
+#endif
+
 #ifdef NDEBUG
 __NORETURN
 #endif
 void
 uos_halt (int dump_flag)
 {
+    UOS_ON_HALT(dump_flag);
 #if LINUX386
 	exit (0);
 #else

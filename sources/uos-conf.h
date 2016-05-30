@@ -207,6 +207,7 @@
  ************************************************************************** */
 //#define UOS_ON_NEW_TASK(t)
 //#define UOS_ON_DESTROY_TASK(t, message)
+#define UOS_ON_HALT(errcode)  uos_on_halt(errcode)
 
 //#define UOS_WITH_NEWLIB
 //!	Newlib port: см. posix/sys/newlib.h
