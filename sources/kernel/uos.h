@@ -235,13 +235,15 @@ struct _array_t {
 #define ARRAY(name, bytes) \
 	array_t name [((bytes) + sizeof (array_t) - 1) / sizeof (array_t)]
 
+//* anonimous type should be only static, cause it cant be referenced anywhere else
+//  static
 #define MUTEX_GROUP(n) \
     union {\
-        ARRAY (data, sizeof(mutex_group_t) + (n) * sizeof(mutex_slot_t));\
+        ARRAY (data, sizeof(mutex_group_t) + (n-1) * sizeof(mutex_slot_t));\
         mutex_group_t g;\
         struct { \
             mutex_group_t   g;\
-            mutex_slot_t    s[n];\
+            mutex_slot_t    s[n-1];\
         } field;\
     }
 

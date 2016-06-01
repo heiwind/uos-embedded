@@ -33,6 +33,7 @@ mutex_lock_irq (mutex_t *m, int irq, handler_t func, void *arg)
 
 	mutex_irq_t* swi = &mutex_irq [irq];
 
+	if (m->irq)
 	if (! m->irq->lock)
 		arch_intr_bind (irq);
 	mutex_lock_swi(m, swi, func, arg);
