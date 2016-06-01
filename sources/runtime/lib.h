@@ -30,23 +30,23 @@ extern void longjmp (jmp_buf, int);
  */
 extern struct _stream_t debug;
 extern bool_t debug_onlcr;
-unsigned short debug_getchar (void);
-int debug_peekchar (void);
+unsigned short debug_getchar (void)  __noexcept __NOTHROW;
+int debug_peekchar (void)  __noexcept __NOTHROW;
 
 #ifndef NO_DEBUG_PRINT
 
-void debug_putchar (void *arg, short c);
-void debug_putc (char c);
-void debug_puts (const char *str);
-int debug_printf (const char *fmt, ...);
-int debug_vprintf (const char *fmt, va_list args);
-void debug_dump (const char *caption, void* data, unsigned len);
+void debug_putchar (void *arg, short c)  __noexcept __NOTHROW;
+void debug_putc (char c)  __noexcept __NOTHROW;
+void debug_puts (const char *str)  __noexcept __NOTHROW;
+int debug_printf (const char *fmt, ...)  __noexcept __NOTHROW;
+int debug_vprintf (const char *fmt, va_list args)  __noexcept __NOTHROW;
+void debug_dump (const char *caption, void* data, unsigned len)  __noexcept __NOTHROW;
 #ifndef ARCH_debug_dump_stack
 void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee);
 #else
 #define debug_dump_stack ARCH_debug_dump_stack
 #endif
-void debug_redirect (void (*func) (void*, short), void *arg);
+void debug_redirect (void (*func) (void*, short), void *arg)  __noexcept __NOTHROW;
 
 #else
 

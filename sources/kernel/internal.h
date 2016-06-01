@@ -143,16 +143,16 @@ extern const char uos_assert_mutex_task_name_msg[];
 
 
 /* Switch to most priority task. */
-void task_schedule (void);
+void task_schedule (void) __noexcept __NOTHROW;
 
 /* Activate all waiters of the lock. */
-void mutex_activate (mutex_t *m, void *message);
+void mutex_activate (mutex_t *m, void *message) __noexcept __NOTHROW;
 
 // it is try to handle IRQ handler and then mutex_activate,
 //  if handler return true
 // \return 0 - no activation was pended
 // \return else - value of handler:
-bool_t mutex_awake (mutex_t *m, void *message);
+bool_t mutex_awake (mutex_t *m, void *message) __noexcept __NOTHROW;
 
 // assign current task to m->slaves and schdule. priority adjusted
 void mutex_slaved_yield(mutex_t *m);
@@ -278,10 +278,10 @@ INLINE bool_t mutex_check_pended_irq (mutex_t *m)
 void mutex_do_unlock(mutex_t *m);
 
 /* Recalculate task priority, based on priorities of acquired locks. */
-void task_recalculate_prio (task_t *t);
+void task_recalculate_prio (task_t *t) __noexcept __NOTHROW;
 
 /* Recalculate lock priority, based on priorities of waiting tasks. */
-void mutex_recalculate_prio (mutex_t *m);
+void mutex_recalculate_prio (mutex_t *m) __noexcept __NOTHROW;
 
 /* Utility functions. */
 INLINE bool_t task_is_waiting (task_t *task) {

@@ -52,10 +52,10 @@ int rtlog_avail   ( rtlog* u ) {return ring_uindex_avail(&u->idx);};
 //* это эмуляторы аналогичных функций печати. количество сохраняемых аргументов 
 //*     не более RTLOG_ARGS_LIMIT
 //* !!! передача аргументов float/double не гарантируется!
-int rtlog_vprintf ( rtlog* u, unsigned argsn, const char *fmt, va_list args);
+int rtlog_vprintf ( rtlog* u, unsigned argsn, const char *fmt, va_list args)  __noexcept __NOTHROW;
 //* 1й параметр va_args трактуется как const char *fmt
-int rtlog_printf  ( rtlog* u, unsigned argsn, ...);
-int rtlog_puts    ( rtlog* u, const char *str);
+int rtlog_printf  ( rtlog* u, unsigned argsn, ...)  __noexcept __NOTHROW;
+int rtlog_puts    ( rtlog* u, const char *str) __noexcept __NOTHROW;
 
 //* печатает records_count последних записей журнала в dst
 void rtlog_dump_last( rtlog* u, stream_t *dst, unsigned records_count);

@@ -16,8 +16,8 @@ extern "C" {
     void __assert_fail_ndebug ();
 #else
     void __assert_fail (const char *expr, const char *file,
-                        unsigned line, const char *func);// __NORETURN;
-    void __assert_msg(const char *msg, ...);
+                        unsigned line, const char *func) __noexcept __NOTHROW;// __NORETURN;
+    void __assert_msg(const char *msg, ...) __noexcept __NOTHROW;
 #endif
 
 #ifdef __cplusplus
