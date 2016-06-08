@@ -211,6 +211,7 @@ tcp_segment_free (tcp_socket_t *s, tcp_segment_t *seg)
 	if (seg->p != 0) {
 	    tcp_event_seg(teFREE, seg, 0);
 		count = buf_free (seg->p);
+		seg->p = 0;
 	}
 
 	if (s != 0){
@@ -287,7 +288,9 @@ tcp_socket_purge (tcp_socket_t *s)
 	    }
 	}
 	if (s->spare_segs != 0){
+        tcp_debug ("tcp_socket_purge: data left on ->spare\n");
         tcp_segments_free (0, s->spare_segs);
+        s->spare_segs = 0;
 	}
 	s->snd_queuelen = 0;
 	
@@ -319,7 +322,7 @@ tcp_socket_remove (tcp_socket_t **slist, tcp_socket_t *s)
 	if (s->state != TIME_WAIT && s->state != LISTEN &&
 	    (s->flags & TF_ACK_DELAY)) {
 		s->flags |= TF_ACK_NOW;
-		tcp_output (s);
+		tcp_output_poll (s);
 	}
 	tcp_set_socket_state (s, CLOSED);
 

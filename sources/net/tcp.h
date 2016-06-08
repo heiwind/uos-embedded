@@ -633,7 +633,7 @@ int tcp_enqueue (tcp_socket_t *s
                 , tcph_flag_set flags);
 
 /** !!! it ensures that socket is lock, and leave it locked after return!
- *  \arg flags - TCP_FLAGS and if TCP_SOCK_LOCK - leaves s locked after return  
+ *  \arg flags - TCP_FLAGS and if TCP_SOCK_LOCK - leaves s locked after success return
  * \return  = amount of passed data
 */
 int tcp_enqueue_option4 (tcp_socket_t *s

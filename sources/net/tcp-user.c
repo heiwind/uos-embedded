@@ -96,6 +96,7 @@ tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
     mutex_unlock (&ip->lock);
     tcp_output (s);
 #endif
+    mutex_unlock (&s->lock);
 	return s;
 }
 
@@ -437,7 +438,6 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
 		return (tcp_socket_t *)SENOMEM;
 	}
     p = tcp_queue_get (s);
-    mutex_unlock (&s->lock);
 
 	h = (tcp_hdr_t*) p->payload;
 	iph = ((ip_hdr_t*) p->payload) - 1;
@@ -453,6 +453,7 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
 	ns->ssthresh = ns->snd_wnd;
 	ns->snd_wl1 = s->ip->tcp_input_seqno;
 	ns->ip = s->ip;
+    mutex_unlock (&s->lock);
 
 	/* Register the new PCB so that we can begin receiving
 	 * segments for it. */
@@ -466,7 +467,9 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
 		(((unsigned long)ns->mss / 256) << 8) | (ns->mss & 255));
 	buf_free (p);
 
-	/* Send a SYN|ACK together with the MSS option. */
+	/* Send a SYN|ACK together with the MSS option.
+	 * there is impossible fail of tcp_enqueue_option4
+	 * */
 	tcp_enqueue_option4 (ns, TCP_SYN | TCP_ACK, optdata);
 #if TCP_LOCK_STYLE <= TCP_LOCK_SURE
     tcp_output (ns);
@@ -475,6 +478,7 @@ tcp_socket_t *tcp_accept_until (tcp_socket_t *s
     mutex_unlock (&ns->ip->lock);
     tcp_output (ns);
 #endif
+    mutex_unlock (&ns->lock);
 	return ns;
 }
 

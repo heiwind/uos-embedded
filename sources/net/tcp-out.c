@@ -171,7 +171,7 @@ tcp_segment_t * tcp_segment_new(tcp_socket_t *s, const void *arg, small_uint_t s
     return seg;
 }
 
-int
+void //int
 tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags);
 
 
@@ -179,11 +179,15 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
 inline 
 int tcp_pass_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags)
 {
-    int res = tcp_enqueue_segments(s, queue, flags);
+    //mutex_t* s_locked =
+            tcpo_lock_ensure(&s->lock);
+    tcp_enqueue_segments(s, queue, flags);
+    return 1;
+    /*
     if ( __glibc_unlikely(res == 0) ){
         tcp_segments_free(s, queue);
     }
-    return res;
+    */
 }
 
 /*
@@ -288,7 +292,7 @@ tcp_enqueue (tcp_socket_t *s, const void *arg, small_uint_t len, tcph_flag_set f
 /*
  * Send options or flags.
  * Allocate a new buf and append it to socket send queue.
- * !!! it ensures that socket is lock, and leave it locked after return! 
+ * !!! it ensures that socket is lock, and leave it locked after success return!
  * \return 0 on error.
  */
 int
@@ -344,10 +348,9 @@ tcp_enqueue_option4 (tcp_socket_t *s
 /*
  * Send data or options or flags.
  * Allocate a new buf and append it to socket send queue.
- * ensures socket locked in operation. !!!! socket leave locked after return! 
  * \return  = 0 on error
  */
-int
+void //int
 tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags)
 {
     tcp_segment_t *useg;
@@ -426,7 +429,7 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
 		assert (s->unacked != 0 || s->unsent != 0);
 	}
 
-	return 1;
+	//return 1;
 }
 
 // overlaped buffer seg->p seems shouldn`t be sopy, caller responded on it`s life
@@ -635,7 +638,7 @@ tcp_output_poll (tcp_socket_t *s)
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
 	mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
 #elif TCP_LOCK_STYLE <= TCP_LOCK_SURE
-    mutex_t* s_locked = tcpo_lock_ensure(IP_TX_LOCK(s->ip));
+    mutex_t* s_locked = iptx_lock_ensure(s->ip);
 #endif
     
     wnd = (s->snd_wnd < s->cwnd) ? s->snd_wnd : s->cwnd;
