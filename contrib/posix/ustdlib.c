@@ -131,5 +131,13 @@ void __cxa_deleted_virtual() {
 #include <sys/newlib.h>
 struct _reent *_impure_ptr __ATTRIBUTE_IMPURE_PTR__;
 
-
+#ifndef _REENT_ONLY
+#include <errno.h>
+int global_errno;
+extern int *__errno(void){
+    if (_impure_ptr == 0)
+        return &global_errno;
+    return &_impure_ptr->_errno;
+}
+#endif
 

@@ -1,6 +1,8 @@
 #ifndef __ERRNO_H__
 #define __ERRNO_H__
 
+
+
 #include <net/errors.h>
 
 #define	EPERM		 1	/* Operation not permitted */
@@ -131,6 +133,12 @@
 #define	ENOMEDIUM	123	/* No medium found */
 #define	EMEDIUMTYPE	124	/* Wrong medium type */
 
-extern int errno;
+
+
+//comes from std newlib
+#ifndef _REENT_ONLY
+#define errno (*__errno())
+extern int *__errno(void);
+#endif
 
 #endif
