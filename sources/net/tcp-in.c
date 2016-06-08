@@ -586,7 +586,7 @@ tcp_process (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 		tcp_receive (s, inseg, h);
 		if ((ip->tcp_input_flags & TCP_ACK) &&
 		    ip->tcp_input_ackno == s->snd_nxt) {
-close_time_wait:	tcp_debug ("TCP connection closed %u -> %u.\n",
+close_time_wait:	tcp_debug ("TCP connection closed to TIME_WAIT %u -> %u.\n",
 				inseg->tcphdr->src, inseg->tcphdr->dest);
 			tcp_ack_now (s);
 			tcp_list_remove (&ip->tcp_sockets, s);
@@ -600,7 +600,7 @@ close_time_wait:	tcp_debug ("TCP connection closed %u -> %u.\n",
 		if ((ip->tcp_input_flags & TCP_ACK) &&
 		    ip->tcp_input_ackno == s->snd_nxt) {
 			/* The connection has been closed. Notify a user. */
-			tcp_debug ("TCP connection closed %u -> %u.\n",
+			tcp_debug ("TCP connection closed by LAST_ACK %u -> %u.\n",
 				inseg->tcphdr->src, inseg->tcphdr->dest);
 			tcp_socket_remove (&ip->tcp_sockets, s);
 		}
