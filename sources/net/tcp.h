@@ -343,6 +343,14 @@ tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
  */
 tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port);
 
+/* takes socket at state CLOSED, and start connect to s->remote
+ *      if s not CLOSED, return null
+ * \return socket in connection state
+ * \return      = SExxx - some error
+ *
+ * */
+tcp_socket_t *tcp_connect_restart (tcp_socket_t *s);
+
 /*
  * Set the state of the connection to be LISTEN, which means that it
  * is able to accept incoming connections. The protocol control block

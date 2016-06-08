@@ -53,7 +53,6 @@ again:
 tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 {
 	tcp_socket_t *s;
-	unsigned long optdata;
 
 	tcp_debug ("tcp_connect to port %u\n", port);
 	if (ipaddr.val == 0)
@@ -71,6 +70,26 @@ tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 	if (s->local_port == 0) {
 		s->local_port = tcp_new_port (ip);
 	}
+    mutex_unlock (&ip->lock);
+    tcp_socket_t* res = tcp_connect_restart(s);
+    if (SEANYERROR(res)){
+        mem_free(s);
+    }
+    return res;
+}
+
+/* takes socket at state CLOSED, and start connect to s->remote
+ *      if s not CLOSED, return null
+ * \return socket in connection state
+ * \return      = SExxx - some error
+ *
+ * */
+tcp_socket_t *tcp_connect_restart (tcp_socket_t *s)
+{
+    unsigned long optdata;
+    ip_t *ip = s->ip;
+    tcp_debug ("tcp reconnect to port %u\n", s->remote_port);
+
 	s->lastack = s->snd_nxt - 1;
 	s->snd_lbb = s->snd_nxt - 1;
 	s->snd_wnd = TCP_WND;
@@ -84,10 +103,10 @@ tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 		(s->mss & 255));
 
 	if (! tcp_enqueue_option4 (s, TCP_SYN, optdata)) {
-		mem_free (s);
-		mutex_unlock (&ip->lock);
 		return 0;
 	}
+    mutex_lock (&ip->lock);
+    s->tmr = ip->tcp_ticks;
 	tcp_list_add (&ip->tcp_sockets, s);
 #if TCP_LOCK_STYLE <= TCP_LOCK_SURE
     tcp_output (s);
