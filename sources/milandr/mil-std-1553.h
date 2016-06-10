@@ -35,7 +35,7 @@ typedef struct _milandr_mil1553_t
 //    uint16_t tx_buf[MIL_DATA_LENGTH];   // только для RT
 
     // Статистика
-    unsigned            nb_transmitions;
+    unsigned            nb_words;
     unsigned            nb_lost;
     unsigned            nb_errors;
     unsigned            nb_emergency_errors;

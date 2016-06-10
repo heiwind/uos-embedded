@@ -266,7 +266,7 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
             mil->reg->StatusWord1 = answerWord;
         }
         if ((status & MIL_STD_STATUS_VALMESS) != 0) {
-            mil->nb_transmitions++;
+            mil->nb_words += wordsCount;
             copy_to_rt_rxq(mil, subaddr, wordsCount);
         }
 
@@ -303,7 +303,7 @@ void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status
 
         }
         if ((status & MIL_STD_STATUS_VALMESS) != 0) {
-            mil->nb_transmitions++;
+            mil->nb_words += wordsCount;
             copy_to_rt_rxq(mil, subaddr, wordsCount);
         }
         break;
@@ -482,17 +482,24 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
 	mil1553_lock(&mil->milif);
 
     if (status & MIL_STD_STATUS_VALMESS) {
+        int wc = -1;
         if (mil->urgent_desc.reserve) {
             // Была передача вне очереди
-            if (mil->pool && mil->urgent_desc.transmit_mode == MIL_SLOT_RT_BC)
+            if (mil->pool && mil->urgent_desc.transmit_mode == MIL_SLOT_RT_BC) {
+                wc = mil->urgent_desc.words_count;
                 copy_to_urgent_rxq(mil, mil->urgent_desc);
+            }
         } else {
             if (mil->cur_slot != 0) {
                 mil_slot_desc_t slot = mil->cur_slot->desc;
+                wc = slot.words_count;                
                 if (mil->pool && slot.transmit_mode == MIL_SLOT_RT_BC) {
                     copy_to_cyclogram_rxq(mil, slot);
                 }
             }
+        }
+        if (wc >= 0) {
+            mil->nb_words += (wc==0?32:wc);
         }
     } else if (status & MIL_STD_STATUS_ERR) {
 	    mil->nb_errors++;
@@ -500,8 +507,6 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
 	    	mil->nb_emergency_errors++;
 	    }
 	}
-
-    mil->nb_transmitions++;
 
 	if (mil->urgent_desc.reserve) // Если была передача вне очереди, то сбрасываем дескриптор,
 		mil->urgent_desc.raw = 0; // чтобы не начать её повторно
