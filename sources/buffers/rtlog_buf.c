@@ -42,8 +42,7 @@ int rtlog_printf  ( rtlog* u, unsigned nargs, ...){
 
 int rtlog_vprintf ( rtlog* u, unsigned nargs, const char *fmt, va_list args){
     unsigned slot;
-    arch_state_t x;
-    arch_intr_disable (&x);
+    arch_state_t x = arch_intr_off();
     if (ring_uindex_full(&u->idx))
         // drop first message if full
         ring_uindex_get(&u->idx);
@@ -76,25 +75,32 @@ int rtlog_puts( rtlog* u, const char *str){
 //* печатает records_count последних записей журнала в dst
 void rtlog_dump_last( rtlog* u, stream_t *dst, unsigned records_count)
 {
-    unsigned slot;
+    unsigned slot = 0;
     rtlog_node n;
     unsigned last_stamp = u->stamp;
-    while (records_count > 0){
-        arch_state_t x;
-        arch_intr_disable (&x);
+
+    {
+        arch_state_t x = arch_intr_off();
 
         unsigned avail = ring_uindex_avail(&u->idx);
         if (records_count > avail)
             records_count = avail;
-        if (records_count > 0) {
-            slot = u->idx.write;
-            slot = (slot - records_count) & u->idx.mask;
-            memcpy(&n, u->store+slot, sizeof(n));
-        }
+
+        if (records_count <= 0)
+            return;
+
+        slot = u->idx.write;
+        slot = (slot - records_count) & u->idx.mask;
         arch_intr_restore (x);
-        if (records_count == 0)
-            break;
-        --records_count;
+    }
+
+    while (slot != u->idx.write){
+
+        {
+            arch_state_t x = arch_intr_off();
+            memcpy(&n, u->store+slot, sizeof(n));
+            arch_intr_restore (x);
+        }
 
         RTLOG_printf("rtdump: at %d[stamp%x] %s"
                     , slot, n.stamp
@@ -107,9 +113,16 @@ void rtlog_dump_last( rtlog* u, stream_t *dst, unsigned records_count)
                           );
         last_stamp = n.stamp;
 
+        void* sp = get_stack_pointer();
         stream_printf(dst, n.msg
                     , n.args[0], n.args[1], n.args[2], n.args[3]
                     , n.args[4], n.args[5]
                     );
+        assert(sp == get_stack_pointer());
+
+        slot = (slot+1) & u->idx.mask;
+        --records_count;
+        if (records_count <= 0)
+            break;
     }
 }
