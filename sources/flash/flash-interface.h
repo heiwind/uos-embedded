@@ -8,6 +8,12 @@
 #define FLASH_ERR_INVAL_SIZE    -4
 #define FLASH_ERR_BAD_ANSWER    -5
 
+#include <kernel/uos.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _flashif_t flashif_t;
 
 struct _flashif_t
@@ -131,5 +137,11 @@ unsigned flash_min_address(flashif_t *flash)
         return flash->min_address(flash);
     else return FLASH_ERR_NOT_SUPP;
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

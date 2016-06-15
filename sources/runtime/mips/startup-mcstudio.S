@@ -19,6 +19,13 @@
 #
 #include <runtime/mips/io.h>
 
+//* MIPS_VEC_SECTIONS declares that vectors are plased on their position by linker
+//	so verctor-handles places in it`s own sections:
+//		.init.pagefault, .init.exception, .init.irq,
+//		.init.* - other common stuff
+//#define  MIPS_VEC_SECTIONS
+
+
 #ifndef RAM_HI
 #define RAM_HI  0xb800
 #endif
@@ -26,6 +33,17 @@
         .section .init
         .set    noreorder
         .set    mips32
+
+
+    .macro SAFE_NOP
+#ifdef ELVEES_SAFE_LW_MXC0
+//suspects that commands lw, mtc0, tfc0 are completed after next tackt, 
+//      so inserts nop to sure thir value
+#ifndef NDEBUG 
+    nop
+#endif
+#endif
+    .endm
 
 #---------------------------------------
 # Macro: flush cache
@@ -36,10 +54,10 @@
         lw  $k1, 0($k0)
         ori $k1, 0x5000
         sw  $k1, 0($k0)
+        SAFE_NOP
         lw  $k1, 0($k0)
 #endif
     .endm
-
 #---------------------------------------
 # Reset vector at 0xBFC00000
 #
@@ -52,11 +70,13 @@ _reset_vector_: .globl  _reset_vector_
 #if 1
         lui     $gp, 0xb840         # Set global pointer
         mfc0    $a0, $C0_COUNT          # Get CPU tick counter
+        SAFE_NOP
         sw      $a0, ($gp)          # Store start time to XYRAM0
 #endif
 
         lui     $gp, RAM_HI         # Set global pointer
-        j       _init_              # Jump to _init_()
+        la      $t0,_init_          # init code can be far away from reset/isr internal mem
+        jr      $t0                 # Jump to _init_()
         nop
 
 #ifdef BOOT_CHECKSUM
@@ -115,30 +135,42 @@ _reset_vector_: .globl  _reset_vector_
         sw  $31, (CONTEXT_RA * 4) ($sp)
         .set    at
 
-        mfhi    $a0                     # Save special registers
-        sw      $a0, (CONTEXT_HI * 4) ($sp)
+        mfhi    $k0                     # Save special registers
+        sw      $k0, (CONTEXT_HI * 4) ($sp)
+        SAFE_NOP
 
-        mflo    $a0
-        sw      $a0, (CONTEXT_LO * 4) ($sp)
+        mflo    $k0
+        sw      $k0, (CONTEXT_LO * 4) ($sp)
+        SAFE_NOP
 
-        mfc0    $a0, $C0_EPC
-        sw      $a0, (CONTEXT_PC * 4) ($sp)
+        mfc0    $k0, $C0_EPC
+        sw      $k0, (CONTEXT_PC * 4) ($sp)
+        SAFE_NOP
 
-        mfc0    $a0, $C0_STATUS
-        sw      $a0, (CONTEXT_STATUS * 4) ($sp)
+        mfc0    $k0, $C0_STATUS
+        sw      $k0, (CONTEXT_STATUS * 4) ($sp)
+        SAFE_NOP
         .endm
 
-#ifndef MIPS_NOBEV
 
+
+#ifndef MIPS_NOBEV
 #---------------------------------------
 # TLB refill vector at 0x....0200
 #
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.pagefault
+#else
         .org    0x0200
+#endif
+
 _pagefault_vector_: .globl _pagefault_vector_
         FLUSH_CACHE
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
+#if MIPS_FSPACE > 0
         addi    $sp, -MIPS_FSPACE       # Make an arg frame
+#endif
 
         .extern _pagefault_handler_
         lui     $gp, RAM_HI             # Set global pointer
@@ -150,23 +182,28 @@ _pagefault_vector_: .globl _pagefault_vector_
 #---------------------------------------
 # Exception vector at 0x....0380
 #
-
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.exception
+#else
 #ifdef MIPS_NOBEV
         .org    0x0180
 #else
         .org    0x0380
+#endif
 #endif
 
 _exception_vector_: .globl _exception_vector_
 
         FLUSH_CACHE
         mfc0    $k0, $C0_CAUSE          # Get CAUSE
+        SAFE_NOP
         andi    $k0, CA_EXC_CODE        # Extract exception code
         li      $k1, CA_Sys             # Is it syscall?
         bne     $k1, $k0, exception     # No - jump to handler.
         nop                             # (delay slot)
 
         mfc0    $k0, $C0_EPC            # Get EPC
+        SAFE_NOP
         add     $k0, 4                  # Return to next instruction
         mtc0    $k0, $C0_EPC            # Put EPC back
 
@@ -174,6 +211,7 @@ _exception_vector_: .globl _exception_vector_
         # Инструкция SYSCALL: чтение регистра STATUS и запрет прерываний.
         #
         mfc0    $a0, $C0_STATUS         # Get SR
+        SAFE_NOP
         li      $k0, -1 - ST_IE         # Prepare bitmask
         and     $k0, $a0                # Clear IE bit
         mtc0    $k0, $C0_STATUS         # Put SR back
@@ -190,11 +228,26 @@ _exception_vector_: .globl _exception_vector_
         nop                             # just to be safe
         nop
         nop
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        and     $k0, $a0                # Clear EXL bit
+        mtc0    $k0, $C0_STATUS         # Put SR back
+        nop  
+        jr    $27                       #go continue
+        nop  
+        nop                             # just to be safe
+        nop
         nop
 #else
         sync                            # Settle things down
         eret                            # PC <= EPC; EXL <= 0
-        nop                             # just to be safe
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        and     $k0, $a0                # Clear IE bit
+        mtc0    $k0, $C0_STATUS         # Put EXL back
+        nop
+        jr    $27                       #go continue
+        nop  
 #endif
         .set mips0
 
@@ -202,39 +255,69 @@ _exception_vector_: .globl _exception_vector_
 # Interrupt vector at 0x....0400
 #
 
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.irq
+#else
 #ifdef MIPS_NOBEV
         .org    0x0200
 #else
         .org    0x0400
 #endif
+#endif
+
 _interrupt_vector_: .globl _interrupt_vector_
 
         FLUSH_CACHE
         SAVE_REGS                       # Save all registers in stack
-        addi    $sp, -MIPS_FSPACE       # Make an arg frame
-
-        .extern _irq_handler_
         lui     $gp, RAM_HI             # Set global pointer
+#if MIPS_FSPACE > 0
+        .extern _irq_handler_
+        addi    $sp, -MIPS_FSPACE       # Make an arg frame
         j       _irq_handler_           # Jump to C code, no return
         nop
+#else
+        .extern _arch_interrupt_
+        .extern switch_task
+        jal     _arch_interrupt_
+        beq     $v0, $zero, _restore_regs_
+        nop
+        //j       _restore_regs_
+        j       switch_task
+        nop 
+#endif
+
 
 #---------------------------------------
 # Hangle exceptions
 #
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.exception.handle
+#endif
+
 exception:
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
+#if MIPS_FSPACE > 0
         addi    $sp, -MIPS_FSPACE       # Make an arg frame
+#endif
 
         .extern _exception_handler_
         lui     $gp, RAM_HI                 # Set global pointer
-        j       _exception_handler_         # Jump to C code, no return
+        la      $t0, _exception_handler_    #exception code can be far away from internal memory
+        jr      $t0                         # Jump to C code, no return
+        nop
+        j       _restore_regs_
         nop
 
+#ifdef  MIPS_VEC_SECTIONS
+        .section .init.context
+#endif
 #---------------------------------------
 # Restore CPU state and return from interrupt
 _restore_regs_: .globl _restore_regs_
+#if MIPS_FSPACE > 0
         addi    $sp, MIPS_FSPACE        # Remove an arg frame
+#endif
 
         lw      $a0, (CONTEXT_LO * 4) ($sp) # Load HI, LO registers
         mtlo    $a0
@@ -302,11 +385,26 @@ _restore_regs_: .globl _restore_regs_
         nop                             # just to be safe
         nop
         nop
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        xori    $k0, ST_EXL             # allow interupts after eret
+        mtc0    $k0, $C0_STATUS         # Put SR back
+        SAFE_NOP
+        jr    $27                       #go continue
+        nop  
+        nop                             # just to be safe
+        nop
         nop
 #else
         sync                            # settle things down
         eret                            # PC <= EPC; EXL <= 0
-        nop                             # just to be safe
+        nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
+        mfc0  $27,  $14                 #save epc in gp 27
+        xori    $k0, ST_EXL             # allow interupts after eret
+        mtc0    $k0, $C0_STATUS         # Put SR back
+        SAFE_NOP
+        jr    $27                       #go continue
+        nop  
 #endif
         .set mips0
 

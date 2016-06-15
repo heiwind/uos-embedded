@@ -1,11 +1,16 @@
 #ifndef _TIME_H_
 #define _TIME_H_
 
+#include <uos-conf.h>
+
 #ifndef UOS_LEAP_SECONDS
 #	define UOS_LEAP_SECONDS 1
 #endif
 
+#ifndef __time_t_defined
 typedef long time_t;
+#define __time_t_defined
+#endif
 
 struct tz_rule_t {
 	small_uint_t month, week, day;

@@ -1,3 +1,6 @@
+#ifndef __UOS_BYTEORDER__
+#define __UOS_BYTEORDER__
+
 /*
  * Convert value between network and host byte order.
  */
@@ -23,3 +26,6 @@
 #define NTOHL(x)	HTONL(x)
 
 #endif
+
+#endif //__UOS_BYTEORDER__
+

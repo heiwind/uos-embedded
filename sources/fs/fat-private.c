@@ -22,10 +22,10 @@ void do_fat_free_fs_entry(fs_entry_t *entry)
 static fat_fs_entry_t *alloc_fs_entry(fat_fs_t *fat, unsigned name_size)
 {
     fat_fs_entry_t *e;
-    e = mem_alloc(fat->pool, sizeof(fat_fs_entry_t));
+    e = (fat_fs_entry_t *)mem_alloc(fat->pool, sizeof(fat_fs_entry_t));
     if (!e) return 0;
 
-    e->fs_entry.name = mem_alloc_dirty(fat->pool, name_size);
+    e->fs_entry.name = (char *)mem_alloc_dirty(fat->pool, name_size);
     if (!e->fs_entry.name) {
         mem_free(e);
         return 0;
@@ -67,7 +67,7 @@ void do_fat_open(fs_entry_t *entry)
 {
     fat_fs_t *fat = (fat_fs_t *)entry->fs;
     
-    entry->cache_data = mem_alloc_dirty(fat->pool, fat->bytes_per_sec);
+    entry->cache_data = (uint8_t *)mem_alloc_dirty(fat->pool, fat->bytes_per_sec);
     if (!entry->cache_data) {
         entry->fs->last_error = FS_ERR_NO_MEM;
         return;
@@ -238,7 +238,7 @@ next_child(fs_entry_t *entry)
             return 0;
         }
         while (de->name[0] == 0xE5) {
-            de = move_to_next_dir_entry(entry);
+            de = (fat_dir_ent_t *)move_to_next_dir_entry(entry);
             if (!de)
                 return 0;
             if (de->name[0] == 0) {
@@ -271,7 +271,7 @@ next_child(fs_entry_t *entry)
                     *name_p++ = le->name1[i];
                 for (i = 0; i < 2; ++i)
                     *name_p++ = le->name2[i];
-                le = move_to_next_dir_entry(entry);
+                le = (fat_long_ent_t *)move_to_next_dir_entry(entry);
                 if (!le)
                     return 0;
                 if (nb_ent == 0) break;

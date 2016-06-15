@@ -1741,6 +1741,17 @@
 #define MC_USB_EP_FULL64            (1 << 23)
 #define MC_USB_EP_EMPTY64           (1 << 24)
 
- 
+
+
+/*****************************************************************************
+ * \~russian карта сигналов (Event) уОС. обработчик прерываний их генерирует.
+ * ****************************************************************************/
+#define MC_IRQ_EVT_SW0              28
+#define MC_IRQ_EVT_SW1              29
+#define MC_IRQ_EVT_COMPARE          30
+#define MC_IRQ_EVT_UART1            5
+#define MC_IRQ_EVT_UART0            4
+
+
 
 #endif /* _IO_ELVEES_H */

@@ -50,7 +50,7 @@ extern int regexp_execute_unicode (regexp_t*, unsigned short*, regexp_match_t*, 
 extern void regexp_substitute (const char*, char*, int, regexp_match_t*, int);
 extern void regexp_substitute_unicode (const unsigned short*, unsigned short*, int, regexp_match_t*, int);
 
-extern void regexp_error (char*);
+extern void regexp_error (const char*);
 
 #if defined(__cplusplus)
 }

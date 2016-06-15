@@ -15,6 +15,8 @@ copy /Y %CUR_SRC_DIR%\buf-prio.c %CUR_DST_DIR%\buf-prio.c
 copy /Y %CUR_SRC_DIR%\buf-prio.h %CUR_DST_DIR%\buf-prio.h
 copy /Y %CUR_SRC_DIR%\buf-queue.c %CUR_DST_DIR%\buf-queue.c
 copy /Y %CUR_SRC_DIR%\buf-queue.h %CUR_DST_DIR%\buf-queue.h
+copy /Y %CUR_SRC_DIR%\buf-queue-header.c %CUR_DST_DIR%\buf-queue-header.c
+copy /Y %CUR_SRC_DIR%\buf-queue-header.h %CUR_DST_DIR%\buf-queue-header.h
 copy /Y %CUR_SRC_DIR%\buf.c %CUR_DST_DIR%\buf.c
 copy /Y %CUR_SRC_DIR%\buf.h %CUR_DST_DIR%\buf.h
 
@@ -35,6 +37,11 @@ copy /Y %CUR_SRC_DIR%\crc8-atm.c %CUR_DST_DIR%\crc8-atm.c
 copy /Y %CUR_SRC_DIR%\crc8-atm.h %CUR_DST_DIR%\crc8-atm.h
 copy /Y %CUR_SRC_DIR%\crc8-dallas.c %CUR_DST_DIR%\crc8-dallas.c
 copy /Y %CUR_SRC_DIR%\crc8-dallas.h %CUR_DST_DIR%\crc8-dallas.h
+
+set CUR_SRC_DIR=%SRC_ROOT%\buffers
+set CUR_DST_DIR=%DST_ROOT%\buffers
+md %CUR_DST_DIR%
+for %%f in (cyc_buf.h, cyc_buf.c, ring_index.h, rtlog_buf.h, rtlog_buf.c) do copy /Y %CUR_SRC_DIR%\%f% %CUR_DST_DIR%\%f%
 
 set CUR_SRC_DIR=%SRC_ROOT%\elvees
 set CUR_DST_DIR=%DST_ROOT%\elvees
@@ -84,7 +91,7 @@ copy /Y %CUR_SRC_DIR%\miic.h %CUR_DST_DIR%\miic.h
 set CUR_SRC_DIR=%SRC_ROOT%\kernel
 set CUR_DST_DIR=%DST_ROOT%\kernel
 md %CUR_DST_DIR%
-copy /Y %CUR_SRC_DIR%\halt.c %CUR_DST_DIR%\halt.c
+copy /Y %CUR_SRC_DIR%\_uos_halt.c %CUR_DST_DIR%\_uos_halt.c
 copy /Y %CUR_SRC_DIR%\iattach.c %CUR_DST_DIR%\iattach.c
 copy /Y %CUR_SRC_DIR%\internal.h %CUR_DST_DIR%\internal.h
 copy /Y %CUR_SRC_DIR%\irelease.c %CUR_DST_DIR%\irelease.c
@@ -157,6 +164,12 @@ copy /Y %CUR_SRC_DIR%\telnet.c %CUR_DST_DIR%\telnet.c
 copy /Y %CUR_SRC_DIR%\telnet.h %CUR_DST_DIR%\telnet.h
 copy /Y %CUR_SRC_DIR%\udp.c %CUR_DST_DIR%\udp.c
 copy /Y %CUR_SRC_DIR%\udp.h %CUR_DST_DIR%\udp.h
+for %%f in (errors.h) do copy /Y %CUR_SRC_DIR%\%f% %CUR_DST_DIR%\%f%
+
+set CUR_SRC_DIR=%SRC_ROOT%\net\arpa
+set CUR_DST_DIR=%DST_ROOT%\net\arpa
+md %CUR_DST_DIR%
+for %%f in (arpa.c,inet.h) do copy /Y %CUR_SRC_DIR%\%f% %CUR_DST_DIR%\%f%
 
 set CUR_SRC_DIR=%SRC_ROOT%\random
 set CUR_DST_DIR=%DST_ROOT%\random
@@ -173,6 +186,7 @@ copy /Y %CUR_SRC_DIR%\assert.h %CUR_DST_DIR%\assert.h
 copy /Y %CUR_SRC_DIR%\byteorder.h %CUR_DST_DIR%\byteorder.h
 copy /Y %CUR_SRC_DIR%\ctype.c %CUR_DST_DIR%\ctype.c
 copy /Y %CUR_SRC_DIR%\ctype.h %CUR_DST_DIR%\ctype.h
+copy /Y %CUR_SRC_DIR%\string.h %CUR_DST_DIR%\string.h
 copy /Y %CUR_SRC_DIR%\debug-dump.c %CUR_DST_DIR%\debug-dump.c
 copy /Y %CUR_SRC_DIR%\debug-printf.c %CUR_DST_DIR%\debug-printf.c
 copy /Y %CUR_SRC_DIR%\halt.c %CUR_DST_DIR%\halt.c
@@ -195,6 +209,7 @@ copy /Y %CUR_SRC_DIR%\strmatch.c %CUR_DST_DIR%\strmatch.c
 copy /Y %CUR_SRC_DIR%\strncasecmp.c %CUR_DST_DIR%\strncasecmp.c
 copy /Y %CUR_SRC_DIR%\strncat-fast.c %CUR_DST_DIR%\strncat-fast.c
 copy /Y %CUR_SRC_DIR%\strncmp-fast.c %CUR_DST_DIR%\strncmp-fast.c
+copy /Y %CUR_SRC_DIR%\strncmp-fast.c %CUR_DST_DIR%\strnzcmp-fast.c
 copy /Y %CUR_SRC_DIR%\strncpy-fast.c %CUR_DST_DIR%\strncpy-fast.c
 copy /Y %CUR_SRC_DIR%\strnlen.c %CUR_DST_DIR%\strnlen.c
 copy /Y %CUR_SRC_DIR%\strrchr-fast.c %CUR_DST_DIR%\strrchr-fast.c
@@ -206,6 +221,19 @@ copy /Y %CUR_SRC_DIR%\strtoul.c %CUR_DST_DIR%\strtoul.c
 copy /Y %CUR_SRC_DIR%\time.h %CUR_DST_DIR%\time.h
 copy /Y %CUR_SRC_DIR%\tz-parse.c %CUR_DST_DIR%\tz-parse.c
 copy /Y %CUR_SRC_DIR%\tz-time.c %CUR_DST_DIR%\tz-time.c
+for %%f in (strnzcmp-fast.c) do copy /Y %CUR_SRC_DIR%\%f% %CUR_DST_DIR%\%f%
+
+md %DST_ROOT%\runtime\c++
+set CUR_SRC_DIR=%SRC_ROOT%\runtime\c++
+set CUR_DST_DIR=%DST_ROOT%\runtime\c++
+md %CUR_DST_DIR%
+copy /Y %CUR_SRC_DIR%\strings.hpp %CUR_DST_DIR%\string.hpp
+
+md %DST_ROOT%\runtime\sys
+set CUR_SRC_DIR=%SRC_ROOT%\runtime\sys
+set CUR_DST_DIR=%DST_ROOT%\runtime\sys
+md %CUR_DST_DIR%
+copy /Y %CUR_SRC_DIR%\uosc.h %CUR_DST_DIR%\uosc.h
 
 set CUR_SRC_DIR=%SRC_ROOT%\runtime\math
 set CUR_DST_DIR=%DST_ROOT%\runtime\math
@@ -298,6 +326,8 @@ set CUR_DST_DIR=%DST_ROOT%\timer
 md %CUR_DST_DIR%
 copy /Y %CUR_SRC_DIR%\timer.c %CUR_DST_DIR%\timer.c
 copy /Y %CUR_SRC_DIR%\timer.h %CUR_DST_DIR%\timer.h
+for %%f in (timeout.h,timeout.c,user_timer.h) do copy /Y %CUR_SRC_DIR%\%f% %CUR_DST_DIR%\%f%
+for %%f in (etimer.h,etimer.h,etimer_threads.h,etimer_threads.c) do copy /Y %CUR_SRC_DIR%\%f% %CUR_DST_DIR%\%f%
 
 set CUR_SRC_DIR=%SRC_ROOT%\uart
 set CUR_DST_DIR=%DST_ROOT%\uart

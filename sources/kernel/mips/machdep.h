@@ -1,3 +1,7 @@
+#ifndef __UOS_MACHDEP_H_
+#define __UOS_MACHDEP_H_
+
+
 /*
  * Machine-dependent uOS declarations for MIPS32.
  *
@@ -126,6 +130,11 @@
 #endif
 
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Type for saving task stack context.
  */
@@ -157,12 +166,12 @@ typedef int arch_state_t;
  *	sz - stack size in bytes
  */
 void arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg,
-	unsigned stacksz);
+	unsigned stacksz) __noexcept __NOTHROW;
 
 /*
  * Perform the task switch.
  */
-void arch_task_switch (task_t *target);
+void arch_task_switch (task_t *target) __noexcept __NOTHROW;
 
 /*
  * The global interrupt control.
@@ -174,6 +183,8 @@ arch_intr_disable (arch_state_t *x)
 {
 	mips_intr_disable (x);
 }
+
+#define ARCH_intr_off() mips_intr_off()
 
 static inline void
 arch_intr_restore (arch_state_t x)
@@ -187,7 +198,7 @@ arch_intr_restore (arch_state_t x)
  *
  * WARNING! MACHDEP_INTR_ALLOW(n) MUST be called when interrupt disabled
  */
-void arch_intr_allow (int irq);
+void arch_intr_allow (int irq) __noexcept __NOTHROW;
 
 /*
  * Bind the handler to the given hardware interrupt.
@@ -244,4 +255,14 @@ typedef unsigned arch_fpu_t;
 /*
  * Change/query a mode of float-point coprocessor.
  */
-unsigned int arch_fpu_control (task_t *t, unsigned int mode, unsigned int mask);
+
+unsigned int arch_fpu_control (task_t *t, unsigned int mode, unsigned int mask) __noexcept __NOTHROW;
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__UOS_MACHDEP_H_
+

@@ -12,89 +12,97 @@
 static void
 stream_flush (tcp_stream_t *u)
 {
-	int len = u->outptr - u->outdata;
-
 /*debug_printf ("tstream output"); buf_print_data (u->outdata, len);*/
-	while (! tcp_enqueue (u->socket, (void*) u->outdata, len, 0, 0, 0))
-		mutex_wait (&u->socket->lock);
-	u->outptr = u->outdata;
+    tcp_socket_t*  s = u->socket;
+	while (u->outptr != u->outdata){
+	    int len = u->outptr - u->outdata;
+	    int sent = tcp_enqueue (u->socket, (void*) u->outdata, len, 0);
+	    u->outptr   += sent;
+	    if (sent != len) {
+#         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+	        mutex_unlock (&s->lock);
+#         endif
+	        tcp_output (s);
+#         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+	        mutex_lock (&s->lock);
+#         endif
+	        mutex_wait (&s->lock);
+	    }
+	}
 }
 
 static void
 socket_flush (tcp_socket_t *s)
 {
 	/* Force IP level to send a packet. */
-        mutex_lock (&s->ip->lock);
 	tcp_output (s);
-	mutex_unlock (&s->ip->lock);
 }
 
 static void
 tcp_stream_putchar (tcp_stream_t *u, short c)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return;
-	mutex_lock (&u->socket->lock);
-	if (u->socket->state != SYN_SENT && u->socket->state != SYN_RCVD &&
-	    u->socket->state != ESTABLISHED && u->socket->state != CLOSE_WAIT) {
+	mutex_lock (&s->lock);
+	if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER | tcpfCLOSE_WAIT)) {
 		/* Connection was closed. */
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 		return;
 	}
 	/* Put byte into output buffer. */
 	*u->outptr++ = c;
 	if (u->outptr < u->outdata + sizeof(u->outdata)) {
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 		return;
 	}
 	stream_flush (u);
-	mutex_unlock (&u->socket->lock);
+	mutex_unlock (&s->lock);
 
 	/* Force IP level to send a packet. */
-	socket_flush (u->socket);
+	socket_flush (s);
 }
 
 static unsigned short
 tcp_stream_getchar (tcp_stream_t *u)
 {
 	unsigned short c;
+	tcp_socket_t*  s = u->socket;
 
-	if (! u->socket)
+	if (!s)
 		return -1;
-	mutex_lock (&u->socket->lock);
+	mutex_lock (&s->lock);
 
 	/* Flush output buffer. */
 	if (u->outptr > u->outdata) {
 		stream_flush (u);
-		mutex_unlock (&u->socket->lock);
-		socket_flush (u->socket);
-		mutex_lock (&u->socket->lock);
+		mutex_unlock (&s->lock);
+		socket_flush (s);
+		mutex_lock (&s->lock);
 	}
 
 	/* Wait for data. */
 	if (u->inbuf)
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 	else {
-		while (tcp_queue_is_empty (u->socket)) {
-			if (u->socket->state != SYN_SENT &&
-			    u->socket->state != SYN_RCVD &&
-			    u->socket->state != ESTABLISHED) {
-				mutex_unlock (&u->socket->lock);
+		while (tcp_queue_is_empty (s)) {
+			if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
+				mutex_unlock (&s->lock);
 				return -1;
 			}
-			mutex_wait (&u->socket->lock);
+			mutex_wait (&s->lock);
 		}
-		u->inbuf = tcp_queue_get (u->socket);
+		u->inbuf = tcp_queue_get (s);
 		u->inptr = u->inbuf->payload;
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 /*debug_printf ("tstream input"); buf_print (u->inbuf);*/
 
-		mutex_lock (&u->socket->ip->lock);
-		if (! (u->socket->flags & TF_ACK_DELAY) &&
-		    ! (u->socket->flags & TF_ACK_NOW)) {
-			tcp_ack (u->socket);
+		mutex_lock (&s->ip->lock);
+		if (! (s->flags & TF_ACK_DELAY) &&
+		    ! (s->flags & TF_ACK_NOW)) {
+			tcp_ack (s);
 		}
-		mutex_unlock (&u->socket->ip->lock);
+		mutex_unlock (&s->ip->lock);
 	}
 
 	/* Get byte from buffer. */
@@ -115,36 +123,37 @@ tcp_stream_getchar (tcp_stream_t *u)
 static int
 tcp_stream_peekchar (tcp_stream_t *u)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return -1;
-	mutex_lock (&u->socket->lock);
+	mutex_lock (&s->lock);
 
 	/* Flush output buffer. */
 	if (u->outptr > u->outdata) {
 		stream_flush (u);
-		mutex_unlock (&u->socket->lock);
-		socket_flush (u->socket);
-		mutex_lock (&u->socket->lock);
+		mutex_unlock (&s->lock);
+		socket_flush (s);
+		mutex_lock (&s->lock);
 	}
 
 	/* Any data available? */
 	if (u->inbuf)
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 	else {
-		if (tcp_queue_is_empty (u->socket)) {
-			mutex_unlock (&u->socket->lock);
+		if (tcp_queue_is_empty (s)) {
+			mutex_unlock (&s->lock);
 			return -1;
 		}
-		u->inbuf = tcp_queue_get (u->socket);
+		u->inbuf = tcp_queue_get (s);
 		u->inptr = u->inbuf->payload;
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 
-		mutex_lock (&u->socket->ip->lock);
-		if (! (u->socket->flags & TF_ACK_DELAY) &&
-		    ! (u->socket->flags & TF_ACK_NOW)) {
-			tcp_ack (u->socket);
+		mutex_lock (&s->ip->lock);
+		if (! (s->flags & TF_ACK_DELAY) &&
+		    ! (s->flags & TF_ACK_NOW)) {
+			tcp_ack (s);
 		}
-		mutex_unlock (&u->socket->ip->lock);
+		mutex_unlock (&s->ip->lock);
 	}
 	return *u->inptr;
 }
@@ -152,47 +161,49 @@ tcp_stream_peekchar (tcp_stream_t *u)
 static void
 tcp_stream_flush (tcp_stream_t *u)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return;
-	mutex_lock (&u->socket->lock);
+	mutex_lock (&s->lock);
 
 	/* Flush output buffer. */
 	if (u->outptr <= u->outdata) {
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 		return;
 	}
 	stream_flush (u);
-	mutex_unlock (&u->socket->lock);
+	mutex_unlock (&s->lock);
 
 	/* Force IP level to send a packet. */
-	socket_flush (u->socket);
+	socket_flush (s);
 }
 
 static bool_t
 tcp_stream_eof (tcp_stream_t *u)
 {
 	bool_t ret;
+    tcp_socket_t*  s = u->socket;
 
-	if (! u->socket)
+	if (! s)
 		return 1;
-	mutex_lock (&u->socket->lock);
-	ret = (u->socket->state != SYN_SENT && u->socket->state != SYN_RCVD &&
-		u->socket->state != ESTABLISHED);
-	mutex_unlock (&u->socket->lock);
+	mutex_lock (&s->lock);
+	ret = (!tcp_socket_is_state(s, TCP_STATES_TRANSFER));
+	mutex_unlock (&s->lock);
 	return ret;
 }
 
 static void
 tcp_stream_close (tcp_stream_t *u)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return;
-	mutex_lock (&u->socket->lock);
-	mutex_signal (&u->socket->lock, 0);
-	mutex_unlock (&u->socket->lock);
+	mutex_lock (&s->lock);
+	mutex_signal (&s->lock, 0);
+	mutex_unlock (&s->lock);
 
-	tcp_close (u->socket);
-	mem_free (u->socket);
+	tcp_close (s);
+	mem_free (s);
 	u->socket = 0;
 }
 

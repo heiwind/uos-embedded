@@ -352,6 +352,10 @@ strnlen (const unsigned char *__string, size_t __maxlen)
   return __end ? __end - __string : __maxlen;
 }
 
+unsigned char *strstr (const char *haystack, const unsigned char *needle);
+int strspn (const unsigned char *s, const unsigned char *accept);
+int strcspn (const unsigned char *s, const unsigned char *reject);
+
 inline extern unsigned char
 strlen_flash (const char *str)
 {

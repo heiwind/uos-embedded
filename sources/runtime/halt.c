@@ -16,13 +16,25 @@
  */
 #include <runtime/lib.h>
 
+#ifndef UOS_ON_HALT
+#define UOS_ON_HALT(errcode)
+#else
+__attribute__((weak, noinline)) 
+void uos_on_halt(int errcode)
+{}
+#endif
+
 /*
  * Halt uOS, return to the parent operating system (if any).
  * Optionally print debugging information about the system state.
  */
 void __attribute__((weak))
-uos_halt (int dump_flag)
+#ifndef NDEBUG
+__NORETURN
+#endif
+rt_halt (int dump_flag)
 {
+    UOS_ON_HALT(dump_flag);
 #if LINUX386
 	exit (0);
 #else

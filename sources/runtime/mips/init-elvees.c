@@ -17,10 +17,27 @@
  * "COPY-UOS.txt" for details.
  */
 #include <runtime/lib.h>
+#include <uos-conf-platform.h>
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern void _etext();
 extern unsigned __data_start, _edata, _end, _estack[];
+extern unsigned __bss_start[];
+extern unsigned __bss_end[];
 extern int main ();
+
+void _init_ (void);
+void _irq_handler_ ();
+void _exception_handler_ (unsigned int context[]);
+void _pagefault_handler_ (unsigned int context[]);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * Initialize the system configuration, cache, intermal SRAM,
@@ -28,47 +45,169 @@ extern int main ();
  * _init_ is called from startup.S.
  * Attribute "naked" skips function prologue.
  */
+#ifndef DEBUG_UARTBAUD
+#define DEBUG_UARTBAUD 115200
+#endif
 
-void __attribute ((noreturn))_init_ (void)
+#if defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+
+#   ifndef UOS_XRAM_BANK_SIZE
+#   define UOS_XRAM_BANK_SIZE  (64UL<<20)
+/* Base address */
+#   define UOS_XRAM_BANK_ORG   0
+/* Sync memory */
+#   define UOS_XRAM_TYPE       MC_CSCON_T
+#   define UOS_XRAM_WS         0
+
+#       ifndef REFRESH_RATE_NS
+#           ifndef XRAM_REFRESH_PERIOD_MS
+#           define XRAM_REFRESH_PERIOD_MS 64
+#           endif
+#       define REFRESH_RATE_NS ((XRAM_REFRESH_PERIOD_MS*1000000ul)/8192)
+#       endif
+
+#       ifndef UOS_SDREFRESH_MODE
+#       define UOS_SDREFRESH_MODE  (MC_SDRCON_PS_512 /* Page size 512 */\
+                | MC_SDRCON_CL_3 /* CAS latency 3 cycles */\
+                | MC_SDRCON_RFR (REFRESH_RATE_NS, MPORT_KHZ)   /* Refresh period */\
+                )
+#       endif
+
+#       ifndef UOS_SDTIMING_MODE
+#       define UOS_SDTIMING_MODE (MC_SDRTMR_TWR(2)      /* Write recovery delay */\
+            | MC_SDRTMR_TRP(2)      /* Минимальный период Precharge */\
+            | MC_SDRTMR_TRCD(2)     /* Между Active и Read/Write */\
+            | MC_SDRTMR_TRAS(5)     /* Между * Active и Precharge */\
+            | MC_SDRTMR_TRFC(15)     /* Интервал между Refresh */\
+            )
+#       endif
+#    endif //!UOS_XRAM_BANK_SIZE
+
+#define SCON0_MASK (~(((unsigned long)UOS_XRAM_BANK_SIZE)-1))
+
+#if defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+inline void _init_sdram(void){
+    /* Configure 128 Mbytes of external 64-bit SDRAM memory at nCS0. */
+    MC_CSCON0 = MC_CSCON_E |        /* Enable nCS0 */
+        MC_CSCON_WS (0) |       /* Wait states  */
+        MC_CSCON_T |            /* Sync memory */
+        MC_CSCON_W64 |          /* 64-bit data width */
+        MC_CSCON_CSBA (0x00000000) |    /* Base address */
+        MC_CSCON_CSMASK (0xF8000000);   /* Address mask */
+
+    MC_SDRCON = MC_SDRCON_INIT |                /* Initialize SDRAM */
+        MC_SDRCON_BL_PAGE |             /* Bursh full page */
+        MC_SDRCON_RFR (64000000/8192, MPORT_KHZ) |  /* Refresh period */
+        MC_SDRCON_PS_512;               /* Page size 512 */
+    udelay (2);
+}
+#else //defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+inline void _init_sdram(void)
+{
+    /* Configure 64 Mbytes of external 32-bit SDRAM memory at nCS0. */
+    MC_CSCON0 = MC_CSCON_E                /* Enable nCS0 */
+              | UOS_XRAM_TYPE
+              | MC_CSCON_CSBA (UOS_XRAM_BANK_ORG)
+              | MC_CSCON_CSMASK (SCON0_MASK)
+              | MC_CSCON_WS (UOS_XRAM_WS)
+              ;   /* Address mask */
+
+#   if UOS_XRAM_TYPE == MC_CSCON_T
+    MC_SDRCON = UOS_SDREFRESH_MODE;
+
+    MC_SDRTMR = UOS_SDTIMING_MODE;
+    MC_SDRCSR = 1;              /* Initialize SDRAM */
+    udelay (2);
+#   endif
+}
+#endif //else defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+
+#else //defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+inline void _init_sdram(void){};
+#endif //defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+
+
+
+#ifndef EXTERNAL_SETUP
+inline void _init_pll(void){
+
+#ifdef ELVEES_NVCOM01
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#elif defined(ELVEES_NVCOM02)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
+#elif defined(ELVEES_MC24) || defined(ELVEES_MC0226)
+    /* Fixed mapping, clock multiply from CLKIN to KHZ. */
+    MC_CSR = MC_CSR_CLK(KHZ/ELVEES_CLKIN) | MC_CSR_CLKEN;
+#elif defined(ELVEES_MC24R2)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
+#elif defined(ELVEES_MCT02)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
+#elif defined(ELVEES_MCT03P)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#elif defined(ELVEES_MC0428)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#elif defined(ELVEES_MC30SF6)
+    /* Clock: enable only core. */
+    MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+
+    /* Clock multiply from CLKIN to KHZ. */
+    MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
+           MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#endif
+}
+#else //!EXTERNAL_SETUP
+inline void _init_pll(void){};
+#endif //EXTERNAL_SETUP
+
+
+
+//#define UOS_START_MODE_BINARY   0
+//#define UOS_START_MODE_LOADED   1
+#if UOS_START_MODE == 1
+#define DONT_COPY_DATA_SEGS
+#endif
+
+void __attribute ((noreturn))
+#ifdef ELVEES_INIT_SDRAM
+//!!! этот код должен лежать в памяти доступной по вектору сброса=прерываня, ибо положить в СДРАМ до ее настрйки не представляется нормальным
+CODE_ISR
+#endif
+_init_ (void)
 {
 	unsigned *dest, *limit;
 	unsigned int divisor;
 
-#ifdef ELVEES_INIT_SDRAM
-#if defined(ELVEES_MC24) || defined(ELVEES_MC0226)
-	/* Configure 128 Mbytes of external 64-bit SDRAM memory at nCS0. */
-	MC_CSCON0 = MC_CSCON_E |		/* Enable nCS0 */
-		MC_CSCON_WS (0) |		/* Wait states  */
-		MC_CSCON_T |			/* Sync memory */
-		MC_CSCON_W64 |			/* 64-bit data width */
-		MC_CSCON_CSBA (0x00000000) |	/* Base address */
-		MC_CSCON_CSMASK (0xF8000000);	/* Address mask */
-
-	MC_SDRCON = MC_SDRCON_INIT |				/* Initialize SDRAM */
-		MC_SDRCON_BL_PAGE |				/* Bursh full page */
-		MC_SDRCON_RFR (64000000/8192, MPORT_KHZ) |	/* Refresh period */
-		MC_SDRCON_PS_512;				/* Page size 512 */
-#else
-	/* Configure 64 Mbytes of external 32-bit SDRAM memory at nCS0. */
-	MC_CSCON0 = MC_CSCON_E |		/* Enable nCS0 */
-	MC_CSCON_T |			/* Sync memory */
-	MC_CSCON_CSBA (0x00000000) |	/* Base address */
-	MC_CSCON_CSMASK (0xF8000000);	/* Address mask */
-
-	MC_SDRCON = MC_SDRCON_PS_512 |				/* Page size 512 */
-		MC_SDRCON_CL_3 |				/* CAS latency 3 cycles */
-		MC_SDRCON_RFR (64000000/8192, MPORT_KHZ); 	/* Refresh period */
-
-	MC_SDRTMR = MC_SDRTMR_TWR(2) |		/* Write recovery delay */
-		MC_SDRTMR_TRP(2) |		/* Минимальный период Precharge */
-		MC_SDRTMR_TRCD(2) |		/* Между Active и Read/Write */
-		MC_SDRTMR_TRAS(5) |		/* Между * Active и Precharge */
-		MC_SDRTMR_TRFC(15);		/* Интервал между Refresh */
-
-	MC_SDRCSR = 1;				/* Initialize SDRAM */
-#endif
-	udelay (2);
-#endif
+	_init_sdram();
 
 	/* Clear CAUSE register. Use special irq vector. */
 	mips_write_c0_register (C0_CAUSE, CA_IV);
@@ -112,14 +251,36 @@ void __attribute ((noreturn))_init_ (void)
 #endif
 		);
 
+    /*
+     * Setup all essential system registers.
+     */
+	{
+	unsigned long csr = MC_CSR;
+
 #if defined (ENABLE_ICACHE) || defined (ENABLE_DCACHE)
 	/* Enable cache for kseg0 segment. */
 	mips_write_c0_register (C0_CONFIG, 3);
-	MC_CSR |= MC_CSR_FLUSH_I | MC_CSR_FLUSH_D;
+#   if defined (ENABLE_ICACHE)
+	csr |= MC_CSR_FLUSH_I;
+#   endif
+#   if defined (ENABLE_DCACHE)
+	csr |= MC_CSR_FLUSH_D;
+#   endif
 #else
 	/* Disable cache for kseg0 segment. */
 	mips_write_c0_register (C0_CONFIG, 2);
+#   ifndef EXTERNAL_SETUP
+#       ifndef ENABLE_ICACHE
+	    csr &= ~MC_CSR_FLUSH_I;
+#       endif
+#       ifndef ENABLE_DCACHE
+	    csr &= ~MC_CSR_FLUSH_D;
+#       endif
+#   endif
 #endif
+	MC_CSR = csr;
+	}
+
 #ifdef ENABLE_ICACHE
 	/* Jump to cached kseg0 segment. */
 	asm volatile (
@@ -165,40 +326,40 @@ void __attribute ((noreturn))_init_ (void)
 	mips_write_fpu_register (31, 0);
 #endif
 
-#ifndef EXTERNAL_SETUP
+	_init_pll();
+
 	/*
-	 * Setup all essential system registers.
-	 */
+     * Setup all essential system registers.
+     */
+
 #ifdef ELVEES_NVCOM01
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
+	{
+#   ifndef EXTERNAL_SETUP
+	unsigned long csr;
+    /* Fixed mapping. */
+    csr = MC_CSR_FM;
+#   else
+    /* Fixed mapping. */
+    unsigned long csr = MC_CSR;
+    csr |= MC_CSR_FM;
+#   endif
 
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
+#   ifdef ELVEES_VECT_CRAM
+    csr |= MC_CSR_TR;
+#   elif !defined(EXTERNAL_SETUP)
+    csr &= ~MC_CSR_TR;
+#   endif
+    MC_CSR = csr;
+	}
 
-	/* Fixed mapping. */
-	MC_CSR = MC_CSR_FM;
-	
-#ifdef ELVEES_VECT_CRAM
-	MC_CSR |= MC_CSR_TR;
-#endif
-
-	MC_MASKR0 = 0;
-	MC_MASKR1 = 0;
-	MC_MASKR2 = 0;
-#endif
+    MC_MASKR0 = 0;
+    MC_MASKR1 = 0;
+    MC_MASKR2 = 0;
+#endif //ELVEES_NVCOM01
 
 #ifdef ELVEES_NVCOM02
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
-	MC_CSR = MC_CSR_FM;
+	MC_CSR |= MC_CSR_FM;
 
 #ifdef ELVEES_VECT_CRAM
 	MC_CSR |= MC_CSR_TR;
@@ -211,18 +372,11 @@ void __attribute ((noreturn))_init_ (void)
 
 #if defined(ELVEES_MC24) || defined(ELVEES_MC0226)
 	/* Fixed mapping, clock multiply from CLKIN to KHZ. */
-	MC_CSR = MC_CSR_FM | MC_CSR_CLK(KHZ/ELVEES_CLKIN) | MC_CSR_CLKEN;
+	MC_CSR |= MC_CSR_FM;
 	MC_MASKR = 0;
 #endif
 
 #ifdef ELVEES_MC24R2
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -233,13 +387,6 @@ void __attribute ((noreturn))_init_ (void)
 #endif
 
 #ifdef ELVEES_MCT02
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -251,13 +398,6 @@ void __attribute ((noreturn))_init_ (void)
 #endif
 
 #ifdef ELVEES_MCT03P
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -273,13 +413,6 @@ void __attribute ((noreturn))_init_ (void)
 #endif
 
 #ifdef ELVEES_MC0428
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -294,13 +427,6 @@ void __attribute ((noreturn))_init_ (void)
 #endif
 
 #ifdef ELVEES_MC30SF6
-	/* Clock: enable only core. */
-	MC_CLKEN = MC_CLKEN_CORE | MC_CLKEN_CPU | MC_CLKEN_CORE2;
-
-	/* Clock multiply from CLKIN to KHZ. */
-	MC_CRPLL = MC_CRPLL_MPORT | MC_CRPLL_CLKSEL_CORE (KHZ*2/ELVEES_CLKIN) |
-		   MC_CRPLL_CORE | MC_CRPLL_CLKSEL_MPORT (MPORT_KHZ*2/ELVEES_CLKIN);
-
 	/* Fixed mapping. */
 	MC_CSR = MC_CSR_FM;
 
@@ -365,14 +491,12 @@ void __attribute ((noreturn))_init_ (void)
 	MC_CSCON4 = MC_CSCON_WS (15);
 	MC_SDRCON = 0;
 #endif
-
-#endif /* EXTERNAL_SETUP */
 	
 	/*
 	 * Setup UART registers.
 	 * Compute the divisor for 115.2 kbaud.
 	 */
-	divisor = MC_DL_BAUD (KHZ * 1000, 115200);
+	divisor = MC_DL_BAUD (KHZ * 1000, DEBUG_UARTBAUD);
 
 	MC_LCR = MC_LCR_8BITS | MC_LCR_DLAB;
 	MC_DLM = divisor >> 8;
@@ -403,8 +527,8 @@ void __attribute ((noreturn))_init_ (void)
 #endif
 
 	/* Initialize .bss segment by zeroes. */
-	dest = &_edata;
-	limit = &_end;
+	dest = __bss_start;
+	limit = __bss_end;
 	while (dest < limit)
 		*dest++ = 0;
 		
@@ -443,12 +567,14 @@ uos_valid_memory_address (void *ptr)
 }
 
 void __attribute__ ((weak))
+CODE_ISR
 _irq_handler_ ()
 {
 	/* This is needed when no kernel is present. */
 }
 
 #if defined (ELVEES)
+DEBUG_NORETURN
 static void dump_of_death (unsigned int context[])
 {
 	debug_printf ("                t0 = %8x   s0 = %8x   t8 = %8x   lo = %8x\n",
@@ -477,17 +603,25 @@ static void dump_of_death (unsigned int context[])
 		context [CONTEXT_R23], context [CONTEXT_RA]);
 
 	debug_printf ("\nHalt...\n\n");
-	asm volatile ("1: j 1b; nop");
+	//asm volatile ("1: j 1b; nop");
+	uos_halt(1);
+    while(1);
 }
 
+DEBUG_NORETURN
 void _exception_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
+	unsigned int errEPC;
 	const char *code = 0;
+
+	badvaddr = mips_read_c0_register (C0_BADVADDR);
+    config = mips_read_c0_register (C0_CONFIG);
+    cause = mips_read_c0_register (C0_CAUSE);
+    errEPC  = mips_read_c0_register (C0_ERROREPC);
 
 	debug_printf ("\n\n*** 0x%08x: exception ", context [CONTEXT_PC]);
 
-	cause = mips_read_c0_register (C0_CAUSE);
 	switch (cause >> 2 & 31) {
 	case 0:	code = "Interrupt"; break;
 	case 1: code = "TLB Modification"; break;
@@ -509,14 +643,13 @@ void _exception_handler_ (unsigned int context[])
 	else
 		debug_printf ("%d\n", cause >> 2 & 31);
 
-	badvaddr = mips_read_c0_register (C0_BADVADDR);
-	config = mips_read_c0_register (C0_CONFIG);
-	debug_printf ("*** cause=0x%08x, badvaddr=0x%08x, config=0x%08x\n",
-		cause, badvaddr, config);
+	debug_printf ("*** cause=0x%08x, badvaddr=0x%08x, config=0x%08x, errEPC=%p\n",
+		cause, badvaddr, config, errEPC);
 
 	dump_of_death (context);
 }
 
+DEBUG_NORETURN
 void _pagefault_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;

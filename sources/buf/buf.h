@@ -1,6 +1,12 @@
 #ifndef __BUF_H_
 #define	__BUF_H_ 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 struct _mem_pool_t;
 
 typedef struct _buf_t buf_t;
@@ -50,6 +56,11 @@ void buf_truncate (buf_t *p, unsigned short size);
 bool_t buf_add_header (buf_t *p, short header_size);
 
 /*
+ * reset p->payload pointer to header_size offset from allocated mem buffer
+ * */
+bool_t buf_reset_header (buf_t *p, short header_size);
+
+/*
  * Chain buf t on the end of buf h. Pbuf h will have it's tot_len
  * field adjusted accordingly. Pbuf t should no be used any more after
  * a call to this function, since buf t is now a part of buf h.
@@ -71,6 +82,12 @@ buf_t *buf_make_continuous (buf_t *h);
  * Make a copy of buffer.
  */
 buf_t *buf_copy (buf_t *h);
+
+/* copy  len bytes from buffer src to single memory chunk dst
+ *      takes into account if src have less data then len
+ * \return - copyed data size 
+ * */
+unsigned buf_copy_continous(void* dst, buf_t *src, unsigned len);
 
 /*
  * Count number of bufs in a chain.
@@ -95,5 +112,11 @@ unsigned short buf_chksum (buf_t *p, unsigned short sum);
  * Compute the 32-bit checksum (baset on VAK's rot13) of the buffer data.
  */
 unsigned long buf_chksum32 (buf_t *p, unsigned long sum);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__BUF_H_ */

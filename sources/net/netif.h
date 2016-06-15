@@ -1,6 +1,16 @@
 #ifndef __NETIF_H_
 #define	__NETIF_H_ 1
 
+
+#include <net/arp.h>
+#include <buf/buf.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 struct _buf_t;
 
 /*
@@ -11,11 +21,14 @@ struct _buf_t;
  */
 typedef struct _netif_t {
 	mutex_t lock;
+    //* TODO в этот лок сыпятся все события интерфейса. возможно имеет смысл разделить
+	//* события приемника и передатчика
 	struct _netif_interface_t *interface;
+	
 
 	const char *name;
 	struct _arp_t *arp;
-	unsigned char ethaddr [6];	/* MAC-адрес */
+	mac_addr        ethaddr;	/* MAC-адрес */
 	unsigned short mtu;		/* max packet length */
 	unsigned char type;		/* SNMP-compatible */
 	unsigned long bps;		/* speed in bits per second */
@@ -73,6 +86,7 @@ typedef struct _netif_t {
 #define NETIF_SIP			31	/* SMDS */
 #define NETIF_FRAME_RELAY		32
 
+//! см. netif_free_buf
 typedef struct _netif_interface_t {
 	/* Передача пакета. */
 	bool_t (*output) (netif_t *u, struct _buf_t *p,
@@ -86,10 +100,129 @@ typedef struct _netif_interface_t {
 } netif_interface_t;
 
 bool_t netif_output (netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ipsrc);
+        ip_addr_const ipdest, ip_addr_const ipsrc);
 bool_t netif_output_prio (netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ipsrc, small_uint_t prio);
+        ip_addr_const ipdest, ip_addr_const ipsrc
+	, small_uint_t prio);
 struct _buf_t *netif_input (netif_t *netif);
 void netif_set_address (netif_t *netif, unsigned char *ethaddr);
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+/** netif_io_overlap - структура оверлап-запроса - кладется в начале буфера, 
+ * позволяет передать опции, колбэк, сигнал с запросом. которые отрабатываются 
+ * по окончании отправки/загрузки буфера.
+ * 
+ * если в оверлапе задан сигнал или обработчик, то буфер не дестроится после передачи,
+ *  он отдается на откуп обработчику.
+ *  !!! следите за памятью.
+ *  
+ * */
+
+//        mutex import
+#include <kernel/uos.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+enum netif_io_overlap_option{
+      nioo_ActionNone  = 0
+    , nioo_ActionMutex = 0x40
+    , nioo_ActionCB    = 0x80
+    , nioo_ActionTask  = 0xc0
+    , nioo_ActionMASK  = 0xc0
+    //* задает уровень свободных слотов в очереди передачи драйвера, на которые 
+    //* пакет не претендует - если в очереди осталось меньше места, драйвер отвергает его
+    //* возвращая ошибку.
+    , nioo_FreeLevel   = 0xf
+    , nioo_ActionTerminate  = 0x20
+} ;
+
+enum netif_io_overlay_asynco{
+      nios_free         = 0
+      //буфер просигналил и готовится освободиться. делается проверка терминирования
+    , nios_leave
+    //буфер в фазе сигналинга, начиная с этой фазы терминация буфера лежит на 
+    //    netio 
+    , nios_inaction
+    , nios_inprocess
+};
+
+enum netif_io_overlap_status{
+        nios_IPOK   =   1   //< завершены заголовки ip,eth
+};
+
+typedef void (*netif_callback)(buf_t *p, unsigned arg);
+#define NETIF_OVERLAP_MARK 0x5a
+
+typedef struct _netif_io_overlap{
+    union {
+        mutex_t* signal;
+        task_t*  task;
+        netif_callback callback;
+    } action;
+    unsigned long arg;
+    unsigned arg2;
+    unsigned long arg3;
+    //*внутреннее поле оверлея для организации конкурентной обработки
+    volatile char asynco;
+    volatile char options;
+    //поля, флаги заполняемые по мере продвижения пакета по стеку
+    char status;
+    //контрольный маркер, чтобы убедиться что в буфере лежит именно оверлап
+    char mark;
+} netif_io_overlap;
+
+#define NETIO_OVERLAP_HLEN  sizeof(netif_io_overlap)
+
+INLINE
+netif_io_overlap* netif_is_overlaped(buf_t *p){
+    netif_io_overlap* over = (netif_io_overlap*)((char*)p + sizeof(buf_t));
+    if( (p->payload - sizeof(netif_io_overlap)) < (unsigned char*)over )
+        return 0;
+    if (over->mark == NETIF_OVERLAP_MARK)
+        return over;
+    else
+        return 0;
+}
+
+INLINE
+netif_io_overlap* netif_overlap_init(buf_t *p){
+    netif_io_overlap* over = (netif_io_overlap*)((char*)p + sizeof(buf_t));
+    if( (p->payload - sizeof(netif_io_overlap)) < (unsigned char*)over )
+        return 0;
+    over->mark = NETIF_OVERLAP_MARK;
+    over->options = 0;
+    over->status = 0;
+    over->action.signal = 0;
+    return over;
+}
+
+void netif_overlap_assign_mutex(buf_t *p, unsigned options
+                                , mutex_t* signal, void* msg);
+void netif_overlap_assign_cb(buf_t *p, unsigned options
+                                , netif_callback cb, void* msg);
+
+//используется интерфейсами для освобождения буфера
+//!!! начиная с версии "+tcp:out:nocopy" обязательно использовать этот метод, 
+//    чтобы ТСП-стек работоспособен был
+void netif_free_buf(netif_t *u, buf_t *p);
+
+
+//прерывает передачу буфера - драйвер не отсылает буфер, а сразу его освобождает 
+void netif_abort_buf(netif_t *u, buf_t *p);
+//конкурентно-безопасный дестрой буфера, прерывает передачу буфера, и инициирует его 
+//  дестрой. терминируемый буфер - не сигналит, а сразу дестроится!!! 
+void netif_terminate_buf(netif_t *u, buf_t *p);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__NETIF_H_ */

@@ -28,25 +28,25 @@
 #define USHRT_MAX	65535
 
 /* Minimum and maximum values a `signed int' can hold.  */
-#define INT_MIN	(-INT_MAX - 1)
-#define INT_MAX	2147483647
+#define INT_MIN	( (int)(~0u) )
+#define INT_MAX	( (int)((~0u)>>1) )
 
 /* Maximum value an `unsigned int' can hold.  (Minimum is 0.)  */
-#define UINT_MAX	4294967295U
+#define UINT_MAX	(~0u)
 
 /* Minimum and maximum values a `signed long int' can hold.  */
 #if __WORDSIZE == 64
 #define LONG_MAX	9223372036854775807L
 #else
-#define LONG_MAX	2147483647L
+#define LONG_MAX	((long)((~0ul)>>1))
 #endif
-#define LONG_MIN	(-LONG_MAX - 1L)
+#define LONG_MIN	((long)(~0ul))
 
 /* Maximum value an `unsigned long int' can hold.  (Minimum is 0.)  */
 #if __WORDSIZE == 64
 #define ULONG_MAX	18446744073709551615UL
 #else
-#define ULONG_MAX	4294967295UL
+#define ULONG_MAX	(~0ul)
 #endif
 
 /* Minimum and maximum values a `signed long long int' can hold.  */

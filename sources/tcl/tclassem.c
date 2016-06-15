@@ -66,7 +66,7 @@ Tcl_CreateCmdBuf (mem_pool_t *pool)
 
     cbPtr = (CmdBuf*) mem_alloc (pool, sizeof(CmdBuf));
     cbPtr->pool = pool;
-    cbPtr->buffer = mem_alloc (pool, CMD_BUF_SIZE);
+    cbPtr->buffer = (unsigned char*)mem_alloc (pool, CMD_BUF_SIZE);
     cbPtr->buffer[0] = '\0';
     cbPtr->bufSize = CMD_BUF_SIZE;
     cbPtr->bytesUsed = 0;
@@ -90,17 +90,16 @@ Tcl_CreateCmdBuf (mem_pool_t *pool)
  *----------------------------------------------------------------------
  */
 
+/* \value buffer - Token for command buffer (return value from previous call to Tcl_CreateCmdBuf). */
 void
-Tcl_DeleteCmdBuf(buffer)
-    Tcl_CmdBuf buffer;		/* Token for command buffer (return value
-				 * from previous call to Tcl_CreateCmdBuf). */
+Tcl_DeleteCmdBuf(Tcl_CmdBuf buffer)
 {
     register CmdBuf *cbPtr = (CmdBuf *) buffer;
 
     mem_free (cbPtr->buffer);
     mem_free (cbPtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -129,15 +128,16 @@ Tcl_DeleteCmdBuf(buffer)
  */
 
 unsigned char *
-Tcl_AssembleCmd (buffer, string)
-    Tcl_CmdBuf buffer;		/* Token for a command buffer previously
+Tcl_AssembleCmd (
+    Tcl_CmdBuf buffer		/* Token for a command buffer previously
 				 * created by Tcl_CreateCmdBuf.  */
-    unsigned char *string;	/* Bytes to be appended to command stream.
+    , unsigned char *string	/* Bytes to be appended to command stream.
 				 * Note:  if the string is zero length,
 				 * then whatever is buffered will be
 				 * considered to be a complete command
 				 * regardless of whether parentheses are
 				 * matched or not. */
+    )
 {
     register CmdBuf *cbPtr = (CmdBuf *) buffer;
     int length, totalLength, c;
@@ -163,14 +163,14 @@ Tcl_AssembleCmd (buffer, string)
     length = strlen(string);
     totalLength = cbPtr->bytesUsed + length + 1;
     if (totalLength > cbPtr->bufSize) {
-	unsigned int newSize;
+	int newSize;
 	unsigned char *newBuf;
 
 	newSize = cbPtr->bufSize*2;
 	if (newSize < totalLength) {
 	    newSize = totalLength;
 	}
-	newBuf = mem_alloc (cbPtr->pool, newSize);
+	newBuf = (unsigned char *)mem_alloc (cbPtr->pool, newSize);
 	strcpy(newBuf, cbPtr->buffer);
 	mem_free(cbPtr->buffer);
 	cbPtr->buffer = newBuf;
@@ -213,8 +213,9 @@ Tcl_AssembleCmd (buffer, string)
  */
 
 int
-Tcl_CommandComplete(cmd)
-    unsigned char *cmd;		/* Command to check. */
+Tcl_CommandComplete(
+    unsigned char *cmd		/* Command to check. */
+    )
 {
     register unsigned char *p = cmd;
 

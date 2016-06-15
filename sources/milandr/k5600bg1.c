@@ -22,6 +22,7 @@
 #include <stream/stream.h>
 #include <mem/mem.h>
 #include <buf/buf.h>
+#include <net/netif.h> 
 #include <milandr/k5600bg1.h>
 #include <milandr/k5600bg1-regs.h>
 
@@ -416,17 +417,22 @@ k5600bg1_output (k5600bg1_t *u, buf_t *p, small_uint_t prio)
 		++u->netif.out_errors;
 		mutex_unlock (&u->netif.lock);
 /*debug_printf ("output: transmit %d bytes, link failed\n", p->tot_len);*/
-		buf_free (p);
+		netif_free_buf (&u->netif, p);
 		return 0;
 	}
 /*debug_printf ("output: transmit %d bytes\n", p->tot_len);*/
 
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over != 0){
+        over->asynco = nios_inprocess;
+    }
+	
 	if (! (ETH_TXDESC[0].CTRL & DESC_TX_RDY)) {
 		/* Смело отсылаем. */
 		transmit_packet (u, p);
 		chip_select (0);
 		mutex_unlock (&u->netif.lock);
-		buf_free (p);
+		netif_free_buf (&u->netif, p);
 		return 1;
 	}
 	chip_select (0);
@@ -437,7 +443,7 @@ k5600bg1_output (k5600bg1_t *u, buf_t *p, small_uint_t prio)
 		++u->netif.out_discards;
 		mutex_unlock (&u->netif.lock);
 		/*debug_printf ("k5600bg1_output: overflow\n");*/
-		buf_free (p);
+		netif_free_buf (&u->netif, p);
 		return 0;
 	}
 	buf_queue_put (&u->outq, p);

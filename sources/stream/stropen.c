@@ -40,27 +40,21 @@ buf_feof (stream_buf_t *u)
 	return ! *u->buf;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] = 
+#define item(i) .i =
+#endif
+
+
 static stream_interface_t buf_interface = {
-	.putc =
-#if __STDC__
-	(void (*) (stream_t*, short))
-#endif
-		buf_putchar,
-	.getc =
-#if __STDC__
-	(unsigned short (*) (stream_t*))
-#endif
-		buf_getchar,
-	.peekc =
-#if __STDC__
-	(int (*) (stream_t*))
-#endif
-		buf_peekchar,
-	.eof =
-#if __STDC__
-	(bool_t (*) (stream_t*))
-#endif
-		buf_feof,
+	item(putc) (void (*) (stream_t*, short)) buf_putchar,
+	item(getc) (unsigned short (*) (stream_t*))	buf_getchar,
+	item(peekc) (int (*) (stream_t*))   buf_peekchar,
+	item(flush) (void (*) (stream_t*))  0,
+	item(eof) (bool_t (*) (stream_t*))		buf_feof,
 };
 
 stream_t *

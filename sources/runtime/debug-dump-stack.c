@@ -1,6 +1,8 @@
 #include <runtime/lib.h>
 #include <stream/stream.h>
 
+#ifndef NO_DEBUG_PRINT
+
 /*
  * Print stack backtrace.
  * Usage:
@@ -8,6 +10,9 @@
  *		__builtin_frame_address (1),
  *		__builtin_return_address (0));
  */
+#undef debug_dump_stack
+
+__WEAK
 void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 {
 	unsigned char *from, *to, *p;
@@ -15,14 +20,15 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 	char c;
 	bool_t flag;
 
-	to = frame; from = sp;
+	to = (unsigned char *)frame; 
+	from = (unsigned char *)sp;
 	if (! uos_valid_memory_address (to) && uos_valid_memory_address (from))
 		to = from;
 	if (uos_valid_memory_address (to) && ! uos_valid_memory_address (from))
 		from = to;
 
 	to -= 16 * sizeof (void*);
-	if ((from - to) > 128 * sizeof (void *))
+	if ((from - to) > (int)(128 * sizeof (void *)))
 		from = to + 128 * sizeof (void*);
 
 	from = (unsigned char*) ((size_t) from & ~(sizeof (void *) - 1));
@@ -34,14 +40,15 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 		from = p;
 	}
 
-	if ((from - to) < 64 * sizeof (void*))
+	if ( (from - to) < (int)(64 * sizeof (void*)) )
 		from = to + 64 * sizeof (void*);
 
 	debug_printf ("%S.stack {%p/%p..%p/%p, %p, %p}\n", caption,
 		sp, from, frame, to, callee, __builtin_frame_address (0));
 
 	/* Stack always grows down. */
-	for (p = from, flag = 0, len = 0; ; --p) {
+	for (p = from-1, flag = 0, len = 0; ; ) {
+	    p--;
 		if (len == 0) {
 			if (sizeof (p) == 1)
 				debug_printf ("[%8S.%02X]", caption, (size_t) p);
@@ -82,3 +89,6 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 		}
 	}
 }
+
+#endif //NO_DEBUG_PRINT
+

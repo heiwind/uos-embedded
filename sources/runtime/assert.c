@@ -1,4 +1,6 @@
 #include <runtime/lib.h>
+#include <kernel/internal.h>
+#include <stdarg.h>
 
 /*
  * Called from assert() macro.
@@ -13,12 +15,28 @@ __assert_fail_ndebug ()
 	uos_halt (1);
 }
 #else
+//__NORETURN
 void
 __assert_fail (const char *cond, const char *file, unsigned int line,
 	const char *func)
 {
+    arch_intr_off ();
 	debug_printf ("\nAssertion failed in function `%S':\n%S, %u: %S\n\n",
 		func, file, line, cond);
 	uos_halt (1);
 }
+
+void __assert_msg(const char *msg, ...)
+{
+    arch_intr_off ();
+    va_list args;
+
+    va_start (args, msg);
+    debug_vprintf (msg, args);
+    va_end (args);
+}
+
+const char uos_assert_task_name_msg[] = "asserted task:%S\n";
+const char uos_assert_mutex_task_name_msg[] = "asserted mutex:%p task:%S\n";
+
 #endif

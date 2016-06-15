@@ -21,8 +21,12 @@
 /*
  * Exit the current task.
  */
+ __attribute__ ((__noreturn__)) 
 void
 task_exit (void *message)
 {
 	task_delete (task_current, message);
+	//here cant be returned from current task_delete!!! 
+	while(1)
+	    assert(0!=0);
 }

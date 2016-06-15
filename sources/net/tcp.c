@@ -10,7 +10,10 @@
 #include <mem/mem.h>
 #include <net/ip.h>
 #include <net/tcp.h>
+#include <net/netif.h>
 
+//checks spare segments for destroy to release memmory space
+void tcp_segments_timeout_spares(tcp_socket_t *s);
 /*
  * Called every 500 ms and implements the retransmission timer and the timer that
  * removes PCBs that have been in TIME-WAIT for enough time. It also increments
@@ -31,12 +34,12 @@ tcp_slowtmr (ip_t *ip)
 
 	/* Steps through all of the active PCBs. */
 	prev = 0;
+    //tcp_debug ("tcp_slowtmr: processing active sockets\n");
 	for (s=ip->tcp_sockets; s; s=s->next) {
-		/* tcp_debug ("tcp_slowtmr: processing active sockets\n"); */
-		mutex_lock (&s->lock);
-		assert (s->state != CLOSED);
-		assert (s->state != LISTEN);
-		assert (s->state != TIME_WAIT);
+		if (!mutex_trylock (&s->lock))
+		    continue;
+	    tcp_debug ("tcp_slowtmr: processing active socket $%p\n",s);
+		assert ( !tcp_socket_is_state(s, tcpfCLOSED| tcpfTIME_WAIT | tcpfLISTEN) );
 		s_remove = 0;
 
 		if (s->state == SYN_SENT && s->nrtx == TCP_SYNMAXRTX) {
@@ -101,6 +104,7 @@ tcp_slowtmr (ip_t *ip)
 				ip->tcp_sockets = s->next;
 			}
 		} else {
+            tcp_segments_timeout_spares(s);
 			prev = s;
 		}
 		mutex_unlock (&s->lock);
@@ -109,7 +113,8 @@ tcp_slowtmr (ip_t *ip)
 	/* Steps through all of the TIME-WAIT PCBs. */
 	prev = 0;
 	for (s=ip->tcp_closing_sockets; s; s=s->next) {
-		mutex_lock (&s->lock);
+        if (!mutex_trylock (&s->lock))
+            continue;
 		assert (s->state == TIME_WAIT);
 
 		/* Check if this PCB has stayed long enough in TIME-WAIT */
@@ -132,6 +137,27 @@ tcp_slowtmr (ip_t *ip)
 	}
 }
 
+
+//checks spare segments for destroy to release memmory space
+void tcp_segments_timeout_spares(tcp_socket_t *s){
+    //резервирую пару сегментов под постоянную активность сокета 
+    unsigned preserve_hotready_spares = 2;
+    tcp_segment_t* useg;
+    tcp_segment_t* pred = 0;
+    for (useg = s->spare_segs; useg != 0; pred = useg, useg = useg->next){
+        ++useg->datacrc;
+        if (useg->datacrc > 2){
+            if (preserve_hotready_spares > 0)
+                --preserve_hotready_spares;
+            else {
+                pred->next = 0;
+                tcp_segments_free(0, useg);
+                return;
+            }
+        }
+    }
+}
+
 /*
  * Is called every TCP_FINE_TIMEOUT (100 ms) and sends delayed ACKs.
  */
@@ -147,6 +173,11 @@ tcp_fasttmr (ip_t *ip)
 			tcp_ack_now (s);
 			s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
 		}
+		else
+		if (s->unsent != 0){
+		    //* try to activate tcp output if it freese by ip_output failures
+		    mutex_signal(&s->lock, s);
+		}
 	}
 }
 
@@ -154,14 +185,14 @@ tcp_fasttmr (ip_t *ip)
  * Deallocates a list of TCP segments (tcp_seg structures).
  */
 unsigned char
-tcp_segments_free (tcp_segment_t *seg)
+tcp_segments_free (tcp_socket_t *s, tcp_segment_t *seg)
 {
 	unsigned char count = 0;
 	tcp_segment_t *next;
 
 	for (count=0; seg != 0; seg = next) {
 		next = seg->next;
-		count += tcp_segment_free (seg);
+		count += tcp_segment_free (s, seg);
 	}
 	return count;
 }
@@ -170,7 +201,7 @@ tcp_segments_free (tcp_segment_t *seg)
  * Frees a TCP segment.
  */
 unsigned char
-tcp_segment_free (tcp_segment_t *seg)
+tcp_segment_free (tcp_socket_t *s, tcp_segment_t *seg)
 {
 	unsigned char count = 0;
 
@@ -178,9 +209,21 @@ tcp_segment_free (tcp_segment_t *seg)
 		return 0;
 
 	if (seg->p != 0) {
+	    tcp_event_seg(teFREE, seg, 0);
 		count = buf_free (seg->p);
+		seg->p = 0;
 	}
-	mem_free (seg);
+
+	if (s != 0){
+	    //drop seg buffer to spare pool
+	    //tcp_debug("tcp_spare:push >>seg $%x\n", seg);
+	    seg->datacrc = 0;
+	    seg->next = s->spare_segs;
+	    s->spare_segs = seg;
+	}
+	else
+	    mem_free (seg);
+
 	return count;
 }
 
@@ -194,7 +237,7 @@ tcp_alloc (ip_t *ip)
 	tcp_socket_t *s;
 	unsigned long iss;
 
-	s = mem_alloc (ip->pool, sizeof(tcp_socket_t));
+	s = (tcp_socket_t *)mem_alloc (ip->pool, sizeof(tcp_socket_t));
 	if (s == 0) {
 		return 0;
 	}
@@ -216,6 +259,7 @@ tcp_alloc (ip_t *ip)
 	s->lastack = iss;
 	s->snd_lbb = iss;
 	s->tmr = ip->tcp_ticks;
+	buf_queueh_init(&s->inq, sizeof(s->queue));
 	return s;
 }
 
@@ -228,15 +272,30 @@ tcp_socket_purge (tcp_socket_t *s)
 	tcp_debug ("tcp_socket_purge\n");
 	if (s->unsent != 0) {
 		tcp_debug ("tcp_socket_purge: not all data sent\n");
-		tcp_segments_free (s->unsent);
+		tcp_segments_free (0, s->unsent);
 		s->unsent = 0;
 	}
 	if (s->unacked != 0) {
 		tcp_debug ("tcp_socket_purge: data left on ->unacked\n");
-		tcp_segments_free (s->unacked);
-		s->unacked = 0;
+	    tcp_segment_t *useg = s->unacked;
+	    while (useg != 0){
+	        tcp_event_seg(teFREE, useg, s);
+	        netif_terminate_buf(0, useg->p);
+            s->unacked = useg->next;
+	        useg->p = 0;
+	        tcp_segment_free (0, useg);
+	        useg = s->unacked;
+	    }
+	}
+	if (s->spare_segs != 0){
+        tcp_debug ("tcp_socket_purge: data left on ->spare\n");
+        tcp_segments_free (0, s->spare_segs);
+        s->spare_segs = 0;
 	}
 	s->snd_queuelen = 0;
+	
+	buf_free(s->iph_cache);
+	s->iph_cache = 0;
 }
 
 /*
@@ -246,7 +305,7 @@ void
 tcp_set_socket_state (tcp_socket_t *s, tcp_state_t newstate)
 {
 	s->state = newstate;
-	mutex_signal (&s->lock, 0);
+	mutex_signal (&s->lock, s);
 }
 
 /*
@@ -263,7 +322,7 @@ tcp_socket_remove (tcp_socket_t **slist, tcp_socket_t *s)
 	if (s->state != TIME_WAIT && s->state != LISTEN &&
 	    (s->flags & TF_ACK_DELAY)) {
 		s->flags |= TF_ACK_NOW;
-		tcp_output (s);
+		tcp_output_poll (s);
 	}
 	tcp_set_socket_state (s, CLOSED);
 
@@ -275,22 +334,12 @@ tcp_queue_get (tcp_socket_t *q)
 {
 	buf_t *p;
 
-	if (q->count == 0) {
+	if (q->inq.count == 0) {
 		/*tcp_debug ("tcp_queue_get: returned 0\n");*/
 		return 0;
 	}
-	assert (q->head >= q->queue);
-	assert (q->head < q->queue + TCP_SOCKET_QUEUE_SIZE);
-	assert (*q->head != 0);
-
-	/* Get the first packet from queue. */
-	p = *q->head;
-
-	/* Advance head pointer. */
-	++q->head;
-	--q->count;
-	if (q->head >= q->queue + TCP_SOCKET_QUEUE_SIZE)
-		q->head = q->queue;
+	
+	p = buf_queueh_get(&q->inq);
 
 	/* Advertise a larger window when the data has been processed. */
 	q->rcv_wnd += p->tot_len;
@@ -304,76 +353,51 @@ tcp_queue_get (tcp_socket_t *q)
 void
 tcp_queue_put (tcp_socket_t *q, buf_t *p)
 {
-	buf_t **tail;
-
-	/*tcp_debug ("tcp_queue_put: p = 0x%04x, count = %d, head = 0x%04x\n", p, q->count, q->head);*/
-
-	/* Must be called ONLY when queue is not full. */
-	assert (q->count < TCP_SOCKET_QUEUE_SIZE);
-
-	if (q->head == 0)
-		q->head = q->queue;
-
-	/* Compute the last place in the queue. */
-	tail = q->head + q->count;
-	if (tail >= q->queue + TCP_SOCKET_QUEUE_SIZE)
-		tail -= TCP_SOCKET_QUEUE_SIZE;
-
-	/* Put the packet in. */
-	*tail = p;
-	++q->count;
-	/*tcp_debug ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/
+    buf_queueh_put(&q->inq, p);
 }
 
 void
 tcp_queue_free (tcp_socket_t *q)
 {
-	while (q->count > 0) {
-		assert (q->head >= q->queue);
-		assert (q->head < q->queue + TCP_SOCKET_QUEUE_SIZE);
-		assert (*q->head != 0);
-
-		/* Remove packet from queue. */
-		buf_free (*q->head);
-
-		/* Advance head pointer. */
-		++q->head;
-		--q->count;
-		if (q->head >= q->queue + TCP_SOCKET_QUEUE_SIZE)
-			q->head = q->queue;
-	}
+    buf_queueh_clean(&q->inq);
 }
 
 #ifdef TCP_DEBUG
+/*
+  TCP_FIN         = 0x01
+, TCP_SYN         = 0x02
+, TCP_RST         = 0x04
+, TCP_PSH         = 0x08
+, TCP_ACK         = 0x10
+, TCP_URG         = 0x20
+*/
+
+const unsigned char tcp_flags_dumpfmt[] = 
+        "\30\1FIN\2SYN\3RST\4PSH\5ACK\6URG";
 void
 tcp_debug_print_header (tcp_hdr_t *tcphdr)
 {
-	debug_printf ("TCP header:\n");
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|      %04x     |      %04x     | (src port, dest port)\n",
-		tcphdr->src, tcphdr->dest);
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|            %08lu           | (seq no)\n",
-		tcphdr->seqno);
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|            %08lu           | (ack no)\n",
-		tcphdr->ackno);
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("| %2u |    |%u%u%u%u%u|    %5u      | (offset, flags (",
-		tcphdr->offset,
-		tcphdr->flags >> 5 & 1,
-		tcphdr->flags >> 4 & 1,
-		tcphdr->flags >> 3 & 1,
-		tcphdr->flags >> 2 & 1,
-		tcphdr->flags >> 1 & 1,
-		tcphdr->flags & 1,
-		tcphdr->wnd);
-	tcp_debug_print_flags (tcphdr->flags);
-	debug_printf ("), win)\n");
-	debug_printf ("+-------------------------------+\n");
-	debug_printf ("|    0x%04x     |     %5u     | (chksum, urgp)\n",
-		NTOHS (tcphdr->chksum), NTOHS (tcphdr->urgp));
-	debug_printf ("+-------------------------------+\n");
+    tcp_debug ( "TCP header:\n"
+                "+-------------------------------+\n"
+	            "|      %04x     |      %04x     | (src port, dest port)\n"
+                "+-------------------------------+\n"
+                "|            %08lu           | (seq no)\n"
+                "+-------------------------------+\n"
+                "|            %08lu           | (ack no)\n"
+            , tcphdr->src, tcphdr->dest
+            , tcphdr->seqno, tcphdr->ackno
+		    );
+    //                "| %2u |    |%u%u%u%u%u|    %5u      | (offset, flags (",
+    tcp_debug ("+-------------------------------+\n"
+                  "| %2u |    |%6b|    %5u      | (offset, flags (%b), win)\n"
+	            , tcphdr->offset
+	            , tcphdr->flags, "\2\0"
+                , tcphdr->flags, tcp_flags_dumpfmt
+	            , tcphdr->wnd);
+    tcp_debug ( "+-------------------------------+\n"
+                "|    0x%04x     |     %5u     | (chksum, urgp)\n"
+                "+-------------------------------+\n"
+            ,NTOHS (tcphdr->chksum), NTOHS (tcphdr->urgp));
 }
 
 const char *
@@ -396,38 +420,43 @@ tcp_state_name (tcp_state_t state)
 }
 
 void
-tcp_debug_print_flags (unsigned char flags)
+tcp_debug_print_flags (tcph_flag_set flags)
 {
-	if (flags & TCP_FIN) debug_printf (" FIN");
-	if (flags & TCP_SYN) debug_printf (" SYN");
-	if (flags & TCP_RST) debug_printf (" RST");
-	if (flags & TCP_PSH) debug_printf (" PSH");
-	if (flags & TCP_ACK) debug_printf (" ACK");
-	if (flags & TCP_URG) debug_printf (" URG");
+    /*
+	if (flags & TCP_FIN) tcp_debug (" FIN");
+	if (flags & TCP_SYN) tcp_debug (" SYN");
+	if (flags & TCP_RST) tcp_debug (" RST");
+	if (flags & TCP_PSH) tcp_debug (" PSH");
+	if (flags & TCP_ACK) tcp_debug (" ACK");
+	if (flags & TCP_URG) tcp_debug (" URG");
+	*/
+    tcp_debug ("%b", flags, tcp_flags_dumpfmt);
+}
+
+void tcp_debug_print_socket (tcp_socket_t *s){
+    const char *fmt = "Local port %u, foreign port %u "
+              "snd_nxt %lu rcv_nxt %lu state %S\n";
+    tcp_debug (fmt
+            , s->local_port, s->remote_port
+            , s->snd_nxt, s->rcv_nxt
+            , tcp_state_name (s->state)
+            );
 }
 
 void
 tcp_debug_print_sockets (ip_t *ip)
 {
 	tcp_socket_t *s;
-	const char *fmt = "Local port %u, foreign port %u "
-			  "snd_nxt %lu rcv_nxt %lu state %S\n";
 
-	debug_printf ("Active PCB states:\n");
-	for (s=ip->tcp_sockets; s; s=s->next) {
-		debug_printf (fmt, s->local_port, s->remote_port,
-			s->snd_nxt, s->rcv_nxt, tcp_state_name (s->state));
-	}
-	debug_printf ("Listen PCB states:\n");
-	for (s=ip->tcp_listen_sockets; s; s=s->next) {
-		debug_printf (fmt, s->local_port, s->remote_port,
-			s->snd_nxt, s->rcv_nxt, tcp_state_name (s->state));
-	}
-	debug_printf ("TIME-WAIT PCB states:\n");
-	for (s=ip->tcp_closing_sockets; s; s=s->next) {
-		debug_printf (fmt, s->local_port, s->remote_port,
-			s->snd_nxt, s->rcv_nxt, tcp_state_name (s->state));
-	}
+	tcp_debug ("Active PCB states:\n");
+	for (s=ip->tcp_sockets; s; s=s->next) 
+	    tcp_debug_print_socket(s);
+	tcp_debug ("Listen PCB states:\n");
+	for (s=ip->tcp_listen_sockets; s; s=s->next)
+        tcp_debug_print_socket(s);
+	tcp_debug ("TIME-WAIT PCB states:\n");
+	for (s=ip->tcp_closing_sockets; s; s=s->next)
+        tcp_debug_print_socket(s);
 }
 
 int

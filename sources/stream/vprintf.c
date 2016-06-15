@@ -39,13 +39,38 @@
  *
  * The format %D -- Hexdump, takes a pointer. Sharp flag - use `:' as
  * a separator, instead of a space. For example:
+                    precision denotes size of groups delimited by space
  *
  *	("%6D", ptr)       -> XX XX XX XX XX XX
+ *  ("%6.3D", len, ptr) -> XX:XX:XX XX:XX:XX ...
  *	("%#*D", len, ptr) -> XX:XX:XX:XX ...
+ *	
+ * The flag specifier introduced:
+ *  @ - denotes padding symbol instead default space or 0
+
+ *  ("%@.6D", ptr)       -> XX.XX.XX.XX.XX.XX
+ *  ("%@.6d", 100)       -> ...100
+ *
+ *  extended dump %@Dxxx introduced:
+ *      precision denotes size of groups delimited by space
+ *      sharp flag - assign group delimiter \n
+ *      xxx - is format specifier of dumped items. supports all simple numeric formats
+ *          it recognise size of items at provided dump pointer
+ *              by default - 1 byte
+ *              h          - short
+ *              l          - long
+ *  ("%#*.*@D08lx", len, groupsize, ptr)    -> xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx ....\n
+ *                                             xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx ....\n
+ *                                             ....
+ *  ("%4@.@Du"  , ipadress)                   -> d.d.d.d
+ *  ("%4@.@D03u", ipadress)                   -> ddd.ddd.ddd.ddd
+ *  ("%4@.@Dhu"  , ip6adress)                 -> d.d.d.d
+ *
  */
 #include <runtime/lib.h>
 #include <runtime/math.h>
 #include <stream/stream.h>
+#include <kernel/internal.h>
 
 /* Max number conversion buffer length: a long in base 2, plus NUL byte. */
 #define MAXNBUF	(sizeof(long) * 8 + 1)
@@ -54,19 +79,60 @@ static unsigned char *ksprintn (unsigned char *buf, unsigned long v, unsigned ch
 	int width, unsigned char *lp);
 static unsigned char mkhex (unsigned char ch);
 
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 static int cvt (double number, int prec, int sharpflag, unsigned char *negp,
 	unsigned char fmtch, unsigned char *startp, unsigned char *endp);
 #endif
 
+#ifdef MIPS32
+#define VPRINTF_FRAME (256+16)
+#else
+#define VPRINTF_FRAME 100
+#endif
+
+#if STREAM_HAVE_ACCEESS > 0
+static
+int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap);
+
+int
+stream_vprintf (stream_t *stream, char const *fmt, va_list ap){
+#ifndef NDEBUG
+    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
+        debug_puts("printf asserted stack task ");
+        debug_puts(task_current->name);
+        debug_putchar(0, '\n');
+        return 0;//task_exit(0);
+    }
+#endif
+
+    if (stream->interface->access_tx != 0)
+        (stream->interface->access_tx(stream, 1));
+    int res = stream_vprintf_nomt(stream, fmt, ap);
+    if (stream->interface->access_tx != 0)
+        (stream->interface->access_tx(stream, 0));
+    return res;
+}
+
+static
+int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap)
+#else
 int
 stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
+#endif
 {
 #define PUTC(c) { putchar(stream,(unsigned char)(c)); ++retval; }
 	unsigned char nbuf [MAXNBUF], padding, *q;
 	const unsigned char *s;
-	unsigned char c, base, lflag, ladjust, sharpflag, neg, dot, size;
-	small_int_t n, width, dwidth, retval, uppercase, extrazeros, sign;
+	unsigned char c, base, ladjust, sharpflag, neg, dot, size;
+	char lflag;
+#define laslong     sizeof(long)
+#define lasshort    sizeof(short)
+//    const int lasbyte = 1;
+	small_int_t n, width, dwidth, retval;
+	char uppercase, extrazeros, sign;
+	small_int_t dump_width, dump_prec, dump_pos;
+	char        dump_pad;
+	const unsigned char *dump_s;
 	unsigned long ul;
 
 	if (! stream)
@@ -74,6 +140,18 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 	if (! fmt)
 		fmt = "(null)\n";
 
+#ifndef NDEBUG
+    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
+        debug_puts("printf asserted stack task ");
+        debug_puts(task_current->name);
+        debug_putchar(0, '\n');
+        return 0;//task_exit(0);
+    }
+#endif
+
+    dump_pos = 0;
+    dump_pad = ' ';
+    dump_prec = -1;
 	retval = 0;
 	for (;;) {
 		while ((c = FETCH_BYTE (fmt++)) != '%') {
@@ -81,11 +159,18 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 				return retval;
 			PUTC (c);
 		}
+        base = 10;
 		padding = ' ';
 		width = 0; extrazeros = 0;
 		lflag = 0; ladjust = 0; sharpflag = 0; neg = 0;
 		sign = 0; dot = 0; uppercase = 0; dwidth = -1;
-reswitch:	switch (c = FETCH_BYTE (fmt++)) {
+		size = 0;
+		dump_width = -1;
+        dump_s = 0;
+reswitch:
+        c = FETCH_BYTE (fmt++);
+doswitch:
+        switch (c) {
 		case '.':
 			dot = 1;
 			padding = ' ';
@@ -120,6 +205,28 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 			}
 			goto reswitch;
 
+        case '@':
+            c = FETCH_BYTE (fmt++);
+            if (c != 'D'){
+                padding = c;
+                goto reswitch;
+            }
+            //here is complex dump
+            dump_width = width;
+            if (! dump_width)
+                dump_width = 16;
+            dump_prec = dwidth;
+            dump_pad = padding;
+            if (sharpflag)
+                dump_pad = '\n';
+            padding = ' ';
+            dump_pos = 0;
+            dwidth = -1;
+            width = 0;
+            sharpflag = 0;
+            dump_s = va_arg (ap, const unsigned char*);
+            goto reswitch;
+
 		case '0':
 			if (! dot) {
 				padding = '0';
@@ -142,7 +249,10 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 		case 'b':
 			ul = va_arg (ap, int);
 			s = va_arg (ap, const unsigned char*);
-			q = ksprintn (nbuf, ul, *s++, -1, 0);
+            base = *s++;
+            if (*s == 0)
+                goto number;
+			q = ksprintn (nbuf, ul, base, -1, 0);
 			while (*q)
 				PUTC (*q--);
 
@@ -177,33 +287,55 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 			break;
 
 		case 'D':
-			s = va_arg (ap, const unsigned char*);
-			if (! width)
-				width = 16;
-			if (sharpflag)
-				padding = ':';
+//dumpcmd:
+            dump_s = va_arg (ap, const unsigned char*);
+            if (dump_width >= 0){
+                dump_pos = 0;
+                goto takenumber;
+            }
+            dump_width = width;
+            if (! dump_width)
+                dump_width = 16;
+            dump_prec = dwidth-1;
+            dump_pad = padding;
+            if (sharpflag)
+                dump_pad = ':';
+			{
+			    int prec = dump_prec-1;
 			while (width--) {
-				c = *s++;
+				c = *dump_s++;
 				PUTC (mkhex (c >> 4));
 				PUTC (mkhex (c));
-				if (width)
-					PUTC (padding);
+				if (prec != 0) {
+				    //precision denotes size of groups delimited by space
+	                if (width)
+	                    PUTC (dump_pad);
+				}
+				else {
+                    PUTC (' ');
+				}
+				prec--;
+				if (prec < 0)
+				    prec = dump_prec-1;
+			}//while (width--)
 			}
 			break;
 
+        case 'i':
 		case 'd':
-			ul = lflag ? va_arg (ap, long) : va_arg (ap, int);
 			if (! sign) sign = 1;
 			base = 10;
-			goto number;
+			goto takenumber;
 
 		case 'l':
-			lflag = 1;
+			lflag = laslong;
 			goto reswitch;
 
+		case 'h':
+            lflag = lasshort;
+            goto reswitch;
+
 		case 'o':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				va_arg (ap, unsigned int);
 			base = 8;
 			goto nosign;
 
@@ -214,18 +346,16 @@ reswitch:	switch (c = FETCH_BYTE (fmt++)) {
 				goto const_string;
 			}
 			base = 16;
+			sign = 0;
 			sharpflag = (width == 0);
-			goto nosign;
-
-		case 'n':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				sign ? (unsigned long) va_arg (ap, int) :
-				va_arg (ap, unsigned int);
-			base = 10;
 			goto number;
 
+		case 'n':
+			base = 10;
+			goto takenumber;
+
 		case 'S':
-#if __AVR__
+#ifdef __AVR__
 			s = va_arg (ap, const unsigned char*);
 			if (! s)
 				s = (const unsigned char*) "(null)";
@@ -284,9 +414,10 @@ const_string:
 		case 'r':
 			/* Saturated counters. */
 			base = 10;
-			if (lflag) {
+			sign = 0;
+			if (lflag != laslong) {
 				ul = va_arg (ap, unsigned long);
-				if (ul == -1) {
+				if (ul == (unsigned long)-1) {
 cnt_unknown:				if (ladjust)
 						PUTC ('-');
 					while (--width > 0)
@@ -295,10 +426,10 @@ cnt_unknown:				if (ladjust)
 						PUTC ('-');
 					break;
 				}
-				if (ul >= -2) {
+				if (ul >= (unsigned long)-2) {
 					ul = -3;
 					neg = '>';
-					goto nosign;
+					goto number;
 				}
 			} else {
 				ul = va_arg (ap, unsigned int);
@@ -307,34 +438,74 @@ cnt_unknown:				if (ladjust)
 				if (ul >= (unsigned short) -2) {
 					ul = (unsigned short) -3;
 					neg = '>';
-					goto nosign;
+					goto number;
 				}
 			}
-			goto nosign;
+			goto number;
 
 		case 'u':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				va_arg (ap, unsigned int);
 			base = 10;
 			goto nosign;
 
 		case 'x':
 		case 'X':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				va_arg (ap, unsigned int);
 			base = 16;
 			uppercase = (c == 'X');
 			goto nosign;
+
 		case 'z':
 		case 'Z':
-			ul = lflag ? va_arg (ap, unsigned long) :
-				sign ? (unsigned long) va_arg (ap, int) :
-				va_arg (ap, unsigned int);
 			base = 16;
 			uppercase = (c == 'Z');
-			goto number;
+			goto takenumber;
 
 nosign:			sign = 0;
+
+takenumber:
+            if (dump_width <= 0 ){
+            if (lflag == laslong){
+                if (sign)
+                    ul = (unsigned long)va_arg (ap, long);
+                else
+                    ul = va_arg (ap, unsigned long);
+            }
+            else {
+                if (sign)
+                    ul = (unsigned long)va_arg (ap, int);
+                else
+                    ul = va_arg (ap, unsigned int);
+            }
+            }//if (dump_width <= 0 )
+            else{
+                switch (lflag){
+                    case 0 :
+                    case 1 :
+                    default :
+                        if (sign)
+                            ul = (unsigned long)(long)(char)(*dump_s++);
+                        else
+                            ul = (*dump_s++);
+                        break;
+
+                    case lasshort :
+                            if (sign)
+                                ul = (unsigned long)(long)*((short*)dump_s);
+                            else
+                                ul = *((unsigned short*)dump_s);
+                            dump_s += sizeof(short);
+                            break;
+
+                    case laslong :
+                            if (sign)
+                                ul = *((long*)dump_s);
+                            else
+                                ul = *((unsigned long*)dump_s);
+                            dump_s += sizeof(long);
+                            break;
+                }//switch (lflag)
+                dump_width--;
+            }//else //if (dump_width <= 0 )
+
 number:		if (sign && ((long) ul != 0L)) {
 				if ((long) ul < 0L) {
 					neg = '-';
@@ -396,8 +567,19 @@ number:		if (sign && ((long) ul != 0L)) {
 				do {
 					PUTC (' ');
 				} while (--width > 0);
-			break;
-#if ARCH_HAVE_FPU
+
+            if (dump_width <= 0)
+                break;
+
+            dump_pos++;
+            if ((dump_pos % dump_prec) != 0){
+                PUTC(' ');
+            }
+            else
+                PUTC(dump_pad);
+            goto doswitch;
+
+#ifdef ARCH_HAVE_FPU
 		case 'e':
 		case 'E':
 		case 'f':
@@ -405,6 +587,7 @@ number:		if (sign && ((long) ul != 0L)) {
 		case 'g':
 		case 'G': {
 			double d = va_arg (ap, double);
+
 			/*
 			 * don't do unrealistic precision; just pad it with
 			 * zeroes later, so buffer size stays rational.
@@ -484,7 +667,7 @@ number:		if (sign && ((long) ul != 0L)) {
 #endif
 		default:
 			PUTC ('%');
-			if (lflag)
+			if (lflag == laslong)
 				PUTC ('l');
 			PUTC (c);
 			break;
@@ -506,9 +689,12 @@ ksprintn (unsigned char *nbuf, unsigned long ul, unsigned char base, int width,
 
 	p = nbuf;
 	*p = 0;
+	if (base > 16)
+	    return p;
 	for (;;) {
-		*++p = mkhex (ul % base);
+		unsigned long rest = mkhex (ul % base);
 		ul /= base;
+		*++p = rest;
 		if (--width > 0)
 			continue;
 		if (! ul)
@@ -528,7 +714,7 @@ mkhex (unsigned char ch)
 	return ch + '0';
 }
 
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 static unsigned char *
 cvtround (double fract, int *exp, unsigned char *start, unsigned char *end, unsigned char ch,
 	unsigned char *negp)

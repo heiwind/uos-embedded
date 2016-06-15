@@ -1,7 +1,9 @@
 #ifndef __SPI_MASTER_ELVEES_H__
 #define __SPI_MASTER_ELVEES_H__
 
+#include <kernel/uos.h>
 #include <spi/spi-master-interface.h>
+#include <stdint.h> 
 
 #ifndef SPI_DMA_BUFSZ
 #define SPI_DMA_BUFSZ   4096
@@ -16,6 +18,12 @@
 
 #define SPI_SS0_ACTIVE_HIGH	(1 << 14)
 #define SPI_SS1_ACTIVE_HIGH	(1 << 15)
+
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct _elvees_spim_t {
     spimif_t        spimif;
@@ -32,5 +40,11 @@ struct _elvees_spim_t {
 typedef struct _elvees_spim_t elvees_spim_t;
 
 int spim_init(elvees_spim_t *spi, unsigned port, unsigned io_mode);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

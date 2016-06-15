@@ -27,13 +27,14 @@
  * Свободная память хранится в виде списка, упорядоченного по возрастанию адресов.
  * Выделяется первый сегмент, подходящий по размеру.
  */
+#include <uos-conf.h>
+#include <uos-conf-cpu.h>
 #include <runtime/lib.h>
 #include <mem/mem.h>
 
 /*
  * Debug configuration.
  */
-#define MEM_DEBUG		1
 
 #ifdef NDEBUG			/* Disable memory debugging on NDEBUG */
 #undef MEM_DEBUG
@@ -48,7 +49,17 @@
  * Align data on pointer-sized boundaries.
  */
 #define SIZEOF_POINTER		sizeof(void*)
-#define MEM_ALIGN(x)		(((x) + SIZEOF_POINTER-1) & -SIZEOF_POINTER)
+#define SIZEOF_DOUBLE       sizeof(double)
+
+#if defined(MIPS32) && defined(ARCH_HAVE_FPU)
+//!!! mips platform requires that all doubles be aligned on 8byte
+//  , so allocate always on this aligns
+#define SIZEOF_ALIGN    SIZEOF_DOUBLE
+#else
+#define SIZEOF_ALIGN    SIZEOF_POINTER
+#endif
+
+#define MEM_ALIGN(x)		(((x) + SIZEOF_ALIGN-1) & -SIZEOF_ALIGN)
 
 /*
  * Every memory block has a header.
@@ -79,7 +90,7 @@ void *mem_alloc (mem_pool_t *m, size_t required)
 
 	p = mem_alloc_dirty (m, required);
 	if (p && required > 0)
-		memset (p, 0, required);
+		memsetw (p, 0, required);
 	return p;
 }
 
@@ -413,7 +424,7 @@ void mem_init (mem_pool_t *m, size_t start, size_t stop)
 	h->magic = MEMORY_HOLE_MAGIC;
 #endif
 	mutex_lock (&m->lock);
-	NEXT(h) = m->free_list;
+	NEXT(h) = (mheader_t *)(m->free_list);
 	m->free_list = h;
 	m->free_size += h->size;
 	mutex_unlock (&m->lock);

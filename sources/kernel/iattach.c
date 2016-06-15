@@ -22,8 +22,7 @@
  * Associate IRQ with the lock.
  * On interrupt, the signal message is sent to the lock.
  */
-void
-mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg)
+void mutex_attach_swi (mutex_t *m, mutex_irq_t* swi, handler_t func, void *arg)
 {
 	arch_state_t x;
 
@@ -31,16 +30,27 @@ mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg)
 	if (! m->item.next)
 		mutex_init (m);
 
-	m->irq = &mutex_irq [irq];
+	m->irq = swi;
 	assert (m->irq->lock == 0);
 	m->irq->lock = m;
-	m->irq->irq = irq;
 	m->irq->handler = func;
 	m->irq->arg = arg;
 	m->irq->pending = 0;
 
-	arch_intr_bind (irq);
-	arch_intr_allow (irq);
-
 	arch_intr_restore (x);
+}
+
+void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg)
+{
+    mutex_irq [irq].irq = irq;
+    mutex_attach_swi(m, &mutex_irq [irq], func, arg);
+    arch_intr_bind (irq);
+    arch_intr_allow (irq);
+}
+
+void mutex_dettach_irq(mutex_t *m){
+    if (m->irq == 0)
+        return;
+    m->irq->lock = 0;
+    m->irq = 0;
 }

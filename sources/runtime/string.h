@@ -1,3 +1,6 @@
+#ifndef UOS_STRINGS_H
+#define UOS_STRINGS_H
+
 /*
  * String inline routines for MIPS architecture.
  * Do not include this file directly, use runtime/lib.h instead.
@@ -18,6 +21,13 @@
  * "COPY-UOS.txt" for details.
  */
 
+// need types.h
+#include "arch.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Copy N bytes of SRC to DEST.  */
 extern void *
 memcpy (void *to, const void *from, size_t n);
@@ -30,6 +40,10 @@ memcpy (void *to, const void *from, size_t n);
 
 extern void *
 memset (void *s, unsigned char c, size_t n);
+
+//* set Nbytes sized area at S by word c
+extern 
+void * memsetw (void *s, unsigned c, size_t n);
 
 /* Compare N bytes of S1 and S2.  */
 extern small_int_t
@@ -72,6 +86,13 @@ strcmp (const unsigned char *s1, const unsigned char *s2);
 extern small_int_t
 strncmp (const unsigned char *s1, const unsigned char *s2, size_t n);
 
+/* Compare N characters of S1 and S2. until end of some string.
+ * \return >= 0  mutched symbols limited by N or end of string
+ *               (Sx+result) points mismatch char position
+ *         <  0 -  (Sx-result) points mismatch char position*/
+extern small_int_t
+strnzcmp (const unsigned char *s1, const unsigned char *s2, size_t n);
+
 /* Find the first occurrence of C in S.  */
 extern unsigned char *
 strchr (const unsigned char *s, unsigned char c);
@@ -84,3 +105,23 @@ strrchr (const unsigned char *src, unsigned char c);
    If no '\0' terminator is found in that many characters, return MAXLEN.  */
 extern size_t
 strnlen (const unsigned char *string, size_t maxlen);
+
+unsigned char *strstr (const unsigned char *haystack, const unsigned char *needle);
+small_int_t strspn (const unsigned char *s, const unsigned char *accept);
+small_int_t strcspn (const unsigned char *s, const unsigned char *reject);
+
+extern const unsigned char *strmatch (const unsigned char* string, const unsigned char *pattern);
+small_int_t strcasecmp (const unsigned char*, const unsigned char*);
+small_int_t strncasecmp (const unsigned char*, const unsigned char*, size_t n);
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+#include <runtime/c++/string.hpp>
+#endif
+
+#endif  // UOS_STRINGS_H
+

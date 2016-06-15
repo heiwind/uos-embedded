@@ -16,6 +16,12 @@
  * uses of the text contained in this file.  See the accompanying file
  * "COPY-UOS.txt" for details.
  */
+#ifndef UOS_RUNTIME_MIPS_IO
+#define UOS_RUNTIME_MIPS_IO
+
+#include <uos-conf.h>
+#include <uos-conf-cpu.h>
+
 #ifdef ELVEES_NVCOM02T
 #define ELVEES_NVCOM01 1
 #endif
@@ -124,11 +130,14 @@
  * local storage. When it is greater than 16, you must put it
  * in a macro definition here.
  */
+#ifndef MIPS_FSPACE
 #ifdef ELVEES_MC24R2
 #   define MIPS_FSPACE		24	/* for Elvees MC24R2 */
 #endif
 #ifdef ELVEES_NVCOM01
-#   define MIPS_FSPACE		24	/* for Elvees NVCom-01 */
+//  !!!без оптимизации -O0 - фрейм _arch_interrupt_ =88
+//  !!!    оптимизация -O1,2 - фрейм _arch_interrupt_ =40
+#   define MIPS_FSPACE		88	/* for Elvees NVCom-01 */
 #endif
 #ifdef ELVEES_NVCOM02
 #   define MIPS_FSPACE		24	/* TODO: for Elvees NVCom-02 */
@@ -148,15 +157,28 @@
 #ifdef ELVEES_MC30SF6
 #   define MIPS_FSPACE		24	/* for Elvees MC-30SF6 */
 #endif
+#endif //MIPS_FSPACE
+
 #ifndef MIPS_FSPACE
-#   define MIPS_FSPACE		16	/* default minimum */
+//  при MIPS_FSPACE==0 используется обыный вызов _arch_interrupt_ 
+//  он медленнее, но - контроль стека не требуется 
+#   define MIPS_FSPACE		0	/* default minimum */
 #endif
 
+//see task_schedule - uses for task stack check
+#define ARCH_CONTEXT_SIZE (MIPS_FSPACE+CONTEXT_WORDS*4)
+#define ARCH_ISR_FSPACE    MIPS_FSPACE
+
 #ifndef __ASSEMBLER__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Set value of stack pointer register.
  */
+CODE_ISR 
 static void inline __attribute__ ((always_inline))
 mips_set_stack_pointer (void *x)
 {
@@ -168,6 +190,7 @@ mips_set_stack_pointer (void *x)
 /*
  * Get value of stack pointer register.
  */
+CODE_ISR 
 static inline __attribute__ ((always_inline))
 void *mips_get_stack_pointer ()
 {
@@ -284,6 +307,8 @@ do {								\
  * Disable the hardware interrupts,
  * saving the interrupt state into the supplied variable.
  */
+ //!!!in exception there is no EPC adress saves, therefore SYSCALL cant't return correctly
+ //  so - BE SURE that not in exception!!!
 static void inline __attribute__ ((always_inline))
 mips_intr_disable (int *x)
 {
@@ -316,6 +341,18 @@ mips_intr_disable (int *x)
 	*x = mips_read_c0_register (C0_STATUS);
 	asm volatile ("di");
 #endif
+}
+
+//* fixed version if mips_intr_disable - that can invokes in exception
+static inline 
+__attribute__ ((always_inline))
+int mips_intr_off (void)
+{
+    int x = mips_read_c0_register (C0_STATUS) ;
+    if ( (x & (ST_EXL | ST_ERL)) == 0){
+        mips_intr_disable (&x);
+    }
+    return x;
 }
 
 /*
@@ -394,4 +431,13 @@ mips_virtual_addr_to_physical (unsigned int virt)
 	}
 }
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __ASSEMBLER__ */
+
+
+
+#endif //UOS_RUNTIME_MIPS_IO
+

@@ -252,7 +252,7 @@ next (snmp_t *snmp, asn_t **name, asn_t **val)
 		/* The first table entry must have no args. */
 		vp = snmp->tab;
 	} else {
-		const char* vid = FETCH_PTR (&vp->id);
+		const char* vid = (const char*)FETCH_PTR (&vp->id);
 		small_uint_t vlen = FETCH_BYTE (&vp->idlen);
 		unsigned min_len = vlen < id_len ? vlen : id_len;
 
@@ -642,7 +642,7 @@ err:            /*debug_printf ("snmp_execute: bad pdu\n");*/
 		/* Repeat variables. */
 		int r;
 
-		for (r=0; r<repetitions; ++r) {
+		for (r=0; r<(int)repetitions; ++r) {
 			for (i=nonrepeaters; i<inbind->seq.count; ++i) {
 				asn_t *pair, *name, *val;
 

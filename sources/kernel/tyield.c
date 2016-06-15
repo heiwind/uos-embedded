@@ -20,6 +20,7 @@
 
 /*
  * Suspend the current task so that other tasks can run.
+//!!! задача task_current включается в список активных ниток
  */
 void
 task_yield ()
@@ -28,8 +29,8 @@ task_yield ()
 
 	arch_intr_disable (&x);
 
-	/* Enqueue always puts element at the tail of the list. */
-	list_append (&task_active, &task_current->item);
+	// note scheduler that current task is yielding
+	task_need_schedule = (unsigned)task_current;
 
 	/* Scheduler selects the first task.
 	 * If there are several tasks with equal priority,

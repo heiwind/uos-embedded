@@ -6,9 +6,14 @@
 #ifndef __IIC_MIIC_H_
 #define __IIC_MIIC_H_
 
-#ifndef __SYS_LIB_H_
 #include <runtime/lib.h>
+#include <kernel/uos.h>
+
+#ifdef __cplusplus
+extern "C" {
 #endif
+
+
 
 #define MIIC_T								\
 	mutex_t lock;     /* semaphore (to prevent concurent use) */	\
@@ -27,5 +32,12 @@ typedef struct _miic_t {
 	(*((c)->transaction)) ((c), (sla) ,(buf), (sz), 0, 0)
 #define miic_read(c,sla,buf,sz) \
 	(*((c)->transaction)) ((c), (sla) , 0, 0, (buf), (sz))
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __IIC_MIIC_H_ */

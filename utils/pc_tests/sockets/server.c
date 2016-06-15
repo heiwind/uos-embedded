@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define PORT 		0xBBBB
 #define MSG_SIZE		365
@@ -12,6 +15,7 @@
 int msg[MSG_SIZE];
 int	sz;
 
+int
 main()
 {
 	int 	 sd, sd_current, cc, fromlen, tolen;
@@ -56,6 +60,13 @@ main()
 		exit(1);
 	}
 	printf ("Client connected\n");
+    int sockopt_flag = 1;
+    setsockopt(sd_current, IPPROTO_TCP, TCP_NODELAY
+                ,(char *)&sockopt_flag,sizeof(sockopt_flag)
+                );
+    setsockopt(sd_current, IPPROTO_TCP, TCP_QUICKACK
+                ,(char *)&sockopt_flag,sizeof(sockopt_flag)
+                );
 #endif
 	
 /* if you want to see the ip address and port of the client, uncomment the 
@@ -66,6 +77,7 @@ printf("Hi there, from  %s#\n",inet_ntoa(pin.sin_addr));
 printf("Coming from port %d\n",ntohs(pin.sin_port));
         */
 
+    gettimeofday(&start, NULL);
 	while (1) {
 		/* get a message from the client */
 #ifdef TCP_SOCKET
@@ -80,7 +92,8 @@ printf("Coming from port %d\n",ntohs(pin.sin_port));
 		} else if (sz == 0) {
 			printf("Disconnected\n");
 			exit(0);
-		}		
+		}
+		//else  printf("recv $%x bytes, count $%x\n", sz, count);
 
 		sz >>= 2;
 

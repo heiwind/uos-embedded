@@ -111,7 +111,7 @@ typedef struct Tcl_HashSearch {
 #define Tcl_FindHashEntry(tablePtr, key) \
 	(*((tablePtr)->findProc))(tablePtr, key)
 #define Tcl_CreateHashEntry(tablePtr, key, newPtr) \
-	(*((tablePtr)->createProc))(tablePtr, key, newPtr)
+	(*((tablePtr)->createProc))((tablePtr), key, newPtr)
 
 /*
  * Exported procedures:

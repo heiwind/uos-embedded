@@ -1,5 +1,5 @@
-#ifndef __M25PXX_H__
-#define __M25PXX_H__
+#ifndef __S25PXX_H__
+#define __S25PXX_H__
 
 #include <flash/flash-interface.h>
 #include <spi/spi-master-interface.h>

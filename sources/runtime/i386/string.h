@@ -471,7 +471,12 @@ static __inline void * memscan(void * addr, unsigned char c, size_t size)
 	return addr;
 }
 
-extern const unsigned char *strmatch (const unsigned char*, const unsigned char*);
+extern const unsigned char *strmatch (const unsigned char* string, const unsigned char *pattern);
 small_int_t strcasecmp (const unsigned char*, const unsigned char*);
 small_int_t strncasecmp (const unsigned char*, const unsigned char*, size_t n);
+
+unsigned char *strstr (const char *haystack, const unsigned char *needle);
+int strspn (const unsigned char *s, const unsigned char *accept);
+int strcspn (const unsigned char *s, const unsigned char *reject);
+
 #endif

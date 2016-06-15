@@ -6,7 +6,15 @@
 #include <kernel/internal.h>
 #include <timer/timer.h>
 #include <errno.h>
+#include <posix-port.h>
 /*#include <dirent.h>*/
+#if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
+#include <timer/etimer_threads.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 static inline int getpid()
 	{ return (int) task_current; }
@@ -50,12 +58,25 @@ static inline int socketpair (int d, int type, int protocol, int sv[2])
 	return -1;
 }
 
-static inline void usleep (unsigned long usec)
+#if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_DELAY
+INLINE void usleep (unsigned long usec)
 {
 	extern timer_t *uos_timer;
 
 	timer_delay (uos_timer, usec / 1000);
 }
+
+INLINE void sleep (unsigned long sec)
+{
+    extern timer_t *uos_timer;
+    while (sec > 0)
+        timer_delay (uos_timer, 1000);
+}
+
+#elif UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
+#define usleep(usec) etimer_usleep(usec)
+#define sleep(sec)   etimer_usleep(sec*1000000ul)
+#endif
 
 static inline char *getcwd (char *buf, size_t size)
 {
@@ -70,5 +91,20 @@ static inline char *getwd (char *buf)
 	buf[1] = 0;
 	return buf;
 }
+
+
+#define sysconf(x) x
+
+#ifdef _SC_PAGE_SIZE
+INLINE __CONST int getpagesize(void) {
+    return sysconf(_SC_PAGE_SIZE);
+}
+
+#endif
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -119,7 +119,7 @@ wait_line_free(sdhc_spi_t *m)
 //
 static int send_command(sdhc_spi_t *m, uint8_t **r1)
 {
-	int i;
+	unsigned i;
 /*
 debug_printf("command:  ");
 for (i = 0; i < m->msg.word_count; ++i)
@@ -676,7 +676,7 @@ sd_read(flashif_t *flash, unsigned page_num, void *data, unsigned size)
     sdhc_spi_t *m = (sdhc_spi_t *) flash;
     int exit = 0;
     uint8_t *r1 = 0;
-    uint8_t *cur_ptr = data;
+    uint8_t *cur_ptr = (uint8_t *)data;
     unsigned cur_size;
     
     mutex_lock(&flash->lock);
@@ -761,7 +761,7 @@ sd_write(flashif_t *flash, unsigned page_num,
     int res = FLASH_ERR_OK;
     sdhc_spi_t *m = (sdhc_spi_t *) flash;
     int exit = 0;
-    uint8_t *cur_ptr = data;
+    uint8_t *cur_ptr = (uint8_t *)data;
     unsigned cur_size;
 
     mutex_lock(&flash->lock);

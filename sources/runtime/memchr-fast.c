@@ -55,7 +55,7 @@ memchr(const void *src_void, unsigned char c, size_t length)
   unsigned long *asrc;
   unsigned long  buffer;
   unsigned long  mask;
-  int i, j;
+  unsigned i, j;
 
   c &= 0xff;
 

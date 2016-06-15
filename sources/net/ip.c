@@ -11,14 +11,24 @@
 #include <net/tcp.h>
 #include <net/arp.h>
 
+#ifdef DEBUG_NET_IP
+#   ifndef IP_PRINTF
+#define IP_printf(...) debug_printf(__VA_ARGS__)
+#   else
+#define IP_printf(...) IP_PRINTF(__VA_ARGS__)
+#   endif
+#else
+#define IP_printf(...)
+#endif
+
 /*
  * Forward an IP packet. It finds an appropriate route for the packet,
  * decrements the TTL value of the packet, adjusts the checksum and outputs
  * the packet on the appropriate interface.
  */
 static void
-ip_forward (ip_t *ip, buf_t *p, unsigned char *gateway, netif_t *netif,
-	unsigned char *netif_ipaddr)
+ip_forward (ip_t *ip, buf_t *p, ip_addr_const gateway, netif_t *netif,
+        ip_addr_const netif_ipaddr)
 {
 	ip_hdr_t *iphdr = (ip_hdr_t*) p->payload;
 
@@ -45,7 +55,7 @@ ip_forward (ip_t *ip, buf_t *p, unsigned char *gateway, netif_t *netif,
 
 	/* Forwarding packet to netif. */
 	if (! gateway)
-		gateway = iphdr->dest;
+		gateway = iphdr->dest.var;
 	netif_output (netif, p, gateway, netif_ipaddr);
 	++ip->forw_datagrams;
 }
@@ -69,8 +79,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	/* Identify the IP header */
 	if ((iphdr->version & 0xf0) != 0x40) {
 		/* Bad version number. */
-		/*debug_printf ("ip_input: bad version number %d\n",
-			iphdr->version >> 4);*/
+	    IP_printf ("ip_input: bad version number %d\n", iphdr->version >> 4);
 		buf_free (p);
 		++ip->in_hdr_errors;
 		return;
@@ -79,8 +88,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	hlen = (iphdr->version & 0x0f) * 4;
 	if (hlen > p->len) {
 		/* Too short packet. */
-		/*debug_printf ("ip_input: too short packet (hlen=%d bytes)\n",
-			hlen);*/
+	    IP_printf ("ip_input: too short packet (hlen=%d bytes)\n", hlen);
 		buf_free (p);
 		++ip->in_hdr_errors;
 		return;
@@ -89,7 +97,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	/* Verify checksum */
 	if (crc16_inet (0, p->payload, hlen) != CRC16_INET_GOOD) {
 		/* Failing checksum. */
-		/*debug_printf ("ip_input: bad checksum\n", hlen);*/
+	    IP_printf ("ip_input: bad checksum\n", hlen);
 		buf_free (p);
 		++ip->in_hdr_errors;
 		return;
@@ -99,27 +107,31 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 	 * but we'll do it anyway just to be sure that its done. */
 	buf_truncate (p, iphdr->len_h << 8 | iphdr->len_l);
 
+	IP_printf("ip:have packet : %@.4D ->%@.4D len %d proto %x\n"
+	            ,iphdr->src.ucs, iphdr->dest.ucs, p->len
+	            , iphdr->proto
+	          );
+	
 	/* Is this packet for us? */
-	broadcast = IS_BROADCAST (iphdr->dest);
+	broadcast = ipadr_is_broadcast(iphdr->dest.var);
 	if (! broadcast) {
 		netif_t *netif;
 
-		netif = route_lookup_self (ip, iphdr->dest, &broadcast);
+		netif = route_lookup_self (ip, iphdr->dest.var, &broadcast);
 		if (! netif) {
 			/* Packet not for us, route or discard */
 			if (ip->forwarding && ! broadcast) {
-				unsigned char *netif_ipaddr, *gateway;
+			    ip_addr_const netif_ipaddr = 0;
+			    ip_addr_const gateway = 0;
 
-				netif = route_lookup (ip, iphdr->dest,
-					&gateway, &netif_ipaddr);
-				if (! gateway)
-					gateway = iphdr->dest;
+				netif = route_lookup (ip, iphdr->dest.var, &gateway, &netif_ipaddr);
+				if (! ipadr_not0(gateway))
+					gateway = iphdr->dest.var;
 
 				/* Don't forward packets onto the same
 				 * network interface on which they arrived. */
 				if (netif && netif != inp)
-					ip_forward (ip, p, gateway, netif,
-						netif_ipaddr);
+					ip_forward (ip, p, gateway, netif, netif_ipaddr);
 				else
 					buf_free (p);
 			} else {
@@ -160,7 +172,7 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 			/* No match was found, send ICMP destination
 			 * port unreachable unless destination address
 			 * was broadcast/multicast. */
-			if (! broadcast && ! IS_MULTICAST (iphdr->dest)) {
+			if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs)) {
 				buf_add_header (p, IP_HLEN);
 				icmp_dest_unreach (ip, p, ICMP_DUR_PORT);
 			} else
@@ -181,8 +193,9 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 		case ICMP_ECHO:
 			/* Ignore ICMP messages on broadcasts */
 			++ip->icmp_in_echos;
-			if (! broadcast && ! IS_MULTICAST (iphdr->dest))
+			if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs)){
 				icmp_echo_request (ip, p, inp);
+			}
 			else
 				buf_free (p);
 			break;
@@ -201,7 +214,7 @@ proto_unreach:
 
 		/* Send ICMP destination protocol unreachable
 		 * unless is was a broadcast */
-		if (! broadcast && ! IS_MULTICAST (iphdr->dest)) {
+		if (! broadcast && ! IS_MULTICAST (iphdr->dest.ucs)) {
 			icmp_dest_unreach (ip, p, ICMP_DUR_PROTO);
 		} else
 			buf_free (p);
@@ -214,32 +227,21 @@ proto_unreach:
 	}
 }
 
-/*
- * Send an IP packet on a network interface. This function constructs
- * the IP header and calculates the IP header checksum.
- * dest		- destination IP address
- * src		- source IP adress. If NULL, the IP address of outgoing
- *		  interface is used instead
- * proto	- protocol field value
- * gateway	- IP address of gateway
- * netif	- outgoing interface. If NULL, the routing table is searched
- *		  for an interface, using destination address as a key
- * netif_ipaddr	- IP address of outgoing interface (when netif is not NULL)
- */
 bool_t
-ip_output_netif (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
-	small_uint_t proto, unsigned char *gateway, netif_t *netif,
-	unsigned char *netif_ipaddr)
+ip_add_header (ip_t *ip, buf_t *p
+        , ip_addr_const dest, ip_addr_const src
+        , small_uint_t proto)
 {
 	ip_hdr_t *iphdr;
 	unsigned short chksum;
+    //mutex_t* iplock = iptx_lock_ensure(ip);
 
 	++ip->out_requests;
 	if (! buf_add_header (p, IP_HLEN)) {
 		/* Not enough room for IP header. */
 		/*debug_printf ("ip_output_netif: no space for header\n");*/
 		++ip->out_discards;
-		buf_free (p);
+		//iptx_unlock_ensure(iplock);
 		return 0;
 	}
 
@@ -259,8 +261,10 @@ ip_output_netif (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	iphdr->id_h = ip->id >> 8;
 	iphdr->id_l = ip->id;
 
-	memcpy (iphdr->dest, dest, 4);
-	memcpy (iphdr->src, src ? src : netif_ipaddr, 4);
+	//iptx_unlock_ensure(iplock);
+
+	iphdr->dest.val = dest;
+    iphdr->src.val = src;
 
 	iphdr->chksum_h = 0;
 	iphdr->chksum_l = 0;
@@ -272,13 +276,44 @@ ip_output_netif (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	iphdr->chksum_h = chksum;
 	iphdr->chksum_l = chksum >> 8;
 #endif
-	/*debug_printf ("ip: netif %S output %d bytes\n",
-		netif->name, p->tot_len);*/
-	/*buf_print_ip (p);*/
 
-	if (! gateway)
+	/*buf_print_ip (p);*/
+	return 1;
+}
+
+/*
+ * Send an IP packet on a network interface. This function constructs
+ * the IP header and calculates the IP header checksum.
+ * dest     - destination IP address
+ * src      - source IP adress. If NULL, the IP address of outgoing
+ *        interface is used instead
+ * proto    - protocol field value
+ * gateway  - IP address of gateway
+ * netif    - outgoing interface. If NULL, the routing table is searched
+ *        for an interface, using destination address as a key
+ * netif_ipaddr - IP address of outgoing interface (when netif is not NULL)
+ */
+bool_t
+ip_output_netif (ip_t *ip, buf_t *p
+        , ip_addr_const dest, ip_addr_const src
+        , small_uint_t proto
+        , ip_addr_const gateway
+        , netif_t *netif , ip_addr_const netif_ipaddr)
+{
+    if (!src)
+        src = netif_ipaddr;
+    if (!ip_add_header(ip, p, dest, src, proto)){
+        netif_free_buf (netif, p);
+        return 0;
+    }
+	if (!ipadr_not0(gateway))
 		gateway = dest;
-	return netif_output (netif, p, dest, netif_ipaddr);
+    IP_printf ("ip: netif %s output %d bytes to %@.4D, gate %@.4D\n"
+            ,netif->name, p->tot_len
+            , ipref_as_ucs(dest), ipref_as_ucs(gateway)
+            );
+
+	return netif_output (netif, p, gateway, netif_ipaddr);
 }
 
 /*
@@ -289,21 +324,151 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 	small_uint_t proto)
 {
 	netif_t *netif;
-	unsigned char *gateway, *netif_ipaddr;
+    ip_addr_const netif_ipaddr;
+    ip_addr_const gateway;
+    ip_addr ipdest = ipadr_4ucs(dest);
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (ip, dest, &gateway, &netif_ipaddr);
+	netif = route_lookup (ip, ipdest.var, &gateway, &netif_ipaddr);
 	if (! netif) {
 		/* No route to host. */
-		/*debug_printf ("ip_output: no route to host %d.%d.%d.%d\n",
-			dest[0], dest[1], dest[2], dest[3]);*/
+	    IP_printf("ip_output: no route to host %@.4D\n", dest);
+	    //mutex_t* iplock = iptx_lock_ensure(ip);
 		++ip->out_requests;
 		++ip->out_no_routes;
-		buf_free (p);
+		//iptx_unlock_ensure(iplock);
+		netif_free_buf (0, p);
 		return 0;
 	}
-	return ip_output_netif (ip, p, dest, src, proto, gateway, netif,
-		netif_ipaddr);
+	return ip_output_netif (ip, p, ipdest.var, ipref_4ucs(src), proto
+	        , gateway, netif, netif_ipaddr
+	        );
+}
+
+unsigned iph_stamp(ip_t *ip, netif_t* u){
+    unsigned now = ip->route_stamp;
+    if (ip->arp)
+        now += ip->arp->stamp;
+    if (u->arp)
+        now += u->arp->stamp;
+    return now;
+}
+
+bool_t ip_hcache_is_fresh(ip_t *ip, ip_header_cache* iph)
+{
+    if (iph->tot_len < IP_CAPLEN)
+        return 0;
+    netif_io_overlap* over = netif_is_overlaped(iph);
+    if (over == 0)
+        return 0;
+    netif_t* u = (netif_t*)(over->arg);
+    if (u == 0)
+        return 0; 
+    unsigned now = iph_stamp(ip, u);
+    unsigned stamp = over->arg2;
+    return (stamp == now)? 1: 0;
+}
+
+//* \arg p - буффер данных, должен иметь IP_HRESERVE резервированого места для заголовка
+//* \arg iph - буффер с образцовым заголовком ip, ранее закешированным.
+//*             если заголовок устарел, используются адресаты и идентификаторы протокола из него 
+//*             чтобы построить новый 
+bool_t ip_output_withheader(ip_t *ip, buf_t *p, ip_header_cache* iph)
+{
+    assert(iph != 0);
+    //this is minimal header len
+    assert(iph->tot_len >= IP_CAPLEN);
+
+    if (ip_hcache_is_fresh(ip, iph)) {
+        netif_io_overlap* over = netif_is_overlaped(iph);
+        netif_t* netif = (netif_t*)(over->arg);
+        ip_hdr_t* iphdr = (ip_hdr_t*) (p->payload - IP_HLEN);
+        //IP_printf ("ip out cached:...");
+    
+        unsigned ipframe_len = p->tot_len + IP_HLEN;
+
+        if (! buf_add_header (p, iph->tot_len)) {
+            /* Not enough room for IP header. */
+            /*debug_printf ("ip_output_netif: no space for header\n");*/
+            //mutex_t* iplock = iptx_lock_ensure(ip);
+            ++ip->out_requests;
+            ++ip->out_discards;
+            //iptx_unlock_ensure(iplock);
+            netif_free_buf (netif, p);
+            return 0;
+        }
+        memcpy(p->payload, iph->payload, iph->tot_len);
+
+        //mutex_t* iplock = iptx_lock_ensure(ip);
+        ++ip->out_requests;
+        /*
+         * Refresh an IP header.
+         */
+        iphdr->ttl = ip->default_ttl;
+        iphdr->len_h = ipframe_len >> 8;
+        iphdr->len_l = ipframe_len;
+        ++ip->id;
+        iphdr->id_h = ip->id >> 8;
+        iphdr->id_l = ip->id;
+        //iptx_unlock_ensure(iplock);
+    
+        iphdr->chksum_h = 0;
+        iphdr->chksum_l = 0;
+        unsigned short chksum;
+        chksum = ~crc16_inet (0, iphdr, IP_HLEN);
+    #if HTONS(1) == 1
+        iphdr->chksum_h = chksum >> 8;
+        iphdr->chksum_l = chksum;
+    #else
+        iphdr->chksum_h = chksum;
+        iphdr->chksum_l = chksum >> 8;
+    #endif
+        IP_printf ("ip: netif %s output %d bytes to %@.4D, cached\n"
+                ,netif->name, p->tot_len
+                , iphdr->dest.ucs
+                );
+        netif_io_overlap* overp = netif_is_overlaped(p);
+        if (overp)
+            overp->status |= nios_IPOK;
+        return netif->interface->output (netif, p, 0);
+    }
+    else{ //if (ip_hcache_is_fresh(ip, iph))
+        ip_hdr_t* iphdr = (ip_hdr_t*) (iph->payload + iph->tot_len - IP_HLEN);
+        return ip_output(ip, p, iphdr->dest.ucs, iphdr->src.ucs, iphdr->proto);
+    }
+}
+
+bool_t ip_refresh_hcache(ip_t *ip, struct _netif_t *netif
+                        , ip_header_cache* iph, buf_t *p, unsigned hlen
+                        )
+{
+    if (ip_hcache_is_fresh(ip, iph))
+        return 1;
+
+    //IP_printf ("ip hcache: assign header cache[%d] ... ", hlen);
+
+    //just reset cache to clean state
+    buf_add_header(iph, -iph->tot_len);
+
+    ip_hdr_t* iphdr = (ip_hdr_t*)(p->payload+hlen-IP_HLEN);
+    if (netif == 0){
+        /* Find the outgoing network interface. */
+        netif = route_lookup (ip, iphdr->dest.var, 0, 0);
+        if (netif == 0){
+            return 0;
+        }
+    }
+    IP_printf ("ip hcache: %S -> %@.4D\n", netif->name, iphdr->dest.ucs);
+
+    if(!buf_add_header(iph, hlen))
+        return 0;
+    memcpy(iph->payload, p->payload, hlen);
+
+    netif_io_overlap* over = netif_overlap_init(iph);
+    over->arg = (unsigned)netif;
+    unsigned now = iph_stamp(ip, netif);
+    over->arg2 = now;
+    return 1;
 }
 
 /*
@@ -318,6 +483,7 @@ ip_main (void *arg)
 	netif_t *netif;
 	buf_t *p;
 
+	assert (ip->netif_group->num > 0);
 	mutex_group_listen (ip->netif_group);
 	for (;;) {
 		mutex_group_wait (ip->netif_group, &m, 0);
@@ -344,7 +510,7 @@ ip_main (void *arg)
 		} else {
 			/* Interrupt from driver. */
 			netif = (netif_t*) m;
-/*debug_printf ("ip: netif %S\n", netif->name);*/
+			//IP_printf ("ip: netif %s\n", netif->name);
 
 			for (;;) {
 				p = netif_input (netif);
@@ -376,6 +542,11 @@ ip_init (ip_t *ip, mem_pool_t *pool, int prio,
 	/* Initialize the TCP layer. */
 	ip->tcp_seqno = 6510;
 	ip->tcp_port = TCP_LOCAL_PORT_RANGE_START;
+
+    mutex_init(&ip->lock);
+#if IP_LOCK_STYLE >= IP_LOCK_STYLE_DEPOUT
+    mutex_init(&ip->lock_tx);
+#endif
 
 	task_create (ip_main, ip, "ipv4", prio, ip->stack, sizeof (ip->stack));
 }

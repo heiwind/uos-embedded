@@ -51,19 +51,19 @@ mutex_t uartx_lock;
  * Размер стека для задачи драйвера UART, в байтах.
  */
 #ifndef UART_STACKSZ
-#   if __AVR__
+#   ifdef __AVR__
 #      define UART_STACKSZ	0x100		/* 100 enough for AVR */
 #   endif
 #   if defined (__arm__) || defined (__thumb__)
 #      define UART_STACKSZ	0x200
 #   endif
-#   if MIPS32
+#   ifdef MIPS32
 #      define UART_STACKSZ	0x400
 #   endif
-#   if MSP430
+#   ifdef MSP430
 #      define UART_STACKSZ	0x100
 #   endif
-#   if LINUX386
+#   ifdef LINUX386
 #      define UART_STACKSZ	4000
 #   endif
 #endif
@@ -222,7 +222,7 @@ uartx_interrupt (uartx_t *u)
 static void
 uartx_receiver (void *arg)
 {
-	uartx_t *u = arg;
+	uartx_t *u = (uartx_t *)arg;
 	unsigned port;
 
 	/*
@@ -247,12 +247,23 @@ uartx_receive_lock (uartx_t *u)
 	return &u->receiver;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] = 
+#define item(i) .i =
+#endif
+
+
 static stream_interface_t uartx_interface = {
-	.putc = (void (*) (stream_t*, short))		uartx_putchar,
-	.getc = (unsigned short (*) (stream_t*))	uartx_getchar,
-	.peekc = (int (*) (stream_t*))			uartx_peekchar,
-	.flush = (void (*) (stream_t*))			uartx_fflush,
-	.receiver = (mutex_t *(*) (stream_t*))		uartx_receive_lock,
+	item(putc) (void (*) (stream_t*, short))		uartx_putchar,
+	item(getc) (unsigned short (*) (stream_t*))	uartx_getchar,
+	item(peekc) (int (*) (stream_t*))			uartx_peekchar,
+	item(flush) (void (*) (stream_t*))			uartx_fflush,
+    item(eof)   (bool_t (*) (stream_t*))        0,
+    item(close) (void (*) (stream_t*))          0,
+	item(receiver) (mutex_t *(*) (stream_t*))		uartx_receive_lock,
 };
 
 /*

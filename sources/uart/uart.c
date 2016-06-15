@@ -2,19 +2,19 @@
 #include <kernel/uos.h>
 #include <uart/uart.h>
 
-#if __AVR__
+#if defined(__AVR__)
 #   include "avr.h"
 #endif
 
-#if ARM_S3C4530
+#if defined(ARM_S3C4530)
 #   include "samsung.h"
 #endif
 
-#if ARM_AT91SAM
+#if defined(ARM_AT91SAM)
 #   include "at91sam.h"
 #endif
 
-#if PIC32MX
+#if defined(PIC32MX)
 #   include "pic32.h"
 #endif
 
@@ -22,11 +22,11 @@
 #   include "elvees.h"
 #endif
 
-#if MSP430
+#if defined(MSP430)
 #   include "msp430.h"
 #endif
 
-#if LINUX386
+#if defined(LINUX386)
 #   include "linux.h"
 #endif
 
@@ -175,7 +175,7 @@ uart_peekchar (uart_t *u)
 static void
 uart_receiver (void *arg)
 {
-	uart_t *u = arg;
+	uart_t *u = (uart_t *)arg;
 	unsigned char c = 0, *newlast;
 
 	/*
@@ -218,8 +218,11 @@ uart_receiver (void *arg)
 		}
 #endif
 #ifndef TRANSMIT_IRQ
-		if (test_transmitter_enabled (u->port))
-			uart_transmit_start (u);
+		if (test_transmitter_enabled (u->port)){
+		        mutex_lock(&u->transmitter);
+                uart_transmit_start (u);
+                mutex_unlock (&u->transmitter);
+		}
 #endif
 		/* Check that receive data is available,
 		 * and get the received byte. */
@@ -246,12 +249,22 @@ uart_receive_lock (uart_t *u)
 	return &u->receiver;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] = 
+#define item(i) .i =
+#endif
+
 static stream_interface_t uart_interface = {
-	.putc = (void (*) (stream_t*, short))		uart_putchar,
-	.getc = (unsigned short (*) (stream_t*))	uart_getchar,
-	.peekc = (int (*) (stream_t*))			uart_peekchar,
-	.flush = (void (*) (stream_t*))			uart_fflush,
-	.receiver = (mutex_t *(*) (stream_t*))		uart_receive_lock,
+	item(putc) (void (*) (stream_t*, short))		uart_putchar,
+	item(getc) (unsigned short (*) (stream_t*))	uart_getchar,
+	item(peekc) (int (*) (stream_t*))			uart_peekchar,
+	item(flush) (void (*) (stream_t*))			uart_fflush,
+	item(eof)   (bool_t (*) (stream_t*))        0,
+	item(close) (void (*) (stream_t*))          0,
+	item(receiver) (mutex_t *(*) (stream_t*))		uart_receive_lock,
 };
 
 void
@@ -263,11 +276,14 @@ uart_init (uart_t *u, small_uint_t port, int prio, unsigned int khz,
 	u->out_first = u->out_last = u->out_buf;
 	u->khz = khz;
 	u->onlcr = 1;
-#if (ARM_1986BE9 || ARM_1986BE1)
+#if (defined(ARM_1986BE9) || defined(ARM_1986BE1))
 	u->port = (port == 0) ? ARM_UART1_BASE : ARM_UART2_BASE;
 #else
 	u->port = port;
 #endif
+
+	mutex_init(&u->transmitter);
+    mutex_init(&u->receiver);
 
 	/* Setup baud rate generator. */
 	setup_baud_rate (u->port, u->khz, baud);

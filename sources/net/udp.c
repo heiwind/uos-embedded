@@ -14,10 +14,10 @@ typedef struct _udp_hdr_t {
 	unsigned char chksum_h, chksum_l;	/* packet checksum */
 } udp_hdr_t;
 
-#define UDP_HLEN	8		/* UDP header length */
+
 
 static buf_t *
-udp_queue_get (udp_socket_t *q, unsigned char *paddr,
+udp_queue_get (udp_socket_t *q, ip_addr_ref* paddr,
 	unsigned short *pport)
 {
 	buf_t *p;
@@ -35,7 +35,7 @@ udp_queue_get (udp_socket_t *q, unsigned char *paddr,
 	head = q->head;
 	p = head->buf;
 	if (paddr)
-		memcpy (paddr, head->addr, 4);
+	    *paddr = head->addr.var;
 	if (pport)
 		*pport = head->port;
 
@@ -58,7 +58,7 @@ udp_queue_free (udp_socket_t *q)
 		assert (q->head->buf != 0);
 
 		/* Remove packet from queue. */
-		buf_free (q->head->buf);
+		netif_free_buf (0, q->head->buf);
 
 		/* Advance head pointer. */
 		++q->head;
@@ -84,7 +84,7 @@ udp_queue_is_empty (udp_socket_t *q)
 
 static void
 udp_queue_put (udp_socket_t *q, buf_t *p,
-	unsigned char *addr, unsigned short port)
+        ip_addr_const addr, unsigned short port)
 {
 	udp_socket_queue_t *tail;
 
@@ -104,7 +104,7 @@ udp_queue_put (udp_socket_t *q, buf_t *p,
 	/* Put the packet in. */
 	tail->buf = p;
 	tail->port = port;
-	memcpy (tail->addr, addr, 4);
+	ipadr_assignref(&tail->addr , addr);
 	++q->count;
 	/*debug_printf ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/
 }
@@ -140,9 +140,9 @@ drop:
 	if (len > p->tot_len)
 		goto drop;
 
-	if ((h->chksum_h | h->chksum_l) != 0 &&
-	    buf_chksum (p, crc16_inet_header (iph->src,
-	    iph->dest, IP_PROTO_UDP, len)) != 0) {
+	if ((h->chksum_h | h->chksum_l) != 0)
+	if (buf_chksum (p, crc16_inet_header (iph->src.ucs, iph->dest.ucs, IP_PROTO_UDP, len)) != 0) 
+	{
 		/* Checksum failed for received UDP packet. */
 		/*debug_printf ("udp_input: bad checksum\n");*/
 		goto drop;
@@ -165,8 +165,7 @@ drop:
 			continue;
 
 		/* Compare peer IP address (or broadcast). */
-		if (memcmp (s->peer_ip, IP_ADDR(0), 4) != 0 &&
-		     memcmp (s->peer_ip, iph->src, 4) != 0)
+		if (ipadr_not0(s->peer_ip.var) && ipadr_is_same(s->peer_ip.var, iph->src.var))
 			continue;
 
 		/* Put packet to socket. */
@@ -177,7 +176,7 @@ drop:
 			/*debug_printf ("udp_input: socket overflow\n");*/
 			goto drop;
 		}
-		udp_queue_put (s, p, iph->src, src);
+		udp_queue_put (s, p, iph->src.var, src);
 		mutex_signal (&s->lock, p);
 		mutex_unlock (&s->lock);
 		/*debug_printf ("udp_input: signaling socket on port %d\n",
@@ -198,9 +197,11 @@ drop:
  * Add UDP header and send the packet to the given interface.
  */
 static bool_t
-udp_send_netif (udp_socket_t *s, buf_t *p, unsigned char *dest,
-	unsigned short port, netif_t *netif, unsigned char *local_ip,
-	unsigned char *gateway)
+udp_send_netif (udp_socket_t *s, buf_t *p
+        , ip_addr_const dest,
+	unsigned short port, netif_t *netif
+	, ip_addr_const local_ip
+	, ip_addr_const gateway)
 {
 	udp_hdr_t *h;
 
@@ -229,8 +230,9 @@ udp_send_netif (udp_socket_t *s, buf_t *p, unsigned char *dest,
 	unsigned short chksum;
 
 	/* Calculate checksum. */
-	chksum = buf_chksum (p, crc16_inet_header (local_ip,
-		dest, IP_PROTO_UDP, p->tot_len));
+	chksum = buf_chksum (p
+	        , crc16_inet_header (ipref_as_ucs(local_ip), ipref_as_ucs(dest), IP_PROTO_UDP, p->tot_len)
+	        );
 	if (chksum == 0x0000)
 		chksum = 0xffff;
 	if (p->tot_len & 1) {
@@ -253,6 +255,7 @@ udp_send_netif (udp_socket_t *s, buf_t *p, unsigned char *dest,
 	}
 	}
 #endif
+	// TODO this should be atomic - protected for thread safe
 	++s->ip->udp_out_datagrams;
 
     return ip_output_netif (s->ip, p, dest, local_ip, IP_PROTO_UDP,
@@ -266,12 +269,14 @@ bool_t
 udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 {
 	netif_t *netif;
-	unsigned char *local_ip, *gateway;
+	ip_addr_const local_ip;
+	ip_addr_const gateway;
+    ip_addr ipdest = ipadr_4ucs(dest);
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (s->ip, dest, &gateway, &local_ip);
+	netif = route_lookup (s->ip, ipdest.var, &gateway, &local_ip);
 	if (! netif) {
-		buf_free (p);
+	    netif_free_buf(0, p);
 		return 0;
 	}
 	/* debug_printf ("udp_sendto: %d bytes to %d.%d.%d.%d port %d netif %s\n",
@@ -281,8 +286,9 @@ udp_sendto (udp_socket_t *s, buf_t *p, unsigned char *dest, unsigned short port)
 		local_ip[0], local_ip[1], local_ip[2], local_ip[3],
 		s->local_port,
 		gateway[0], gateway[1], gateway[2], gateway[3]); */
-	return udp_send_netif (s, p, dest, port, netif, local_ip,
-		gateway);
+	return udp_send_netif (s, p, ipdest.var, port
+	        , netif, local_ip, gateway
+	        );
 }
 
 /*
@@ -293,7 +299,7 @@ udp_send (udp_socket_t *s, buf_t *p)
 {
 	/* To send packets using UDP socket, it must
 	 * have nonzero remote IP address and port number. */
-	if (! s->peer_port || memcmp (s->peer_ip, IP_ADDR(0), 4) == 0) {
+	if (! s->peer_port || !ipadr_not0(s->peer_ip.var) ) {
 		return 0;
 	}
 
@@ -301,8 +307,8 @@ udp_send (udp_socket_t *s, buf_t *p)
 	if (! s->netif) {
 		return 0;
 	}
-	return udp_send_netif (s, p, s->peer_ip, s->peer_port, s->netif,
-		s->local_ip, s->gateway);
+	return udp_send_netif (s, p, s->peer_ip.var, s->peer_port, s->netif,
+	        s->local_ip, s->gateway);
 }
 
 /*
@@ -366,16 +372,17 @@ udp_close (udp_socket_t *s)
  * with appropriate address/port.
  */
 void
-udp_connect (udp_socket_t *s, unsigned char *ipaddr, unsigned short port)
+udp_connect (udp_socket_t *s, const unsigned char *ipaddr, unsigned short port)
 {
 	mutex_lock (&s->lock);
 	s->peer_port = port;
 	if (ipaddr) {
-		memcpy (s->peer_ip, ipaddr, 4);
+		s->peer_ip = ipadr_4ucs(ipaddr);
 
 		/* Find the outgoing network interface. */
-		s->netif = route_lookup (s->ip, ipaddr, &s->gateway,
-			&s->local_ip);
+		s->netif = route_lookup (s->ip, s->peer_ip.var
+		                        , &s->gateway, &s->local_ip
+		                        );
 	}
 	mutex_unlock (&s->lock);
 }
@@ -394,7 +401,7 @@ udp_peekfrom (udp_socket_t *s, unsigned char *from_addr,
 
 	mutex_lock (&s->lock);
 
-	p = udp_queue_get (s, from_addr, from_port);
+	p = udp_queue_get (s, (ip_addr_ref*)(from_addr), from_port);
 
 	mutex_unlock (&s->lock);
 	return p;
@@ -416,7 +423,7 @@ udp_recvfrom (udp_socket_t *s, unsigned char *from_addr,
 	while (udp_queue_is_empty (s))
 		mutex_wait (&s->lock);
 
-	p = udp_queue_get (s, from_addr, from_port);
+	p = udp_queue_get (s, (ip_addr_ref*)(from_addr), from_port);
 
 	mutex_unlock (&s->lock);
 	return p;

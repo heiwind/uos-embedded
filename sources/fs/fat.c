@@ -198,7 +198,7 @@ void fat_fs_init(fat_fs_t *fat, mem_pool_t *pool,
     fat->fsif.get_parent = fat_get_parent;
     fat->fsif.free_fs_entry = fat_free_fs_entry;
     fat->fsif.create = fat_create;
-    fat->fsif.delete = fat_delete;
+    fat->fsif.delete_entry = fat_delete;
     fat->fsif.change = fat_change;
     fat->fsif.move = fat_move;
     fat->fsif.open = fat_open;

@@ -13,7 +13,7 @@ buf_alloc (mem_pool_t *m, unsigned short size, unsigned short reserved)
 	buf_t *p;
 
 	/* Allocate memory for it. */
-	p = mem_alloc_dirty (m, sizeof(buf_t) + size + reserved);
+	p = (buf_t *)mem_alloc_dirty (m, sizeof(buf_t) + size + reserved);
 	if (! p)
 		return 0;
 
@@ -68,7 +68,7 @@ buf_truncate (buf_t *p, unsigned short size)
 bool_t
 buf_add_header (buf_t *p, short header_size)
 {
-	if (p->payload - header_size < (unsigned char*) p + sizeof (buf_t))
+	if ((p->payload - header_size) < ((unsigned char*) p + sizeof (buf_t)) )
 		return 0;
 
 	p->payload -= header_size;
@@ -76,6 +76,23 @@ buf_add_header (buf_t *p, short header_size)
 	p->tot_len += header_size;
 
 	return 1;
+}
+
+/*
+ * reset p->payload pointer to header_size offset from allocated mem buffer
+ * */
+bool_t buf_reset_header (buf_t *p, short header_size){
+    int preserve = p->payload - (unsigned char*) p - sizeof (buf_t);
+    if (header_size < (p->len+preserve))
+    {
+        unsigned h = preserve - header_size;
+        p->payload -= h;
+        p->len += h;
+        p->tot_len += h;
+        return 1;
+    }
+    else
+        return 0;
 }
 
 /*
@@ -155,7 +172,7 @@ buf_make_continuous (buf_t *p)
 	next = p->next;
 	/* Reallocate the first chunk, to make it big enough. */
 	header_size = (p->payload - (unsigned char*) p);
-	p = mem_realloc (p, p->tot_len + header_size);
+	p = (buf_t *)mem_realloc (p, p->tot_len + header_size);
 	if (! p) {
 		/* Free all other chunks to the end of the first chunk. */
 		for (q = next; q; q = next) {
@@ -177,4 +194,29 @@ buf_make_continuous (buf_t *p)
 	}
 	p->next = 0;
 	return p;
+}
+
+/* copy  len bytes from buffer src to single memory chunk dst 
+ * */
+unsigned buf_copy_continous(void* dst, buf_t *src, unsigned len)
+{
+    if ( !src || !dst)
+        return 0;
+
+    const buf_t * null = (buf_t *)0;
+
+    buf_t *q = src;
+    buf_t *next;
+    unsigned char* pd = (unsigned char*)dst;
+    /* Copy all other chunks to the end of the first chunk. */
+    for (; (q != null) && (len > 0); q = next) {
+        next = q->next;
+        if (q->len <= 0)
+            continue;
+        unsigned l = (q->len > len)?len:q->len;
+        memcpy (pd, q->payload, l);
+        len -= l;
+        pd  += l;
+    }
+    return pd - (unsigned char*)dst;
 }

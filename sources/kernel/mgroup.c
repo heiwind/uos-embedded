@@ -17,6 +17,12 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#ifndef UOS_MGROUP_SMART
+#define UOS_MGROUP_SMART 0
+#endif
 
 /*
  * Initialize the group data structure.
@@ -45,6 +51,19 @@ mutex_group_add (mutex_group_t *g, mutex_t *m)
 
 	if (! m->item.next)
 		mutex_init (m);
+#if UOS_MGROUP_SMART > 0
+	// look 1st empty slot
+    for (s = g->slot;  s < (g->slot+g->num); ++s) {
+        if (s->lock == 0){
+            list_init (&s->item);
+            s->group = g;
+            s->lock = m;
+            s->message = 0;
+            //s->active = 0;
+            return 1;
+        }
+    }
+#endif
 	if (g->num >= g->size)
 		return 0;
 	s = g->slot + g->num;
@@ -52,8 +71,31 @@ mutex_group_add (mutex_group_t *g, mutex_t *m)
 	s->group = g;
 	s->lock = m;
 	s->message = 0;
+    //s->active = 0;
 	++g->num;
 	return 1;
+}
+
+bool_t mutex_group_remove (mutex_group_t* g, mutex_t* m)
+{
+    assert(UOS_MGROUP_SMART > 0);
+
+#if UOS_MGROUP_SMART > 0
+    // look 1st empty slot
+    mutex_slot_t *s;
+    arch_state_t x;
+    arch_intr_disable (&x);
+    for (s = g->slot + g->num; --s >= g->slot; ) {
+        if (s->lock == m){
+            list_unlink (&s->item);
+            s->lock = 0;
+            arch_intr_restore (x);
+            return 1;
+        }
+    }
+    arch_intr_restore (x);
+#endif
+    return 0;
 }
 
 /*
@@ -69,13 +111,40 @@ mutex_group_listen (mutex_group_t *g)
 	mutex_slot_t *s;
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	for (s = g->slot + g->num; --s >= g->slot; ) {
+#if UOS_MGROUP_SMART > 0
+        if (s->lock == 0) continue;
+#endif
 		assert (list_is_empty (&s->item));
 		s->message = 0;
+	    s->active = 0;
 		list_prepend (&s->lock->groups, &s->item);
 	}
 	arch_intr_restore (x);
+}
+
+/** \~russian
+ * сбрасывает статус активности с мутехов группы, ожидание активности
+ * ведется с этого момента.
+ * подключает прослушивание не подключенных мутехов
+ */
+void mutex_group_relisten(mutex_group_t* g){
+    arch_state_t x;
+    mutex_slot_t *s;
+
+    arch_intr_disable (&x);
+    for (s = g->slot + g->num; --s >= g->slot; ) {
+            s->active = 0;
+#if UOS_MGROUP_SMART > 0
+            if (s->lock != 0)
+            if (list_is_empty (&s->item)){
+                s->message = 0;
+                list_prepend (&s->lock->groups, &s->item);
+            }
+#endif
+    }
+    arch_intr_restore (x);
 }
 
 /*
@@ -91,13 +160,37 @@ mutex_group_unlisten (mutex_group_t *g)
 	mutex_slot_t *s;
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	for (s = g->slot + g->num; --s >= g->slot; ) {
 		assert (! list_is_empty (&s->item));
-		s->message = 0;
+		//s->message = 0;
 		list_unlink (&s->item);
 	}
 	arch_intr_restore (x);
+}
+
+struct mg_signal_ctx {
+    mutex_group_t *g;
+    mutex_t **lock_ptr;
+    void **msg_ptr;
+};
+
+bool_t mutex_group_signaled(struct mg_signal_ctx* ctx)
+{
+    mutex_slot_t *s;
+    mutex_group_t *g = ctx->g;
+    /* Find an active slot. */
+    for (s = g->slot + g->num; --s >= g->slot; ) {
+        if (s->active) {
+            if (ctx->lock_ptr)
+                *(ctx->lock_ptr) = s->lock;
+            if (ctx->msg_ptr)
+                *(ctx->msg_ptr) = s->message;
+            s->active = 0;
+            return true;
+        }
+    }
+    return false;
 }
 
 /*
@@ -109,25 +202,17 @@ void
 mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 {
 	arch_state_t x;
-	mutex_slot_t *s;
+	struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	assert (task_current->wait == 0);
 	assert (g->num > 0);
 
 	for (;;) {
-		/* Find an active slot. */
-		for (s = g->slot + g->num; --s >= g->slot; ) {
-			if (s->active) {
-				if (lock_ptr)
-					*lock_ptr = s->lock;
-				if (msg_ptr)
-					*msg_ptr = s->message;
-				s->active = 0;
+	    if (mutex_group_signaled(&signaler)){
 				arch_intr_restore (x);
 				return;
-			}
 		}
 
 		/* Suspend the task. */
@@ -135,4 +220,43 @@ mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 		g->waiter = task_current;
 		task_schedule ();
 	}
+}
+
+bool_t 
+mutex_group_lockwaiting (mutex_t *m, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
+{
+    if (mutex_recurcived_lock(m))
+        return 1;
+
+    arch_state_t x;
+    struct mg_signal_ctx signaler = {g, lock_ptr, msg_ptr};
+
+    arch_intr_disable (&x);
+    assert_task_good_stack(task_current);
+    assert (task_current->wait == 0);
+    assert (g->num > 0);
+    if (m != NULL)
+    if (! m->item.next)
+        mutex_init (m);
+
+    
+    for (;;) {
+        if (m != NULL)
+        if (mutex_trylock_in(m)) {
+            arch_intr_restore (x);
+            return true;
+        }
+        if (mutex_group_signaled(&signaler)){
+                arch_intr_restore (x);
+                return false;
+        }
+
+        if (m != NULL)
+            mutex_slaved_yield(m);
+        else {
+            /* Suspend the task. */
+            list_unlink (&task_current->item);
+            task_schedule ();
+        }
+    }
 }
