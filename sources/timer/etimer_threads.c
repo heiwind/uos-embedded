@@ -75,7 +75,7 @@ int etimer_wait(etimer *t, bool_t sanity){
     /* Suspend the task. */
     list_unlink (&task_current->item);
     task_schedule ();
-    ok = !etimer_is_wait(t);
+    ok = etimer_not_active(t);
     if (ok)
         break;
     } while (sanity == 0);
@@ -99,8 +99,10 @@ int etimer_uswait(unsigned usec, bool_t sanity)
 
     etimer t;
     list_init(&t.item);
+    etimer_assign_task(&t, task_current);
     etimer_set(&t, usec);
-    return etimer_wait(&t, sanity);
+    bool_t ok = etimer_wait(&t, sanity);
+    return ok;
 }
 
 #endif //USER_TIMERS

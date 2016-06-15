@@ -66,7 +66,7 @@ extern "C" {
  */
 typedef timeout_time_t etimer_time_t;
 
-typedef struct {
+typedef struct etimer_s {
     list_t  item;
     volatile long   cur_time;//least timeout
     etimer_time_t   interval;
@@ -75,6 +75,13 @@ typedef struct {
         task_t*         activate_task;
         void*           lock_message;
     } handle;
+
+#if ETIMER_SAFE > 0
+#ifdef __cplusplus
+    INLINE
+    ~etimer_s();
+#endif
+#endif
 } etimer;
 
 INLINE bool_t etimer_not_active (const etimer *t){
@@ -146,10 +153,12 @@ void etimer_set(etimer *et, etimer_time_t interval);
  *             This function resets the event timer with the same
  *             interval that was given to the event timer with the
  *             etimer_set() function. The start point of the interval
- *             is the exact time that the event timer last
- *             expired. Therefore, this function will cause the timer
+ *             take into account time-drift of previous time-event expiration.
+ *             Therefore, this function will cause the timer
  *             to be stable over time, unlike the etimer_restart()
  *             function.
+ *             !!!But reset action must be executed right
+ *             after timer event, within current clock cycle.
  *
  * \sa etimer_restart()
  */
@@ -221,7 +230,7 @@ int etimer_expired(etimer *et)
 INLINE 
 int etimer_is_wait(etimer *et)
 {
-    return (!etimer_not_active(et) && (et->cur_time > 0));
+    return (!etimer_not_active(et)); //  && (et->cur_time >= 0)
 }
 
 /**
@@ -292,6 +301,15 @@ etimer_time_t etimer_next_expiration_time(void)
 
 #ifdef __cplusplus
 }
+
+#if ETIMER_SAFE > 0
+INLINE
+etimer_s::~etimer_s()
+{
+    etimer_stop(this);
+}
+#endif // ETIMER_SAFE > 0
+
 #endif
 
 #endif /* UOS_ETIMER_H_ */

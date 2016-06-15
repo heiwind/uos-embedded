@@ -54,6 +54,7 @@ typedef enum{
 /**
  *  \brief      sleep current thread for activation by etimer
  *              !!! it froces et to etimer_assign_task mode
+ *              !!! it stops timer on finish
  *  \param et   A pointer to the event timer
  * \param sanity == ewsUntilTimeout - ожидает до завершения таймаута
  *      sanity != 0 - ожидает до ближайшего просыпания нитки
@@ -71,7 +72,7 @@ int etimer_uswait(unsigned usec, bool_t sanity);
 
 INLINE
 void etimer_usleep(unsigned usec){
-    etimer_uswait(usec, 0);
+    etimer_uswait(usec, ewsUntilTimeout);
 };
 
 #ifdef __cplusplus

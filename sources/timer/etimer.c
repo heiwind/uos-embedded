@@ -41,11 +41,19 @@ etimer_device system_etimer = {NULL};
 #define ETIMER_SAFE     1
 #endif
 
+
+
 #if DEBUG_ETIMER
 #include <runtime/lib.h>
+#ifdef ETIMER_PRINTF
+#define ETIMER_printf(...) ETIMER_PRINTF(__VA_ARGS__)
+#define ETIMER_putchar(x)  ETIMER_PRINTF(x)
+#define ETIMER_puts(x)     ETIMER_PRINTF(x)
+#else
 #define ETIMER_printf(...) debug_printf(__VA_ARGS__)
 #define ETIMER_putchar(x)  debug_putchar(0, x)
 #define ETIMER_puts(x)     debug_puts(x)
+#endif
 #define ETIMER_print_tasks(x)
 void tasks_list(list_t* x);
 #else
@@ -112,16 +120,23 @@ void ETimer_Handle (timeout_t *to, void *data){
     etimer_device* self = etimer_dev_of(event);
     if (self == 0)
         return;
+    assert(self->os_timer.timer == self->clock);
+
     list_t* pended_timers = &(self->timerlist);
     timeout_t *timer      = &(self->os_timer);
     /*etimer_time_t*/long timeover = -timer->cur_time;
+
+    if (timer->cur_time > 0)
+        return;
 
     do { 
         event->cur_time = -timeover;
 #if ETIMER_SAFE > 0
         assert( event->item.prev == pended_timers);
         assert( pended_timers->next == &event->item);
-        assert( &event->item == event->item.next->prev);
+        assert2( &event->item == event->item.next->prev,
+                "etimer($%x)->($%x.<-$%x):"
+                , event, event->item.next, event->item.next->prev);
 #endif
         list_unlink(&event->item);
         if (event->lock != NULL){
@@ -160,6 +175,10 @@ void ETimer_Handle (timeout_t *to, void *data){
             event = newtime;
             ETIMER_putchar('/');
     } while (!list_is_empty(pended_timers));
+
+#if ETIMER_SAFE > 0
+    assert(self->os_timer.timer == self->clock);
+#endif
 }
 
 void tasks_list(list_t* l){
@@ -190,14 +209,18 @@ static void
 add_timer(etimer *timer)
 {
     etimer_device* self = &system_etimer;
-    etimer_time_t timeout = timer->interval + timer->cur_time;
     etimer *t;
 
     assert(self->clock != NULL);
+#if ETIMER_SAFE > 0
+    assert(self->os_timer.timer == self->clock);
+#endif
 
     etimer_seq_aqure(self);
     mutex_t* clock_lock = self->os_timer.mutex;
     mutex_lock(clock_lock);
+    while (1) {
+        etimer_time_t timeout = timer->interval + timer->cur_time;
         if (list_is_empty(&self->timerlist)){
             timer->cur_time = timeout;
             list_append(&self->timerlist, &timer->item);
@@ -243,7 +266,14 @@ add_timer(etimer *timer)
                 safe_timeout += self->clock->msec_per_tick*2;
 #endif
                 list_iterate_from(t, t->item.next, &self->timerlist){
+#if ETIMER_SAFE > 0
                     assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time);
+                    assert2( (void*)t == t->item.prev->next
+                                    , "(%x.->%x)<-et(%x)"
+                                    , t->item.prev, t->item.prev->next, t);
+#endif
+                    if (list_is_empty(&t->item))    //this is impossible/unsync collision. try again on it
+                        break;
                     etimer_time_t elapsed = t->cur_time;
                     if (timeout < elapsed)
                         break;
@@ -259,6 +289,8 @@ add_timer(etimer *timer)
                         }
                     }
                 }
+                if (list_is_empty(&t->item))    //this is impossible/unsync collision. try again on it
+                    continue;
                 timer->cur_time = timeout;
                 list_append(&t->item, &timer->item);//insert before t 
                 if ( (&t->item) != (&self->timerlist) ) {
@@ -278,6 +310,11 @@ add_timer(etimer *timer)
                         );
             }
         }// else if (list_empty(self->timerlist))
+        break;  //normal finish
+    } // while (true) - cycle attempts on collision
+#if ETIMER_SAFE > 0
+    assert(self->os_timer.timer == self->clock);
+#endif
     etimer_seq_release(self);
 }
 
@@ -347,6 +384,7 @@ etimer_expiration_time(etimer *et)
     etimer_time_t elapse = 0;
 
     assert(self->clock != NULL);
+    assert(self->os_timer.timer == self->clock);
 
     etimer_seq_aqure(self);
     mutex_t* clock_lock = self->os_timer.mutex;
@@ -388,7 +426,7 @@ etimer_start_time(etimer *et)
 void
 etimer_stop(etimer *et)
 {
-    if (!etimer_is_wait(et))
+    if (etimer_not_active(et))
         return;
 
     etimer_device* self = etimer_dev_of(et);
@@ -396,9 +434,13 @@ etimer_stop(etimer *et)
     mutex_t* clock_lock = self->os_timer.mutex;
 
     assert(self->clock != NULL);
+#if ETIMER_SAFE > 0
+    assert(self->os_timer.timer == self->clock);
+#endif
 
     etimer_seq_aqure(self);
     mutex_lock(clock_lock);
+    if (!etimer_not_active(et)){
         t = (etimer*)list_first(&self->timerlist);
         if (et == t){
             ETIMER_printf("#et(%x:%s)\n", (unsigned)(et), task_name(task_current) );
@@ -426,7 +468,11 @@ etimer_stop(etimer *et)
             if ( &(t->item) != &self->timerlist )
                 t->cur_time += et->cur_time;
         }// else if (list_empty(self->timerlist))
+    }//if (!etimer_not_active(et))
     mutex_unlock(clock_lock);
+#if ETIMER_SAFE > 0
+    assert(self->os_timer.timer == self->clock);
+#endif
     etimer_seq_release(self);
 }
 /*---------------------------------------------------------------------------*/
