@@ -4,18 +4,21 @@
 #include <runtime/lib.h>
 #include <stream/stream.h>
 #include <mem/mem.h>
+#include <buf/buf.h>
 #include <net/route.h>
 #include <net/ip.h>
 #include <net/arp.h>
 #include <net/tcp.h>
+#include <net/udp.h>
 #include <timer/timer.h>
 #include <gpanel/gpanel.h>
 #include <milandr/eth.h>
 
 ARRAY (stack_tcp, 1000);
+ARRAY (stack_udp, 1000);
 ARRAY (stack_console, 1000);
 ARRAY(stack_local_idle, 500); /* Task: local idle for eth led */
-//ARRAY (stack_poll, 1000);
+ARRAY (stack_poll, 1000);
 ARRAY (group, sizeof(mutex_group_t) + 4 * sizeof(mutex_slot_t));
 ARRAY (arp_data, sizeof(arp_t) + 10 * sizeof(arp_entry_t));
 mem_pool_t pool;
@@ -145,11 +148,11 @@ void console_task (void *data)
 				print_socket_data (&debug, user_socket);
 			putchar (&debug, '\n');
 			break;
-		case 't' & 037:
+		case 't':// & 037:
 			task_print (&debug, 0);
 			task_print (&debug, (task_t*) stack_console);
-//			task_print (&debug, (task_t*) stack_poll);
-			task_print (&debug, (task_t*) stack_tcp);
+			task_print (&debug, (task_t*) stack_poll);
+			task_print (&debug, (task_t*) stack_udp);
 			task_print (&debug, (task_t*) eth.stack);
 			task_print (&debug, (task_t*) ip.stack);
 			putchar (&debug, '\n');
@@ -158,14 +161,12 @@ void console_task (void *data)
 	}
 }
 
-#if 0
 void poll_task (void *data)
 {
 	for (;;) {
 		eth_poll (&eth);
 	}
 }
-#endif
 
 void tcp_task (void *data)
 {
@@ -173,16 +174,21 @@ void tcp_task (void *data)
 	unsigned short serv_port = 2222;
 	unsigned char ch;
 	int n;
+	int counter = 0;
 
-	lsock = tcp_listen (&ip, 0, serv_port);
+	unsigned char ipaddr[] = {192,168, 1, 225};
+
+	lsock = tcp_listen (&ip, ipaddr, serv_port);
 	if (! lsock) {
 		printf (&debug, "Error on listen, aborted\n");
 		uos_halt (0);
 	}
+
 	/* Добавляем заголовок - длину пакета (LSB). */
 	memset (buf, 0xff, sizeof (buf));
 	buf[0] = (char) sizeof (buf);
 	buf[1] = sizeof (buf) >> 8;
+
 	for (;;) {
 		printf (&debug, "Server waiting on port %d...\n", serv_port);
 		printf (&debug, "Free memory: %d bytes\n", mem_available (&pool));
@@ -191,14 +197,16 @@ void tcp_task (void *data)
 			printf (&debug, "Error on accept\n");
 			uos_halt (0);
 		}
+
 		/* Пересылаем данные, пока юзер не отключится. */
+
 		for (;;) {
 			/* Десять пакетов в секуду. */
 /*			mutex_wait (&timer.decisec);*/
-
+			printf (&debug, "send %d\n", counter++);
 			for (n=0; n<2; ++n) {
 				if (tcp_write (user_socket, buf, sizeof (buf)) < 0) {
-					/*printf (&debug, "tcp_write failed\n");*/
+					printf (&debug, "tcp_write failed\n");
 					goto closed;
 				}
 			}
@@ -206,17 +214,58 @@ void tcp_task (void *data)
 			/* Обрабатываем команды от пользователя. */
 			for (;;) {
 				n = tcp_read_poll (user_socket, &ch, 1, 1);
-				if (n < 0)
+				if (n < 0) {
+					printf (&debug, "close\n");
 					goto closed;
+				}
 				if (n == 0)
 					break;
-				/*process_command (ch);*/
+				//process_command (ch);
 			}
 		}
-closed:		tcp_close (user_socket);
+closed:
+		tcp_close (user_socket);
 		mem_free (user_socket);
 		user_socket = 0;
 	}
+}
+#define BUF_SIZE	1024
+void udp_task (void *data)
+{
+	udp_socket_t usock;
+
+	unsigned short serv_port = 2220;
+	int counter = 0;
+
+	memset((void*)&usock, 0, sizeof(usock));
+
+	udp_socket (&usock, &ip, serv_port);
+
+	printf (&debug, "Server waiting on port %d...\n", serv_port);
+	printf (&debug, "Free memory: %d bytes\n", mem_available (&pool));
+
+	/* Пересылаем данные, пока юзер не отключится. */
+
+	for (;;) {
+		/* Десять пакетов в секуду. */
+			//mutex_wait (&timer.decisec);
+			unsigned char client_addr [4];
+			unsigned short client_port;
+			//  Ожидание   пакета   от   клиента .
+			buf_t *p = udp_recvfrom (&usock, client_addr, &client_port);
+			if (p) {
+				printf (&debug, "received from %u.%u.%u.%u packet %d\n", client_addr[0], client_addr[1], client_addr[2], client_addr[3], counter++);
+				int i;
+				for (i=0;i<p->len;i++) {
+					printf (&debug, "%02X", p->payload[i]);
+				}
+				printf (&debug, "\n");
+
+				//  Отправка   ответа   клиенту .
+				udp_sendto (&usock, p, client_addr, client_port);
+			}
+	}
+	udp_close (&usock);
 }
 
 void init_leds() {
@@ -297,12 +346,9 @@ extern unsigned __hi_data_end[], _hstack[];
 	unsigned char my_ip[] = { 192, 168, 1, 225 };
 	route_add_netif (&ip, &route, my_ip, 24, &eth.netif);
 
-	task_create (tcp_task, 0, "tcp", 20,
-		stack_tcp, sizeof (stack_tcp));
-//	task_create (poll_task, 0, "poll", 1,
-//		stack_poll, sizeof (stack_poll));
-	task_create (console_task, 0, "cons", 10,
-		stack_console, sizeof (stack_console));
-        task_create(local_idle, 0, "local idle", 21, stack_local_idle,
-			sizeof(stack_local_idle));
+//task_create (tcp_task, 0, "tcp", 10, stack_tcp, sizeof (stack_tcp));
+	task_create (udp_task, 0, "udp", 10, stack_udp, sizeof (stack_udp));
+	task_create (poll_task, 0, "poll", 1, stack_poll, sizeof (stack_poll));
+	task_create (console_task, 0, "cons", 20, stack_console, sizeof (stack_console));
+    task_create (local_idle, 0, "local idle", 21, stack_local_idle, sizeof(stack_local_idle));
 }
