@@ -130,9 +130,11 @@ void console_task (void *data)
 			printf (&debug, "Transmit: %ld packets, %ld collisions, %ld errors\n",
 					eth.netif.out_packets, eth.netif.out_collisions,
 					eth.netif.out_errors);
-			printf (&debug, "Receive: %ld packets, %ld errors, %ld lost\n",
-					eth.netif.in_packets, eth.netif.in_errors,
-					eth.netif.in_discards);
+			printf (&debug, "Receive: %ld packets, %ld errors, %ld netif.in_discards\n", eth.netif.in_packets, eth.netif.in_errors, eth.netif.in_discards);
+
+			printf (&debug, "In discards: %ld full_buff, %ld len_packet, %ld missed\n",
+			        eth.in_discards_full_buff, eth.in_discards_len_packet, eth.in_missed);
+
 			printf (&debug, "Interrupts: %ln\n", eth.intr);
 			printf (&debug, "Free memory: %u bytes\n",
 				mem_available (&pool));
@@ -151,7 +153,7 @@ void console_task (void *data)
 		case 't':// & 037:
 			task_print (&debug, 0);
 			task_print (&debug, (task_t*) stack_console);
-			task_print (&debug, (task_t*) stack_poll);
+			//task_print (&debug, (task_t*) stack_poll);
 			task_print (&debug, (task_t*) stack_udp);
 			task_print (&debug, (task_t*) eth.stack);
 			task_print (&debug, (task_t*) ip.stack);
@@ -160,14 +162,14 @@ void console_task (void *data)
 		}
 	}
 }
-
+#if 0
 void poll_task (void *data)
 {
 	for (;;) {
 		eth_poll (&eth);
 	}
 }
-
+#endif
 void tcp_task (void *data)
 {
 	tcp_socket_t *lsock;
@@ -235,11 +237,15 @@ void udp_task (void *data)
 	udp_socket_t usock;
 
 	unsigned short serv_port = 2220;
-	int counter = 0;
 
 	memset((void*)&usock, 0, sizeof(usock));
 
 	udp_socket (&usock, &ip, serv_port);
+
+    unsigned char client_addr [4] = {192,168,1,1};
+    unsigned short client_port = 2220;
+
+	udp_connect(&usock, client_addr, client_port);
 
 	printf (&debug, "Server waiting on port %d...\n", serv_port);
 	printf (&debug, "Free memory: %d bytes\n", mem_available (&pool));
@@ -249,19 +255,17 @@ void udp_task (void *data)
 	for (;;) {
 		/* Десять пакетов в секуду. */
 			//mutex_wait (&timer.decisec);
-			unsigned char client_addr [4];
-			unsigned short client_port;
 			//  Ожидание   пакета   от   клиента .
 			buf_t *p = udp_recvfrom (&usock, client_addr, &client_port);
 			if (p) {
-				printf (&debug, "received from %u.%u.%u.%u packet %d\n", client_addr[0], client_addr[1], client_addr[2], client_addr[3], counter++);
-				int i;
-				for (i=0;i<p->len;i++) {
-					printf (&debug, "%02X", p->payload[i]);
-				}
-				printf (&debug, "\n");
+				//printf (&debug, "received from %u.%u.%u.%u packet %d\n", client_addr[0], client_addr[1], client_addr[2], client_addr[3], counter++);
+				//int i;
+				//for (i=0;i<p->len;i++) {
+				//	printf (&debug, "%02X", p->payload[i]);
+				//}
+				//printf (&debug, "\n");
 
-				//  Отправка   ответа   клиенту .
+				// Отправка ответа клиенту.
 				udp_sendto (&usock, p, client_addr, client_port);
 			}
 	}
@@ -348,7 +352,7 @@ extern unsigned __hi_data_end[], _hstack[];
 
 //task_create (tcp_task, 0, "tcp", 10, stack_tcp, sizeof (stack_tcp));
 	task_create (udp_task, 0, "udp", 10, stack_udp, sizeof (stack_udp));
-	task_create (poll_task, 0, "poll", 1, stack_poll, sizeof (stack_poll));
+//	task_create (poll_task, 0, "poll", 1, stack_poll, sizeof (stack_poll));
 	task_create (console_task, 0, "cons", 20, stack_console, sizeof (stack_console));
     task_create (local_idle, 0, "local idle", 21, stack_local_idle, sizeof(stack_local_idle));
 }

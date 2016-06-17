@@ -234,6 +234,7 @@ void eth_set_promisc(eth_t *u, int station, int group) {
  * Deallocate the packet.
  */
 static void transmit_packet(eth_t *u, buf_t *p) {
+
 	/* Send the data from the buf chain to the interface,
 	 * one buf at a time. The size of the data in each
 	 * buf is kept in the ->len variable. */
@@ -468,8 +469,6 @@ static void receive_packet(eth_t *u) {
 	if (sizeBytes - 4 > ETH_MTU) {
 		++u->netif.in_errors;
 		++u->in_discards_len_packet;
-		debug_printf("receive_data: bad status 0x%04X\tbytes = %d\n",
-				Rx_Stat >> 16, sizeBytes);
 		ARM_ETH->STAT = 0;
 		return;
 	}
@@ -478,22 +477,15 @@ static void receive_packet(eth_t *u) {
 		*dst++ = ARM_ETH_RX_FIFO;
 	}
 	ARM_ETH->STAT = 0;
-	if (Rx_Stat
-			& (ARM_ETH_PKT_SMB_ERR | ARM_ETH_PKT_CRC_ERR | ARM_ETH_PKT_DN_ERR
-					| ARM_ETH_PKT_LF_ERR)) {
-		debug_printf("Error  %d, size = %d\n", Rx_Stat >> 16, sizeBytes);
+	if (Rx_Stat	& (ARM_ETH_PKT_SMB_ERR | ARM_ETH_PKT_CRC_ERR | ARM_ETH_PKT_DN_ERR | ARM_ETH_PKT_LF_ERR)) {
 		++u->netif.in_errors;
 		return;
 	}
-
-	/* debug_printf("Recive packet \tRx_stat = 0x%08x; \tbytes = %d \t buf = %d\n",
-	 Rx_Stat, ARM_ETH_PKT_LENGTH(Rx_Stat), size); */
 
 	++u->netif.in_packets;
 	u->netif.in_bytes += sizeBytes;
 
 	if (buf_queue_is_full(&u->inq)) {
-		/*debug_printf("receive_data: input overflow\n");*/
 		++u->netif.in_discards;
 		++u->in_discards_full_buff;
 		return;
@@ -501,19 +493,11 @@ static void receive_packet(eth_t *u) {
 
 	buf_t *p = buf_alloc(u->pool, sizeBytes, 4); /* выделить фактически места */
 	if (!p) {
-		/*debug_printf("receive_data: ignore packet - out of memory\n");*/
 		++u->netif.in_discards;
 		++u->in_discards_full_buff;
 		return;
 	}
-	//dst = (unsigned *) &p->payload[0];
-	//unsigned *src = (unsigned *) &u->rxbuf_data[0];
-	//for(i = 0; i < sizeWords; i++)
-	//	*dst++ = *src++;
 	memcpy(p->payload, u->rxbuf, sizeBytes);
-	/*for (i = 0; i < sizeBytes; i++)
-	 debug_printf("<%02X> ", p->payload[i]);
-	 debug_printf("\n");*/
 	buf_queue_put(&u->inq, p);
 
 #else
@@ -635,7 +619,12 @@ static unsigned handle_interrupt(eth_t *u) {
 		ARM_ETH->R_CFG |= ARM_ETH_EN;
 	}
 	/* Обработка приёма пакета */
-	if (u->intr_flags & ARM_ETH_RF_OK) {
+	//if (ARM_ETH->X_TAIL != ARM_ETH->X_HEAD) {
+	//	/* Если есть данные, прочитать пакет */
+	//	receive_packet(u);
+	//	active++;
+	//}
+	if (ARM_ETH->R_TAIL != ARM_ETH->R_HEAD) {
 		/* Если есть данные, прочитать пакет */
 		while (ARM_ETH->STAT & 0xE0) {
 			receive_packet(u);
@@ -736,11 +725,11 @@ void eth_init(eth_t *u, const char *name, int prio, mem_pool_t *pool,
 	u->netif.arp = arp;
 	u->netif.mtu = ETH_MTU;
 	u->netif.type = NETIF_ETHERNET_CSMACD;
-	u->netif.bps = 1000000;
+	u->netif.bps = 100000;
 	memcpy(&u->netif.ethaddr, macaddr, 6);
 
 	u->pool = pool;
-	u->rxbuf = (unsigned char*) ((unsigned) u->rxbuf_data);
+	u->rxbuf = (unsigned char*) ((unsigned) (u->rxbuf_data + 7) & ~7);
 	u->txbuf = (unsigned char*) ((unsigned) (u->txbuf_data + 7) & ~7);
 	u->rxbuf_physaddr = (unsigned) u->rxbuf;
 	u->txbuf_physaddr = (unsigned) u->txbuf;

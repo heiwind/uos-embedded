@@ -31,7 +31,7 @@ typedef volatile unsigned int eth_reg_t;
 #define ETH_IRQ			ETHERNET_IRQn		/* pin PB10 - EXT_INT2 */
 #define ETH_MTU			1518		/* maximum ethernet frame length */
 #define MDR_ETHERNET1_BUF_SIZE		8192
-#define RXBUF_BYTES	4096		/* size of hardware receive buffer */
+#define RXBUF_BYTES     4096		/* size of hardware receive buffer */
 
 struct _mem_pool_t;
 struct _stream_t *stream;
@@ -49,8 +49,8 @@ typedef struct _eth_t {
 
 	unsigned intr_flags;		/* interrupt flags */
 	unsigned long intr;		/* interrupt counter */
-	unsigned char rxbuf_data [ETH_MTU + 8];
-	unsigned char txbuf_data [ETH_MTU + 8];
+	unsigned char rxbuf_data [ETH_MTU + 8 + 4];
+	unsigned char txbuf_data [ETH_MTU + 8 + 4];
 	unsigned char *rxbuf;		/* aligned rxbuf[] */
 	unsigned char *txbuf;		/* aligned txbuf[] */
 	unsigned rxbuf_physaddr;	/* phys address of rxbuf[] */

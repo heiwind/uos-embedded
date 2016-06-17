@@ -1949,8 +1949,8 @@ typedef struct
     volatile uint16_t    MDIO_DATA;
     volatile uint16_t    R_HEAD;
     volatile uint16_t    X_TAIL;
-    volatile uint16_t    X_HEAD;
     volatile uint16_t    R_TAIL;
+    volatile uint16_t    X_HEAD;
     volatile uint16_t    STAT;
     volatile uint16_t    spare0;
     volatile uint16_t    PHY_CTRL;
