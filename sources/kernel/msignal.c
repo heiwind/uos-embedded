@@ -128,6 +128,14 @@ bool_t mutex_wait_until (mutex_t *m
             task_schedule ();
     }
 
+    if (waitfor != NULL) {
+        bool_t res = !(*waitfor)(waitarg);
+        if (!res){
+            arch_intr_restore (x);
+            return res;
+        }
+    }
+
     if (m->irq){
         //для ожидания на прерывании, форсирую разрешение прерывания
         mutex_irq_t *   irq = m->irq;
