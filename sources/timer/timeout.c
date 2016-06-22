@@ -63,8 +63,7 @@ void timeout_arm_us  (timeout_t *ut, timeout_time_t interval)
 void timeout_arm  (timeout_t *ut, timeout_time_t interval)
 #endif
 {
-    arch_state_t x;
-    arch_intr_disable (&x);
+    arch_state_t x = arch_intr_off();
     ut->interval = interval;
     ut->cur_time = interval;
     //ut->autoreload = tsLoadOnce;
@@ -84,9 +83,8 @@ bool_t timeout_rearm_us  (timeout_t *ut, timeout_time_t interval)
 bool_t timeout_rearm  (timeout_t *ut, timeout_time_t interval)
 #endif
 {
-    arch_state_t x;
     bool_t res;
-    arch_intr_disable (&x);
+    arch_state_t x = arch_intr_off();
     ut->interval = interval;
     ut->cur_time += interval;
     //ut->autoreload = tsLoadOnce;
@@ -107,8 +105,7 @@ void timeout_restart_interval_us (timeout_t *ut, timeout_time_t interval)
 void timeout_restart_interval (timeout_t *ut, timeout_time_t interval)
 #endif
 {
-    arch_state_t x;
-    arch_intr_disable (&x);
+    arch_state_t x = arch_intr_off();
     if (ut->cur_time > 0){
         long delta = ut->interval - interval;
         ut->cur_time += delta;

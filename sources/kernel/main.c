@@ -214,8 +214,7 @@ main (void)
 	assert (task_current == task_idle);
 
     task_current->prio = task_current->base_prio = 0;
-    arch_state_t x;
-    arch_intr_disable (&x);
+    arch_state_t x = arch_intr_off();
 	task_schedule ();
 	arch_intr_restore(x);
 

@@ -67,8 +67,7 @@ int etimer_wait(etimer *t, bool_t sanity){
         return 0;
     etimer_assign_task(t, task_current);
 
-    arch_state_t x;
-    arch_intr_disable (&x);
+    arch_state_t x = arch_intr_off();
 
     bool_t ok = 0;
     do {
