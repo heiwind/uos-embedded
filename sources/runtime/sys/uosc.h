@@ -114,6 +114,7 @@
 # endif
 #endif
 
+#define __cpp_decls    __noexcept __NOTHROW
 
 
 /**\~rissian эти модификаторы предназначены для более аккуратной линковки кода:

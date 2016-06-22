@@ -18,6 +18,7 @@
 #define	__KERNEL_UOS_H_ 1
 
 #include <uos-conf.h>
+#include <runtime/sys/uosc.h>
 #include <runtime/list.h>
 
 #ifdef __cplusplus
@@ -59,19 +60,19 @@ typedef bool_t (*handler_t) (void*);
 
 /* Task management. */
 task_t *task_create (void (*func)(void*), void *arg, const char *name, int priority,
-	array_t *stack, unsigned stacksz);
-void task_exit (void *status) __attribute__ ((__noreturn__));
-void task_delete (task_t *task, void *status);
-void *task_wait (task_t *task);
-int task_stack_avail (task_t *task);
+	array_t *stack, unsigned stacksz)  __cpp_decls;
+void task_exit (void *status) __attribute__ ((__noreturn__))  __cpp_decls;
+void task_delete (task_t *task, void *status) __cpp_decls;
+void *task_wait (task_t *task) __cpp_decls;
+int task_stack_avail (task_t *task) __cpp_decls;
 //* return safe-checked task name.
 //* return (damaged) on suspicious string
-const char *task_name (task_t *task);
-int task_priority (task_t *task);
-void task_set_priority (task_t *task, int priority);
-void *task_private (task_t *task);
-void task_set_private (task_t *task, void *privatep);
-void task_yield (void);
+const char *task_name (task_t *task) __cpp_decls;
+int task_priority (task_t *task) __cpp_decls;
+void task_set_priority (task_t *task, int priority) __cpp_decls;
+void *task_private (task_t *task) __cpp_decls;
+void task_set_private (task_t *task, void *privatep) __cpp_decls;
+void task_yield (void)  __cpp_decls;
 
 struct _stream_t;
 void task_print (struct _stream_t *stream, task_t *t);
@@ -85,11 +86,11 @@ unsigned int task_fpu_control (task_t *t, unsigned int mode, unsigned int mask);
 
 //****************************************************************************
 /* Initialize a data structure of the lock. */
-void mutex_init (mutex_t *);
+void mutex_init (mutex_t *)  __cpp_decls;
 
 /* Lock management. */
-void mutex_lock (mutex_t *lock);
-void mutex_unlock (mutex_t *lock);
+void mutex_lock (mutex_t *lock)  __cpp_decls;
+void mutex_unlock (mutex_t *lock)  __cpp_decls;
 
 /**\~english
  * Try to get the lock. Return 1 on success, 0 on failure.
@@ -97,7 +98,7 @@ void mutex_unlock (mutex_t *lock);
  * In the case the lock has associated IRQ number,
  * after acquiring the lock the IRQ will be disabled.
  */
-bool_t mutex_trylock (mutex_t *lock);
+bool_t mutex_trylock (mutex_t *lock)  __cpp_decls;
 INLINE bool_t mutex_is_locked (mutex_t *m);
 INLINE bool_t mutex_is_wait (mutex_t *m);
 INLINE bool_t mutex_is_my (mutex_t *m);
@@ -112,10 +113,10 @@ typedef bool_t (*scheduless_condition)(void* arg);
  * \return true - mutex succesfuly locked
  * \return false - if mutex not locked due to <waitfor> signalled
  * */
-bool_t mutex_lock_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
+bool_t mutex_lock_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg)  __cpp_decls;
 
-void mutex_signal (mutex_t *lock, void *message);
-void *mutex_wait (mutex_t *lock);
+void mutex_signal (mutex_t *lock, void *message)  __cpp_decls;
+void *mutex_wait (mutex_t *lock)  __cpp_decls;
 /*
  * for owned mutex:
  * \return true - if signaled and therefore valid task_current->message
@@ -124,10 +125,10 @@ void *mutex_wait (mutex_t *lock);
  * for not owned mutex - just wait for thread activate and returns waitfor state
  *
  * */
-bool_t mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg);
+bool_t mutex_wait_until (mutex_t *lock, scheduless_condition waitfor, void* waitarg)  __cpp_decls;
 
 /* Interrupt management. */
-void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);
+void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg) __cpp_decls;
 /**\~english
  *  this allows instead IRQ_EVT use desired isr-fast-handler routine for signaling
        to ordinar mutexes, and so realize Software Interrupt similar to system 
@@ -139,34 +140,34 @@ void mutex_lock_irq (mutex_t*, int irq, handler_t func, void *arg);
        при этом быстрый обработчик выполняется в контексте сигналящей нитки,
        и сигнал к мутексу проникнет если он возвратит сообщение != 0 
  */
-void mutex_lock_swi (mutex_t*, mutex_irq_t* swi, handler_t func, void *arg);
-void mutex_unlock_irq (mutex_t*);
-void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg);
-void mutex_attach_swi (mutex_t *m, mutex_irq_t* swi, handler_t func, void *arg);
-void mutex_dettach_irq(mutex_t *m);
+void mutex_lock_swi (mutex_t*, mutex_irq_t* swi, handler_t func, void *arg) __cpp_decls;
+void mutex_unlock_irq (mutex_t*) __cpp_decls;
+void mutex_attach_irq (mutex_t *m, int irq, handler_t func, void *arg) __cpp_decls;
+void mutex_attach_swi (mutex_t *m, mutex_irq_t* swi, handler_t func, void *arg) __cpp_decls;
+void mutex_dettach_irq(mutex_t *m) __cpp_decls;
 
 /* Group management. */
-mutex_group_t *mutex_group_init (array_t *buf, unsigned buf_size);
-bool_t mutex_group_add (mutex_group_t*, mutex_t*);
-bool_t mutex_group_remove (mutex_group_t*, mutex_t*);
-void mutex_group_listen (mutex_group_t*);
+mutex_group_t *mutex_group_init (array_t *buf, unsigned buf_size) __cpp_decls;
+bool_t mutex_group_add (mutex_group_t*, mutex_t*) __cpp_decls;
+bool_t mutex_group_remove (mutex_group_t*, mutex_t*) __cpp_decls;
+void mutex_group_listen (mutex_group_t*) __cpp_decls;
 /** \~russian
  * сбрасывает статус активности с мутехов группы, ожидание активности
  * ведется с этого момента.
  * подключает прослушивание не подключенных мутехов
  */
-void mutex_group_relisten(mutex_group_t*);
-void mutex_group_unlisten (mutex_group_t*);
-void mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
+void mutex_group_relisten(mutex_group_t*) __cpp_decls;
+void mutex_group_unlisten (mutex_group_t*) __cpp_decls;
+void mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr) __cpp_decls;
 /**\~russian
  * этот лок ожидает захвата мутекса или сигнала от группы
  * \return true - захвачен lock
  * \return false - получен сигнал от группы, или мутекс был закрыт извне
  * */
-bool_t mutex_group_lockwaiting (mutex_t *lock, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr);
+bool_t mutex_group_lockwaiting (mutex_t *lock, mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr) __cpp_decls;
 
 /* User-supplied startup routine. */
-extern void uos_init (void);
+extern void uos_init (void) __cpp_decls;
 
 
 

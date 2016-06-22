@@ -333,7 +333,7 @@ struct _tcp_socket_t {//: base_socket_t
  * Connect to another host. Wait until connection established.
  * Return 1 on success, 0 on error.
  */
-tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port);
+tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)  __cpp_decls;
 
 /*
  * Create socket and start connection to another host.
@@ -341,7 +341,7 @@ tcp_socket_t *tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
  * \return socket in connection state
  * \return      = SExxx - some error
  */
-tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port);
+tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)  __cpp_decls;
 
 /* takes socket at state CLOSED, and start connect to s->remote
  *      if s not CLOSED, return null
@@ -349,7 +349,7 @@ tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
  * \return      = SExxx - some error
  *
  * */
-tcp_socket_t *tcp_connect_restart (tcp_socket_t *s);
+tcp_socket_t *tcp_connect_restart (tcp_socket_t *s)  __cpp_decls;
 
 /*
  * Set the state of the connection to be LISTEN, which means that it
@@ -358,7 +358,7 @@ tcp_socket_t *tcp_connect_restart (tcp_socket_t *s);
  * connection to LISTEN is an irreversible process.
  */
 tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
-	unsigned short port);
+	unsigned short port)  __cpp_decls;
 
 /* It extracts the first connection request on the queue of pending connections 
  *  for the listening socket s, creates a new connected socket, 
@@ -366,7 +366,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
  *  The newly created socket is not in the listening state.
  *  \return      = NULL if socket s aborted of failed
  */
-tcp_socket_t *tcp_accept (tcp_socket_t *s);
+tcp_socket_t *tcp_accept (tcp_socket_t *s)  __cpp_decls;
 
 /* It extracts the first connection request on the queue of pending connections 
  *  for the listening socket s, creates a new connected socket, 
@@ -378,20 +378,20 @@ tcp_socket_t *tcp_accept (tcp_socket_t *s);
  * \return      = SExxx - some error
  * */
 tcp_socket_t *tcp_accept_until (tcp_socket_t *s
-                                , scheduless_condition waitfor, void* waitarg);
+                                , scheduless_condition waitfor, void* waitarg)  __cpp_decls;
 
 /*
  * Closes the connection held by the PCB.
  * Return 1 on success, 0 on error.
  */
-int tcp_close (tcp_socket_t *s);
+int tcp_close (tcp_socket_t *s)  __cpp_decls;
 
 /*
  * Aborts a connection by sending a RST to the remote host and deletes
  * the local protocol control block. This is done when a connection is
  * killed because of shortage of memory.
  */
-void tcp_abort (tcp_socket_t *s);
+void tcp_abort (tcp_socket_t *s)  __cpp_decls;
 
 /* \~russian ожидает появления данных в приемнике сокета
  * \return = 0 - if socket have some dats in receiver
@@ -399,43 +399,43 @@ void tcp_abort (tcp_socket_t *s);
  *         = SEerror_code - on error
  * */
 int tcp_wait_avail(tcp_socket_t *s
-                    , scheduless_condition waitfor, void* waitarg);
+                    , scheduless_condition waitfor, void* waitarg) __cpp_decls;
 
 /*
  * Blocking receive.
  * Return a number of received bytes >0.
  * Return <0 on error.
  */
-int tcp_read (tcp_socket_t *s, void *dataptr, unsigned short len);
+int tcp_read (tcp_socket_t *s, void *dataptr, unsigned short len) __cpp_decls;
 
 /*
  * Receive len>0 bytes. Return <0 on error.
  * When nonblock flag is zero, blocks until data get available (never returns 0).
  * When nonblock flag is nonzero, returns 0 if no data is available.
  */
-int tcp_read_poll (tcp_socket_t *s, void *dataptr, unsigned short len, int nonblock);
+int tcp_read_poll (tcp_socket_t *s, void *dataptr, unsigned short len, int nonblock) __cpp_decls;
 
 /** alternative tcp_read_poll with condition test function waitfor
  * \arg waitfor - simple test function that must not affects mutex_xxx and schedule functionality
  * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
  * */
 int tcp_read_until (tcp_socket_t *s, void *dataptr, unsigned short len
-                , scheduless_condition waitfor, void* waitarg);
+                , scheduless_condition waitfor, void* waitarg) __cpp_decls;
 
 /* reads 1 received socket buffer - vs tcp_read_until do not internal copy to user buffer
  * \arg waitarg - if (waitfor==0) and (waitarg!=0) - this assumes as nonblocking operation
  * */
 buf_t* tcp_read_buf_until (tcp_socket_t *s
-                , scheduless_condition waitfor, void* waitarg);
+                , scheduless_condition waitfor, void* waitarg) __cpp_decls;
 
 //* non blocking version of tcp_read_buf_until
-buf_t* tcp_take_buf(tcp_socket_t *s);
+buf_t* tcp_take_buf(tcp_socket_t *s) __cpp_decls;
 
 /*
  * Send len>0 bytes.
  * Return a number ob transmitted bytes, or -1 on error.
  */
-int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len);
+int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len) __cpp_decls;
 
 
 #ifdef UTCP_RAW
@@ -447,18 +447,18 @@ int tcp_write (tcp_socket_t *s, const void *dataptr, unsigned short len);
 //*         and provide buffer with data on teREXMIT event.
 //* \arg data   buffer with user data, must have preserved header TCP_SEG_RESERVE size
 int tcp_write_buf (tcp_socket_t *s, buf_t* data, tcps_flag_set opts
-                    , tcp_callback evhandle, unsigned long harg);
+                    , tcp_callback evhandle, unsigned long harg)  __cpp_decls;
 
 //* uTCP segment handle helper - assign data bufer to segment.
 //*     intended for use on teREXMIT
-int tcp_segment_assign_buf(tcp_socket_t *s, tcp_segment_t * seg, buf_t* p);
+int tcp_segment_assign_buf(tcp_socket_t *s, tcp_segment_t * seg, buf_t* p)  __cpp_decls;
 
 #endif // UTCP_RAW
 
 /*
  * Return the period of socket inactivity, in seconds.
  */
-unsigned long tcp_inactivity (tcp_socket_t *s);
+unsigned long tcp_inactivity (tcp_socket_t *s) __cpp_decls;
 
 
 

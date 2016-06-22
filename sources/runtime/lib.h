@@ -30,23 +30,23 @@ extern void longjmp (jmp_buf, int);
  */
 extern struct _stream_t debug;
 extern bool_t debug_onlcr;
-unsigned short debug_getchar (void)  __noexcept __NOTHROW;
-int debug_peekchar (void)  __noexcept __NOTHROW;
+unsigned short debug_getchar (void) __cpp_decls;
+int debug_peekchar (void) __cpp_decls;
 
 #ifndef NO_DEBUG_PRINT
 
-void debug_putchar (void *arg, short c)  __noexcept __NOTHROW;
-void debug_putc (char c)  __noexcept __NOTHROW;
-void debug_puts (const char *str)  __noexcept __NOTHROW;
-int debug_printf (const char *fmt, ...)  __noexcept __NOTHROW;
-int debug_vprintf (const char *fmt, va_list args)  __noexcept __NOTHROW;
-void debug_dump (const char *caption, void* data, unsigned len)  __noexcept __NOTHROW;
+void debug_putchar (void *arg, short c) __cpp_decls;
+void debug_putc (char c) __cpp_decls;
+void debug_puts (const char *str) __cpp_decls;
+int debug_printf (const char *fmt, ...) __cpp_decls;
+int debug_vprintf (const char *fmt, va_list args) __cpp_decls;
+void debug_dump (const char *caption, void* data, unsigned len) __cpp_decls;
 #ifndef ARCH_debug_dump_stack
 void debug_dump_stack (const char *caption, void *sp, void* frame, void *callee);
 #else
 #define debug_dump_stack ARCH_debug_dump_stack
 #endif
-void debug_redirect (void (*func) (void*, short), void *arg)  __noexcept __NOTHROW;
+void debug_redirect (void (*func) (void*, short), void *arg) __cpp_decls;
 
 #else
 
@@ -94,8 +94,8 @@ void uos_call_global_destructors (void);
 /*
  * Delay functions, useful for small pauses.
  */
-void udelay (small_uint_t);
-void mdelay (small_uint_t);
+void udelay (small_uint_t) __cpp_decls;
+void mdelay (small_uint_t) __cpp_decls;
 
 /*
  * Check memory address.
