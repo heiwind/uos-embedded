@@ -626,13 +626,6 @@ tcp_output_poll (tcp_socket_t *s)
 	tcp_segment_t *seg, *useg;
 	unsigned long wnd;
 
-	/* First, check if we are invoked by the TCP input processing code.
-	 * If so, we do not output anything. Instead, we rely on the input
-	 * processing code to call us when input processing is done with. */
-	if (s->ip->tcp_input_socket == s) {
-		return 1;
-	}
-
     assert_task_good_stack(task_current);
 
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
@@ -706,8 +699,21 @@ tcp_output_poll (tcp_socket_t *s)
 	    netif_io_overlap* over = 0;
 	    //tcp_debug ("tcp_output seg $%x:\n", seg);
 
-	    //with tcp-raw support segment can loose its data
-	    if ( (seg->tcphdr != 0) && (seg->p != 0) )
+        //with utcp-raw support segment can loose its data
+        if ( (seg->tcphdr == 0) || (seg->p == 0) )
+        if (seg->len > 0)
+        {
+            //this situation preserved for REXMIT segment that was released after sent
+            assert(tcp_seg_with_event(seg));
+            //do not execute rexmit event from ip-input processing
+            if (s->ip->tcp_input_socket == s) {
+                break;
+            }
+
+            tcp_event_seg(teREXMIT, seg, s);
+        }
+
+        if ( (seg->tcphdr != 0) && (seg->p != 0) )
 	    {
             if (tcp_segment_seqno(seg) - s->lastack + seg->len > wnd){
                 tcp_debug("tcp_output : break seg $%x seq %lu by window\n", seg, tcp_segment_seqno(seg));
@@ -743,9 +749,8 @@ tcp_output_poll (tcp_socket_t *s)
 		    tcp_debug("tcp_output : break seg $%x seq %lu by net\n", seg, tcp_segment_seqno(seg));
 		    break;
 		}
-	    
-	    } //if ( (seg->tcphdr != 0) && (seg->p != 0) )
-	    else
+	    }
+		else //if ( (seg->tcphdr != 0) && (seg->p != 0) )
 	        assert(seg->len == 0);
 
 		s->unsent = seg->next;
@@ -797,7 +802,8 @@ tcp_output (tcp_socket_t *s)
     if (s->ip->tcp_input_socket == s) {
         return 1;
     }
-    if (s->unsent == 0)
+
+    if ((s->unsent == 0) && !(s->flags & TF_ACK_NOW))
         return 1;
 
 #if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) || (IP_LOCK_STYLE == IP_LOCK_STYLE_OUT1)
@@ -806,7 +812,8 @@ tcp_output (tcp_socket_t *s)
     mutex_t* s_locked = iptx_lock_ensure(s->ip);
 #endif
 
-    while (s->unsent != 0){
+    while ((s->unsent != 0) || (s->flags & TF_ACK_NOW))
+    {
         tcp_output_poll(s);
         if (s->unsent == 0)
             break;
@@ -871,9 +878,7 @@ tcp_rexmit (tcp_socket_t *s)
 	}
 
 	/* Move all unacked segments to the unsent queue. */
-	for (seg = s->unacked; seg->next != 0; seg = seg->next)
-        tcp_event_seg(teREXMIT, seg, s);
-	tcp_event_seg(teREXMIT, seg, s);
+	for (seg = s->unacked; seg->next != 0; seg = seg->next);
 
 	seg->next = s->unsent;
 	s->unsent = s->unacked;
@@ -915,21 +920,25 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
     if (len == 0) {
         return -1;
     }
-    assert(len < s->mss);
 
-    tcp_segment_t *seg;
+    unsigned segn = 1;
+    if (flags & TF_SEG_CHAIN)
+        segn = buf_chain_len(p);
+    else
+        assert(len < s->mss);
+
     unsigned char queuelen;
 
     /* Check if the queue length exceeds the configured maximum queue
      * length. If so, we return an error. */
     queuelen = s->snd_queuelen;
-    if (queuelen >= TCP_SND_QUEUELEN) {
+    if (queuelen >= (TCP_SND_QUEUELEN-segn) ) {
         tcp_debug ("tcp_write_buf: too long queue %u (max %u)\n",
             queuelen, TCP_SND_QUEUELEN);
         if (flags & TF_NOBLOCK)
             return 0;
         mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
-        while (s->snd_queuelen >= TCP_SND_QUEUELEN) {
+        while (s->snd_queuelen >= (TCP_SND_QUEUELEN-segn) ) {
             mutex_wait(&s->lock);
             if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
                 tcp_debug ("tcp_write() called in invalid state $%x\n", s->state);
@@ -943,6 +952,12 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
     /* First, break up the data into segments and tuck them together in
      * the local "queue" variable. */
 
+    tcp_segment_t *seg;
+    tcp_segment_t *pseg = 0;
+    tcp_segment_t *que  = 0;
+    buf_t* nextp = 0;
+
+    while (p != 0){
         /* Allocate memory for tcp_segment, and fill in fields. */
         seg = tcp_segment_alloc_maylock(s);
         if (seg == 0) {
@@ -951,12 +966,32 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
             tcp_debug ("tcp_write_buf: cannot allocate tcp_segment\n");
             return 0;
         }
+        if (que == 0)
+            que = seg;
+        if (pseg == 0)
+            ;
+        else
+            pseg->next = seg;
+
+        if (flags & TF_SEG_CHAIN){
+            nextp = buf_dechain(p);
+            assert(p->tot_len < s->mss);
+        }
 
         seg->datacrc = 0;
         seg->handle  = 0;
         if (tcp_segment_assign_buf(s, seg, p) == 0){
-            seg->p = 0;
-            tcp_segment_free(s, seg);
+            //отсоединю обратно в цепь буферы из цепи сегментов
+            p = que->p;
+            que->p = 0;
+            for (seg = que->next; seg != 0; seg = seg->next){
+                buf_chain(p, seg->p);
+                seg->p = 0;
+            }
+            if (nextp != 0)
+                buf_chain(p, nextp);
+
+            tcp_segments_free(s, que);
             if (mutex_is_my(&s->lock))
                 mutex_unlock(&s->lock);
             return 0;
@@ -973,8 +1008,12 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
         if (evhandle)
             flags |= TF_NOCORK;
 
+        p = nextp;
+        pseg = seg;
+    }//while (p != 0)
+
         tcpo_lock_ensure(&s->lock);
-        int res = (tcp_pass_segments(s, seg, flags) != 0)? len : 0;
+        int res = (tcp_pass_segments(s, que, flags) != 0)? len : 0;
 
 #       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
         mutex_unlock(&s->lock);

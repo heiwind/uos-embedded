@@ -212,6 +212,7 @@ struct _tcp_segment_t {
 #ifdef UTCP_RAW
 	tcp_callback    handle;
 	long            harg;
+    long            harg2;
 	struct hdr_save{
 	    //* this saves used for rexmit tcp hdr restoration, when socket event handle
 	    //*     provides data
@@ -232,6 +233,9 @@ typedef enum{
     , TF_NOCORK     = 0x100         //* refuse TCP segments optimiation - don`t combine small segments into big one
     , TF_NOBLOCK    = 0x400       //*< tcp_write/read returns imidiately, not waiting for all data enqueued
 
+#ifdef UTCP_RAW
+    , TF_SEG_CHAIN  = 0x2000      //* tcp_write_buf passed bufs chain, that must be decomposed to segments chain
+#endif
 #if TCP_IP_HCACHE > 0
     , TF_IP_NOCACHE = 0x4000      //* disables ip router resolution cache, always route ip-frames
 #else
@@ -319,7 +323,7 @@ struct _tcp_socket_t {//: base_socket_t
 	tcp_segment_t *unsent;		/* Unsent (queued) segments. */
 	tcp_segment_t *unacked;		/* Sent but unacknowledged segments. */
     tcp_segment_t *spare_segs;        /* segments not busy, and can be used for new data */
-	
+
 	ip_header_cache*    iph_cache;
 };
 
@@ -730,8 +734,15 @@ void tcp_event_seg(tcp_cb_event ev
     if (seg->handle != 0)
         seg->handle(ev, seg, s);
 }
+
+INLINE
+bool_t tcp_seg_with_event(tcp_segment_t* seg){
+    return (seg->handle != 0);
+}
+
 #else
 #define tcp_event_seg(ev, seg, sock)
+#define tcp_seg_with_event(seg)   0
 #endif
 
 #ifdef __cplusplus
