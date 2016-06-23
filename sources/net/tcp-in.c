@@ -767,11 +767,13 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 				s->rcv_nxt = ip->tcp_input_seqno +
 					ip->tcp_input_len;
 			}
-			if (ip->tcp_input_len > 0) {
-				tcp_ack_now (s);
-			}
             //! TODO WARNING nonsafe scoket access
-			tcp_output_poll (s);
+			if (ip->tcp_input_len > 0) {
+                s->flags |= TF_ACK_NOW;
+			}
+            ip->tcp_input_socket = s;
+            tcp_output_poll(s);
+            ip->tcp_input_socket = 0;
 			goto drop;
 		}
 
@@ -847,7 +849,6 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 
 	ip->tcp_input_socket = s;
 	tcp_process (s, &inseg, h);
-	ip->tcp_input_socket = 0;
 
 	/* We deallocate the incoming buf, if it was not buffered by
 	 * the application. */
@@ -856,6 +857,7 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 
 	if (s->unsent != 0 || (s->flags & TF_ACK_NOW))
 		tcp_output_poll (s);
+    ip->tcp_input_socket = 0;
 
 	tcp_debug ("tcp_input: done, state=%S\n\n", tcp_state_name (s->state));
 	mutex_unlock (&s->lock);

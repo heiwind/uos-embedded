@@ -179,6 +179,20 @@ tcp_fasttmr (ip_t *ip)
 		    mutex_signal(&s->lock, s);
 		}
 	}
+
+    for (s=ip->tcp_closing_sockets; s; s=s->next) {
+        if (!(s->flags & TF_ACK_NOW))
+            continue;
+#if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) || (IP_LOCK_STYLE == IP_LOCK_STYLE_OUT1)
+        //avoid sleep on sock lock
+        if (!mutex_trylock (&s->lock))
+            continue;
+        tcp_output_poll (s);
+        mutex_unlock(&s->lock);
+#else
+        tcp_output_poll (s);
+#endif
+    }
 }
 
 /*
