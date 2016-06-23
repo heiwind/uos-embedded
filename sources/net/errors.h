@@ -13,10 +13,13 @@ enum sock_error_state{
     , SENOMEM           = SESOCKANY+12     //
     , SENOBUFS          = SESOCKANY+105    //
     , SEBADF            = SESOCKANY+9      //The descriptor is invalid.
+    , SEBADFD           = SESOCKANY+77     //* File descriptor in bad state */
     //, SENOTSOCK                  //The descriptor references a file, not a socket.
     , SENFILE           = SESOCKANY+23     //The system limit on the total number of open files has been reached.
+    , SENETUNREACH      = SESOCKANY+101    //* Network is unreachable
     , SETIMEDOUT        = SESOCKANY+110
 };
+typedef enum sock_error_state sock_error;
 
 #define SEANYERROR(p)   (~((unsigned)p) <= 0xff)
 

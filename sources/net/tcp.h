@@ -3,6 +3,7 @@
 
 #include <net/ip.h>
 #include <buf/buf-queue-header.h>
+#include <net/netif.h>
 
 #ifdef __cplusplus
 extern "C" {

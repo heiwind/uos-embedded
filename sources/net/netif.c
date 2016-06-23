@@ -6,7 +6,7 @@
 #include <net/netif.h>
 #include <net/arp.h>
 
-bool_t
+sock_error
 netif_output_prio (netif_t *netif, buf_t *p
         , ip_addr_const ipdest
         , ip_addr_const ipsrc
@@ -26,14 +26,16 @@ netif_output_prio (netif_t *netif, buf_t *p
 			        p = 0;
 			    }
 				arp_request (netif, p, ipdest, ipsrc);
-				goto discard;
+				//goto discard;
+				++netif->out_discards;
+				return SENETUNREACH;
 			}
 		}
 		if (! arp_add_header (netif, p, ipdest, ethdest)) {
             netif_free_buf (netif, p);
-discard:    /* Count this packet as discarded. */
+//discard:    /* Count this packet as discarded. */
 			++netif->out_discards;
-			return 0;
+			return SEBADFD;
 		}
 	}
     netif_io_overlap* over = netif_is_overlaped(p);
@@ -43,7 +45,7 @@ discard:    /* Count this packet as discarded. */
 	return netif->interface->output (netif, p, prio);
 }
 
-bool_t
+sock_error
 netif_output (netif_t *netif, buf_t *p
         , ip_addr_const ipdest
         , ip_addr_const ipsrc)

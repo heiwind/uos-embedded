@@ -4,6 +4,7 @@
 
 #include <net/arp.h>
 #include <buf/buf.h>
+#include <net/errors.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,9 +100,9 @@ typedef struct _netif_interface_t {
 	void (*set_address) (netif_t *u, unsigned char *address);
 } netif_interface_t;
 
-bool_t netif_output (netif_t *netif, struct _buf_t *p,
+sock_error netif_output (netif_t *netif, struct _buf_t *p,
         ip_addr_const ipdest, ip_addr_const ipsrc);
-bool_t netif_output_prio (netif_t *netif, struct _buf_t *p,
+sock_error netif_output_prio (netif_t *netif, struct _buf_t *p,
         ip_addr_const ipdest, ip_addr_const ipsrc
 	, small_uint_t prio);
 struct _buf_t *netif_input (netif_t *netif);

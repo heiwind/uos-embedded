@@ -305,8 +305,8 @@ tcp_enqueue_option4 (tcp_socket_t *s
     tcp_segment_t *seg, *queue;
     unsigned char queuelen;
 
-    tcp_debug ("tcp_enqueue_option(s=%p, flags=%x, op=0x%x) queuelen = %u\n",
-        (void*) s, flags, optdata,s->snd_queuelen);
+    tcp_debug ("tcp_enqueue_option(s=%p, flags=%b, op=0x%x) queuelen = %u\n",
+        (void*) s, flags, tcp_flags_dumpfmt, optdata,s->snd_queuelen);
 
     /* Check if the queue length exceeds the configured maximum queue
      * length. If so, we return an error. */
@@ -467,7 +467,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
 
     tcp_event_seg_prepare(seg, s);
 	
-    bool_t res;
+    sock_error res;
 
     if (seg->dataptr != 0){
 
@@ -537,8 +537,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
         res = 1;
     }
 
-
-	if (res){
+	if (res && !SEANYERROR(res)){
 	    ++s->ip->tcp_out_datagrams;
         s->rtime = 0;
     
@@ -551,18 +550,14 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
             s->snd_max = s->snd_nxt;
         }
 	} //if (res)
-	else{
-	    //unsent segment will be sent next later
-	    if (seg->p == 0)
-	        tcp_event_seg(teREXMIT, seg, s);
-	}
+
     tcp_debug ("tcp_output_segment: %lu:%lu, snd_nxt = %u ok %d\n"
             , tcp_segment_seqno(seg), tcp_segment_seqafter(seg)
             , s->snd_nxt
         , res
         );
 
-	return  res;
+	return  res != 0;
 }
 
 
@@ -747,10 +742,24 @@ tcp_output_poll (tcp_socket_t *s)
 		      tcp_output_segment_arm(s, seg);
 		}
 
-		if (!tcp_output_segment (seg, s)){
-		    tcp_debug("tcp_output : break seg $%x seq %lu by net\n", seg, tcp_segment_seqno(seg));
-		    break;
+		sock_error ok = tcp_output_segment (seg, s);
+		if (ok && !SEANYERROR(ok))
+		    ;
+		else if (ok == SENETUNREACH) ;
+            //не удалось отправить сегмент, ибо нет маршрута, 
+            //  этот пакет обрабатываем будто он отправлен, чтобы обработать таймаут 
+		    //  поиска маршрута механизмом ретрансмисии
+		else if (!ok) {
+            tcp_debug("tcp_output : break seg $%x seq %lu by net\n", seg, tcp_segment_seqno(seg));
+            break;
 		}
+		else {
+		    // TODO should aborts connection on unpredictable error?
+            tcp_debug("tcp_output : break seg $%x seq %lu by net error $%x\n"
+                        , seg, tcp_segment_seqno(seg) , ok );
+            break;
+		}
+		
 	    }
 		else //if ( (seg->tcphdr != 0) && (seg->p != 0) )
 	        assert(seg->len == 0);
