@@ -112,11 +112,12 @@ int tcp_segment_assign_buf(tcp_socket_t *s, tcp_segment_t * seg, buf_t* p)
         return 0;
     }
     tcp_hdr_t* tcphdr = (tcp_hdr_t*) p->payload;
-    tcphdr->src = HTONS (s->local_port);
-    tcphdr->dest = HTONS (s->remote_port);
-    tcphdr->urgp = 0;
-    tcphdr->chksum = 0;
-    tcphdr->offset = 5 << 4;
+    tcphdr->src     = HTONS (s->local_port);
+    tcphdr->dest    = HTONS (s->remote_port);
+    tcphdr->offset  = 5 << 4;
+    tcphdr->flags   = 0;
+    tcphdr->chksum  = 0;
+    tcphdr->urgp    = 0;
     seg->tcphdr = tcphdr;
     tcp_event_seg_recover(seg);
 
@@ -531,6 +532,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     else { //if (seg->dataptr != 0){
         // suspects that TF_TRAP_LOOSE
         tcp_debug ("!!!tcp_output_segment: drop segment as TF_TRAP_LOOSE\n"); 
+        tcp_event_seg(teSENT, seg, s);
         netif_free_buf(0, seg->p);
         res = 1;
     }
@@ -800,7 +802,8 @@ tcp_output (tcp_socket_t *s)
      * If so, we do not output anything. Instead, we rely on the input
      * processing code to call us when input processing is done with. */
     if (s->ip->tcp_input_socket == s) {
-        return 1;
+        if (mutex_is_my(&s->ip->lock))
+            return 1;
     }
 
     if ((s->unsent == 0) && !(s->flags & TF_ACK_NOW))
@@ -939,7 +942,17 @@ int tcp_write_buf (tcp_socket_t *s, buf_t* p, tcps_flag_set flags
             return 0;
         mutex_t* s_locked = tcpo_lock_ensure(&s->lock);
         while (s->snd_queuelen >= (TCP_SND_QUEUELEN-segn) ) {
-            mutex_wait(&s->lock);
+            if ((s->unsent != 0)){
+#               if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+                mutex_unlock (&s->lock);
+                tcp_output_poll (s);
+                mutex_lock (&s->lock);
+#               elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
+                tcp_output_poll (s);
+#               endif
+            }
+            else
+                mutex_wait(&s->lock);
             if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
                 tcp_debug ("tcp_write() called in invalid state $%x\n", s->state);
                 tcpo_unlock_ensure(s_locked);

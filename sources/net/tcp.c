@@ -222,8 +222,8 @@ tcp_segment_free (tcp_socket_t *s, tcp_segment_t *seg)
 	if (! seg)
 		return 0;
 
+    tcp_event_seg(teFREE, seg, 0);
 	if (seg->p != 0) {
-	    tcp_event_seg(teFREE, seg, 0);
 		count = buf_free (seg->p);
 		seg->p = 0;
 	}
