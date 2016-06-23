@@ -221,14 +221,15 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			tcp_debug ("tcp_receive: experienced rtt %u ticks (%u msec).\n",
 				m, m * TCP_SLOW_INTERVAL);
 
-			/* This is taken directly from VJs original code
-			 * in his paper */
+			/* This is taken directly from VJs original code in his paper */
 			m = m - (s->sa >> 3);
 			s->sa += m;
 			if (m < 0) {
 				m = -m;
 			}
-			m = m - (s->sv >> 2);
+			//sv >= dev(rtt)*4
+			//m = m - (s->sv >> 2);
+			m = (m<<1) - (s->sv >> 1);
 			s->sv += m;
 			s->rto = (s->sa >> 3) + s->sv;
 

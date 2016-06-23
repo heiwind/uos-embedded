@@ -69,6 +69,7 @@ typedef enum _tcp_state_t {
 } tcp_state_t;
 
 #ifndef TCP_TMR_INTERVAL
+//* TODO сейчас это значение завязано на сигналящий мутех timer.decisec
 #define TCP_TMR_INTERVAL	100	/* TCP timer interval in msec. */
 #endif
 

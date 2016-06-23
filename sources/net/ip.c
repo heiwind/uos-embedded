@@ -496,16 +496,19 @@ ip_main (void *arg)
 				arp_timer (ip->arp);
 
 			++ip->tcp_timer;
-			if (ip->tcp_timer >= 10)
+            const unsigned char time_limit = (TCP_SLOW_INTERVAL*2)/TCP_TMR_INTERVAL;
+			if (ip->tcp_timer >= time_limit)
 				ip->tcp_timer = 0;
 
 			/* Call tcp_fasttmr() every 200 ms. */
-			if (tcp_fasttmr && (ip->tcp_timer & 1))
+            const unsigned char time_fast = (TCP_FAST_INTERVAL/TCP_TMR_INTERVAL);
+			if (tcp_fasttmr && ( (ip->tcp_timer%time_fast + 1) == time_fast))
 				tcp_fasttmr (ip);
 
 			/* Call tcp_slowtmr() every 500 ms. */
+            const unsigned char time_slow = (TCP_SLOW_INTERVAL/TCP_TMR_INTERVAL);
 			if (tcp_slowtmr &&
-			    (ip->tcp_timer == 0 || ip->tcp_timer == 5))
+			    (ip->tcp_timer == 0 || ip->tcp_timer == time_slow))
 				tcp_slowtmr (ip);
 		} else {
 			/* Interrupt from driver. */
@@ -528,6 +531,7 @@ ip_main (void *arg)
 
 /*
  * Initialize the IP layer.
+ * TODO - хочется отвязаться от использования клока, перейти на таймаут или сигналящий мутех.
  */
 void
 ip_init (ip_t *ip, mem_pool_t *pool, int prio,
