@@ -889,7 +889,9 @@ tcp_rexmit (tcp_socket_t *s)
 	s->rttest = 0;
 
 	/* Do the actual retransmission. */
-	tcp_output (s);
+	//* if this call not post all segments, transmitions can hung, and it will
+	//* continue by sender task when it polls tcp_output
+	tcp_output_poll(s);
 }
 
 #ifdef UTCP_RAW
