@@ -39,6 +39,7 @@ typedef struct _stream_interface_t {
 
 void drain_input (stream_t *u); /* LY: чистит забуферизированный в потоке ввод. */
 int stream_puts (stream_t *u, const char *str);
+int stream_write (stream_t *u, const void *str, unsigned len);
 unsigned char *stream_gets (stream_t *u, unsigned char *str, int len);
 int stream_printf (stream_t *u, const char *fmt, ...);
 int stream_vprintf (stream_t *u, const char *fmt, va_list args);
