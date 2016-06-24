@@ -129,7 +129,28 @@ void __cxa_deleted_virtual() {
 
 
 #include <sys/newlib.h>
+
+#if UOS_POSIX_NEWLIB_IO > 0
+
+struct _reent _global_impure __ATTRIBUTE_IMPURE_PTR__
+#   if __UOS_STDIO__ ==__UOS_STDIO_IS_STREAM
+        = {
+              0                         //int _errno;
+            , (__FILE*)stdin
+            , (__FILE*)stdout
+            , (__FILE*)stderr     //__FILE *_stdin, *_stdout, *_stderr;
+        };
+#   else
+        ;
+#   endif
+
+struct _reent *_CONST _global_impure_ptr __ATTRIBUTE_IMPURE_PTR__ = &_global_impure;
+struct _reent *_impure_ptr __ATTRIBUTE_IMPURE_PTR__ = &_global_impure;
+
+#else
 struct _reent *_impure_ptr __ATTRIBUTE_IMPURE_PTR__;
+#endif
+
 
 #ifndef _REENT_ONLY
 #include <errno.h>
@@ -141,3 +162,72 @@ extern int *__errno(void){
 }
 #endif
 
+
+
+#if __UOS_STDIO__ ==__UOS_STDIO_IS_STREAM
+
+
+static FILE* stdfiles[3] = {(FILE*)stdin, (FILE*)stdout, (FILE*)stderr};
+
+FILE *fdopen_io (int fildes){
+    if (fildes <= STDERR_FILENO)
+        return stdfiles[fildes];
+    return 0;
+}
+
+int fileno_io (FILE *f){
+    if (f == (FILE*)stdin)
+        return STDIN_FILENO;
+    if (f == (FILE*)stdout)
+        return STDOUT_FILENO;
+    if (f == (FILE*)stderr)
+        return STDERR_FILENO;
+    return -1;
+}
+
+#if UOS_POSIX_NEWLIB_IO > 0
+
+FILE *fdopen (int fildes, const char *mode){
+    if (_impure_ptr == 0)
+        return fdopen_io(fildes);
+    return &_impure_ptr->_errno;
+
+    switch (fildes){
+        case STDIN_FILENO: return (FILE*)_impure_ptr->_stdin; break;
+        case STDOUT_FILENO: return (FILE*)_impure_ptr->_stdout;break;
+        case STDERR_FILENO: return (FILE*)_impure_ptr->_stderr;break;
+    }
+    return 0;
+}
+int fileno (FILE * f){
+    if (_impure_ptr == 0)
+        return fileno_io(f);
+    if (f == (FILE*)_impure_ptr->_stdin)
+        return STDIN_FILENO;
+    if (f == (FILE*)_impure_ptr->_stdout)
+        return STDOUT_FILENO;
+    if (f == (FILE*)_impure_ptr->_stderr)
+        return STDERR_FILENO;
+    return -1;
+}
+
+#else //UOS_POSIX_NEWLIB_IO > 0
+
+FILE *fdopen (int fildes, const char *mode){
+    return fdopen_io(fildes);
+}
+
+int fileno (FILE *f){
+    return fileno_io(f);
+}
+
+#endif //UOS_POSIX_NEWLIB_IO > 0
+
+size_t write (int fd, const void *buf, size_t count){
+    FILE* f = fdopen(fd, 0);
+    if (f == 0) return 0;
+    return stream_write(to_stream((stream_t*)f), buf, count);
+    //fclose(f);
+}
+
+#endif //__UOS_STDIO__ ==__UOS_STDIO_IS_STREAM

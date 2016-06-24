@@ -40,6 +40,8 @@ int snprintf (char *buf, int size, const char *fmt, ...);
 int vsnprintf (char *buf, int size, const char *fmt, va_list args);
 #endif
 
+//actualy this
+//#define FILE            stream_t
 #define FILE			int
 #define fpos_t			long
 
@@ -52,10 +54,6 @@ int vsnprintf (char *buf, int size, const char *fmt, va_list args);
 #define stdout          0
 #define stderr          0
 #endif
-
-INLINE_STDC
-FILE *fdopen (int fildes, const char *mode)
-	{ return 0; }
 
 INLINE_STDC
 FILE *freopen (const char *path, const char *mode, FILE *stream)
@@ -96,10 +94,6 @@ void clearerr (FILE *stream)
 
 INLINE_STDC
 int ferror (FILE *stream)
-	{ return 0; }
-
-INLINE_STDC
-int fileno (FILE *stream)
 	{ return 0; }
 
 INLINE_STDC
@@ -195,6 +189,14 @@ INLINE_STDC int vfprintf (FILE *stream, const char *format, va_list ap)
 
 #if __UOS_STDIO__ ==__UOS_STDIO_IS_NULL
 
+INLINE_STDC
+FILE *fdopen (int fildes, const char *mode)
+    { return 0; }
+
+INLINE_STDC
+int fileno (FILE *stream)
+    { return 0; }
+
 #if (!defined(to_stream)) || defined(__cplusplus) 
 
 INLINE_STDC
@@ -235,6 +237,10 @@ int printf (const char *fmt, ...) __noexcept
 #endif //to_stream
 
 #elif __UOS_STDIO__ ==__UOS_STDIO_IS_STREAM
+
+FILE *fdopen (int fildes, const char *mode);
+int fileno (FILE *stream);
+
 
 #if (defined(to_stream))
 // remove stream.h wraps macros since used stdio
@@ -280,6 +286,12 @@ int printf (const char *fmt, ...) __noexcept
     va_end (args);
     return err;
 }
+
+#elif UOS_POSIX_NEWLIB_IO > 0
+
+FILE *fdopen (int fildes, const char *mode);
+int fileno (FILE *stream);
+
 #endif  //__uos_have_stdio_stream__
 
 

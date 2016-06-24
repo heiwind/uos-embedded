@@ -12,6 +12,13 @@
 #include <timer/etimer_threads.h>
 #endif
 
+#ifndef INLINE_STDC
+//  когда сторонний код требует линковаться процедурам заявленным как инлайн, и ему надо предоставить
+//  объект с экземплярами этих процедур.(контрибут POSIX генерирует свой врап stdlib чтобы подключить stdc++.)
+//  в коде объекта этот инлайн отключаю чтобы получить нормальный код, линкуемый извне
+#define INLINE_STDC INLINE
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,8 +54,17 @@ static inline int close (int fd)
 static inline size_t read (int fd, void *buf, size_t count)
 	{ return 0; }
 
-static inline size_t write (int fd, const void *buf, size_t count)
+#if __UOS_STDIO__ ==__UOS_STDIO_IS_NULL
+
+INLINE_STDC
+size_t write (int fd, const void *buf, size_t count)
 	{ return count; }
+
+#elif (__UOS_STDIO__ ==__UOS_STDIO_IS_STREAM) || (UOS_POSIX_NEWLIB_IO > 0)
+
+size_t write (int fd, const void *buf, size_t count);
+
+#endif
 
 #define PF_LOCAL 0
 #define SOCK_STREAM 0
@@ -99,6 +115,10 @@ static inline char *getwd (char *buf)
 INLINE __CONST int getpagesize(void) {
     return sysconf(_SC_PAGE_SIZE);
 }
+
+#define STDIN_FILENO    0       /* standard input file descriptor */
+#define STDOUT_FILENO   1       /* standard output file descriptor */
+#define STDERR_FILENO   2       /* standard error file descriptor */
 
 #endif
 
