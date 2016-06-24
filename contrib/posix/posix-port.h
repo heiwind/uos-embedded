@@ -25,6 +25,10 @@ extern "C" {
 
 //#define _SC_PAGE_SIZE
 
+#define UOS_POSIX_NEW_LIBC      0
+#define UOS_POSIX_NEW_DMMY      1
+#define UOS_POSIX_NEW           UOS_POSIX_NEW_DMMY
+
 #ifdef __cplusplus
 }
 #endif

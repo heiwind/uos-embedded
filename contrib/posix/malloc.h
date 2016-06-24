@@ -92,6 +92,8 @@ void * aligned_alloc (size_t __alignment, size_t __size) __noexcept
 
 #include <new>
 
+#if UOS_POSIX_NEW > 0
+
 INLINE_STDC
 __NOTHROW
 void operator delete (void *ptr) __noexcept
@@ -109,13 +111,15 @@ void *operator new (unsigned size) __noexcept
 
 INLINE_STDC
 __NOTHROW
-void *operator new (unsigned size, mem_pool_t& pool) __noexcept
-    { return mem_alloc (&pool, size); }
+void *operator new[] (unsigned size) __noexcept
+    { return mem_alloc (POSIX_memory, size); }
+
+#endif // UOS_POSIX_NEW
 
 INLINE_STDC
 __NOTHROW
-void *operator new[] (unsigned size) __noexcept
-    { return mem_alloc (POSIX_memory, size); }
+void *operator new (unsigned size, mem_pool_t& pool) __noexcept
+    { return mem_alloc (&pool, size); }
 
 #endif
 

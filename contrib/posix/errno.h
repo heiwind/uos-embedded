@@ -135,10 +135,19 @@
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //comes from std newlib
 #ifndef _REENT_ONLY
 #define errno (*__errno())
 extern int *__errno(void);
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif
