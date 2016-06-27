@@ -299,8 +299,11 @@ void uos_call_global_initializers (void)
 	extern funcptr_t __CTOR_END__[];
 	funcptr_t *func;
 
+	if (__CTOR_END__[0] == 0)
 	for (func = __CTOR_END__-1; func >= __CTOR_LIST__; --func)
 		(*func) ();
+	//this prevents secondary initialisation
+	__CTOR_END__[0] = (funcptr_t)(~0);
 }
 
 /*
@@ -313,8 +316,11 @@ void uos_call_global_destructors (void)
 	extern funcptr_t __DTOR_END__[];
 	funcptr_t *func;
 
+    if (__DTOR_END__[0] == 0)
 	for (func = __DTOR_LIST__; func < __DTOR_END__; ++func)
 		(*func) ();
+    //this prevents secondary finalisation
+    __DTOR_END__[0] = (funcptr_t)(~0);
 }
 
 /*

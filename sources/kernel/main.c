@@ -205,7 +205,7 @@ main (void)
 	uos_init ();
 
     __uos_init_array();
-    _init_ctors();
+    uos_call_global_initializers();
 
 	/* Additional machine-dependent initialization */
 	uos_post_init ();
@@ -234,10 +234,6 @@ main (void)
 typedef void (*func_ptr)(void);
 
 #ifdef UOS_HAVE_CTORS
-extern func_ptr __CTOR_LIST__[] __attribute__((weak));
-extern func_ptr __CTOR_END__[] __attribute__((weak));
-extern func_ptr __DTOR_LIST__[] __attribute__((weak));
-extern func_ptr __DTOR_END__[] __attribute__((weak));
 /*  you should place such code to linkes script to provide initialisers table
      __CTOR_LIST__ = .;
       LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
@@ -251,20 +247,44 @@ extern func_ptr __DTOR_END__[] __attribute__((weak));
       __DTOR_END__ = .;
  * */
 
-void _init_ctors(void)
+/*
+ * Call global C++ constructors.
+ */
+__WEAK
+void uos_call_global_initializers (void)
 {
-    func_ptr* func;
-    unsigned len = (__CTOR_END__ - __CTOR_LIST__);
-    if (len <= 2)
-        return;
-    len -= 2;
-    if (len != (unsigned)__CTOR_LIST__[0])
-        return;
-    for ( func = &__CTOR_LIST__[1]; (func != 0) && (len > 0); func++, len-- )
-        (*func)();
+    typedef void (*funcptr_t) ();
+    extern funcptr_t __CTOR_LIST__[];
+    extern funcptr_t __CTOR_END__[];
+    funcptr_t *func;
+
+    if (__CTOR_END__[0] == 0)
+    for (func = __CTOR_END__-1; func >= __CTOR_LIST__; --func)
+        (*func) ();
+    //this prevents secondary initialisation
+    __CTOR_END__[0] = (funcptr_t)(~0);
 }
+
+/*
+ * Call global C++ destructors.
+ */
+__WEAK
+void uos_call_global_destructors (void)
+{
+    typedef void (*funcptr_t) ();
+    extern funcptr_t __DTOR_LIST__[];
+    extern funcptr_t __DTOR_END__[];
+    funcptr_t *func;
+
+    if (__DTOR_END__[0] == 0)
+    for (func = __DTOR_LIST__; func < __DTOR_END__; ++func)
+        (*func) ();
+    //this prevents secondary finalisation
+    __DTOR_END__[0] = (funcptr_t)(~0);
+}
+
 #else
-inline void _init_ctors(void){};
+inline void uos_call_global_initializers(void){};
 #endif
 
 
