@@ -70,6 +70,12 @@ strcpy (unsigned char *dest, const unsigned char *src)  __cpp_decls;
 extern unsigned char *
 strncpy (unsigned char *dest, const unsigned char *src, size_t n)  __cpp_decls;
 
+/* Copy no more than N-1 characters of SRC to DEST. DEST always NUL terminates.
+ * \return strlen(src), if retval >= n truncation occured
+ * */
+extern small_int_t
+strlcpy (unsigned char *dest, const unsigned char *src, size_t n)  __cpp_decls;
+
 /* Append SRC onto DEST.  */
 extern unsigned char *
 strcat (unsigned char *dest, const unsigned char *src)  __cpp_decls;
