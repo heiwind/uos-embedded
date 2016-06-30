@@ -49,15 +49,22 @@ void _pagefault_handler_ (unsigned int context[]);
 #define DEBUG_UARTBAUD 115200
 #endif
 
-#if defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+#if defined(ELVEES_INIT_SDRAM)
 
-#   ifndef UOS_XRAM_BANK_SIZE
-#   define UOS_XRAM_BANK_SIZE  (64UL<<20)
+#   if !defined(UOS_XRAM_BANK_SIZE)
+#       define UOS_XRAM_BANK_SIZE  (64UL<<20)
 /* Base address */
-#   define UOS_XRAM_BANK_ORG   0
+#       define UOS_XRAM_BANK_ORG   0
 /* Sync memory */
-#   define UOS_XRAM_TYPE       MC_CSCON_T
-#   define UOS_XRAM_WS         0
+#       define UOS_XRAM_WS         0
+#   endif
+
+#   if !defined(UOS_XRAM_TYPE)
+#       define UOS_XRAM_TYPE       MC_CSCON_T
+#   endif
+
+
+#   if (UOS_XRAM_TYPE == MC_CSCON_T)
 
 #       ifndef REFRESH_RATE_NS
 #           ifndef XRAM_REFRESH_PERIOD_MS
@@ -81,7 +88,7 @@ void _pagefault_handler_ (unsigned int context[]);
             | MC_SDRTMR_TRFC(15)     /* Интервал между Refresh */\
             )
 #       endif
-#    endif //!UOS_XRAM_BANK_SIZE
+#    endif //(UOS_XRAM_TYPE == MC_CSCON_T)
 
 #define SCON0_MASK (~(((unsigned long)UOS_XRAM_BANK_SIZE)-1))
 
@@ -122,7 +129,7 @@ inline void _init_sdram(void)
 }
 #endif //else defined(ELVEES_MC24) || defined(ELVEES_MC0226)
 
-#else //defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
+#else //defined(ELVEES_INIT_SDRAM)
 inline void _init_sdram(void){};
 #endif //defined(ELVEES_INIT_SDRAM) && (UOS_XRAM_BANK_SIZE > 0)
 
