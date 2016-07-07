@@ -278,6 +278,7 @@ _interrupt_vector_: .globl _interrupt_vector_
         FLUSH_CACHE
         SAVE_REGS                       # Save all registers in stack
         lui     $gp, RAM_HI             # Set global pointer
+        move    $fp, $sp
 #if MIPS_FSPACE > 0
         .extern _irq_handler_
         addi    $sp, -MIPS_FSPACE       # Make an arg frame

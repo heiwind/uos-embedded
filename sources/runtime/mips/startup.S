@@ -292,5 +292,6 @@ _interrupt_vector_: .globl _interrupt_vector_
 
 		.extern _irq_handler_
 		lui	$gp, RAM_HI			# Set global pointer
+                move    $fp, $sp
 		j	_irq_handler_			# Jump to C code, no return
 		nop
