@@ -1,308 +1,248 @@
-#ifdef ARM_1986BE1
-
+// ID: SPO-UOS-milandr-mil-std-1553_bc.c VER: 1.0.0
+//
+// История изменений:
+//
+// 1.0.0	Начальная версия
+//
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 #include <milandr/mil-std-1553_setup.h>
 #include <milandr/mil-std-1553_bc.h>
 
-#define BC_DEBUG 0
-
-// (?) Необходимо синхронизировать данные дескриптора КШ
-// также и с прерыванием по таймеру.
-static mutex_t timerMutex;
-
-static const int timer_irq = TIMER1_IRQn;
-
-static MIL_STD_1553B_t *bc_setup(int port, int channel)
+static void copy_to_cyclogram_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
 {
-    MIL_STD_1553B_t *const mil_std_channel = mil_std_1553_port_setup(port);
-
-    unsigned int locControl = 0;
-    locControl |= MIL_STD_CONTROL_DIV(KHZ/1000);
-    locControl |= MIL_STD_CONTROL_MODE(MIL_STD_MODE_BC);
-    if (channel == 1)
-    {
-        // резервный канал
-        locControl |= MIL_STD_CONTROL_TRB;
-    }
-    else
-    {
-        // основной канал
-        locControl |= MIL_STD_CONTROL_TRA;
-    }
-    mil_std_channel->CONTROL = MIL_STD_CONTROL_MR;
-    mil_std_channel->CONTROL = locControl;
-
-    return mil_std_channel;
-}
-
-static bool_t mil_std_1553_bc_handler(void *arg)
-{
-    mil_std_bc_t *bc = (mil_std_bc_t *)arg;
-
-    const unsigned int locStatus = bc->reg->STATUS;
-
-    const int locIrqNum = bc->port == 1 ? MIL_STD_1553B2_IRQn : MIL_STD_1553B1_IRQn;
-
-#if BC_DEBUG
-    debug_printf("handler, STATUS=%x, StatWrd1=%x, CONTROL=%x, ERROR=%x\n",
-                 locStatus,
-                 bc->reg->StatusWord1,
-                 bc->reg->CONTROL,
-                 bc->reg->ERROR);
-#endif
-
-    if ((locStatus & MIL_STD_STATUS_ERR) != 0)
-    {
-#if BC_DEBUG
-        debug_printf("error received\n");
-#endif
-
-        // (?)
-        bc_setup(bc->port, bc->channel);
-
-        // Разрешить прерывания:
-        // при приёме достоверного слова,
-        // при возникновении ошибки в сообщении.
-        bc->reg->INTEN = MIL_STD_INTEN_RFLAGNIE | MIL_STD_INTEN_ERRIE;
-    }
-    else if ((locStatus & MIL_STD_STATUS_RFLAGN) != 0)
-    {
-        if (bc->rt_bc_slot < bc->slots_count)
-        {
-            const cyclogram_slot_t *const expectedSlot = &bc->cyclogram[bc->rt_bc_slot];
-
-            const int index = MIL_STD_SUBADDR_WORD_INDEX(expectedSlot->subaddr_source);
-            int i = 0;
-
-            for (i=0; i<expectedSlot->words_count; ++i)
-                bc->rx_buf[index + i] = bc->reg->DATA[index + i];
-
-#if BC_DEBUG
-            debug_printf("handler, data received =");
-            for (i=0; i<expectedSlot->words_count; ++i)
-                debug_printf(" %x", bc->rx_buf[index + i]);
-            debug_printf("\n");
-#endif
-
-            bc->rt_bc_slot = 0xff;
+    if (mem_queue_is_full(&mil->cyclogram_rxq)) {
+        mil->nb_lost++;
+    } else {
+        unsigned wrc = (slot.words_count == 0 ? 32 : slot.words_count);
+        uint16_t *que_elem = mem_alloc_dirty(mil->pool, 2*wrc + 8);
+        if (!que_elem) {
+            mil->nb_lost++;
+            return;
         }
+        mem_queue_put(&mil->cyclogram_rxq, que_elem);
+        // Номер слота всегда 0
+        *que_elem = 0;
+        *(que_elem + 1) = 0;
+        // Копируем дескриптор слота
+        memcpy(que_elem + 2, &slot, 4);
+        // Копируем данные слота
+        arm_reg_t *preg = &mil->reg->DATA[slot.subaddr * MIL_SUBADDR_WORDS_COUNT];
+
+
+#if BC_DEBUG
+        uint16_t *que_elem_debug = que_elem + 4; // Область данных
+        int wordscount = wrc;
+#endif
+
+        que_elem += 4;  // Область данных
+        while (wrc) {
+            *que_elem++ = *preg++;
+            wrc--;
+        }
+
+#if BC_DEBUG
+
+        int i;
+        debug_printf("\n");
+        debug_printf("wc=%d\n", wordscount);
+        for (i=0;i<wordscount;i++) {
+        	debug_printf("%04x\n", *que_elem_debug++);
+        }
+        debug_printf("\n");
+#endif
+
     }
-
-    arch_intr_allow(locIrqNum);
-
-    return 0;
 }
 
-static bool_t mil_std_1553_timer_handler(void *arg)
+static void copy_to_urgent_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
 {
+    if (mem_queue_is_full(&mil->urgent_rxq)) {
+        mil->nb_lost++;
+    } else {
+        unsigned wrc = (slot.words_count == 0 ? 32 : slot.words_count);
+        uint16_t *que_elem = mem_alloc_dirty(mil->pool, 2*wrc + 8);
+        if (!que_elem) {
+            mil->nb_lost++;
+            return;
+        }
+        mem_queue_put(&mil->urgent_rxq, que_elem);
+        // Первый байт номера слота всегда 1
+        *que_elem = 1;
+        *(que_elem + 1) = 0;
+        // Копируем дескриптор слота
+        memcpy(que_elem + 2, &slot, 4);
+        // Копируем данные слота
+        arm_reg_t *preg = &mil->reg->DATA[slot.subaddr * MIL_SUBADDR_WORDS_COUNT];
+
+
 #if BC_DEBUG
-    debug_printf("timer handler, ");
+        uint16_t *que_elem_debug = que_elem + 4; // Область данных
+        int wordscount = wrc;
 #endif
 
-    mil_std_bc_t *const bc = (mil_std_bc_t *)arg;
-
-    // (!) Здесь не вызывается повторное разрешение прерывания
-    if (bc->cyclogram == 0 || bc->slots_count == 0)
-        return 0;
-
-    const cyclogram_slot_t *const currSlot = &bc->cyclogram[bc->curr_slot];
-
-    bc->rt_bc_slot = 0xff;
+        que_elem += 4;  // Область данных
+        while (wrc) {
+            *que_elem++ = *preg++;
+            wrc--;
+        }
 
 #if BC_DEBUG
-    debug_printf("slot #%d: ", bc->curr_slot);
+
+        int i;
+        debug_printf("\n");
+        debug_printf("wc=%d\n", wordscount);
+        for (i=0;i<wordscount;i++) {
+            debug_printf("%04x\n", *que_elem_debug++);
+        }
+        debug_printf("\n");
 #endif
 
-    if (currSlot->words_count > 0)
-    {
+    }
+}
+
+void start_slot(milandr_mil1553_t *mil, mil_slot_desc_t slot, uint16_t *pdata)
+{
+    if (slot.command.req_pattern == 0 || slot.command.req_pattern == 0x1f) {
+//        debug_printf("control command %x %x %x\n", slot.command.command, slot.command.control, slot.command.addr);
+        mil->reg->CommandWord1 =
+                // Количество слов выдаваемых данных/код команды
+                MIL_STD_COMWORD_WORDSCNT_CODE(slot.command.command) |
+                // Подадрес приёмника/режим управления
+                MIL_STD_COMWORD_SUBADDR_MODE(slot.command.req_pattern) |
+                (slot.command.mode == MIL_REQUEST_WRITE ? MIL_STD_COMWORD_BC_RT :MIL_STD_COMWORD_RT_BC) |
+                // Адрес приёмника
+                MIL_STD_COMWORD_ADDR(slot.command.addr);
+        mil->reg->CommandWord2 = 0;
+    } else if (slot.transmit_mode == MIL_SLOT_BC_RT) {
         // Режим передачи КШ-ОУ
-        if (currSlot->addr_source == 0xff || currSlot->subaddr_source == 0xff)
-        {
-            bc->reg->CommandWord1 |=
-                    // Количество слов выдаваемых данных
-                    MIL_STD_COMWORD_WORDSCNT_CODE(currSlot->words_count) |
-                    // Подадрес приёмника
-                    MIL_STD_COMWORD_SUBADDR_MODE(currSlot->subaddr_dest) |
-                    // Адрес приёмника
-                    MIL_STD_COMWORD_ADDR(currSlot->addr_dest);
+        mil->reg->CommandWord1 =
+                // Количество слов выдаваемых данных
+                MIL_STD_COMWORD_WORDSCNT_CODE(slot.words_count) |
+                // Подадрес приёмника
+                MIL_STD_COMWORD_SUBADDR_MODE(slot.subaddr) |
+                // Адрес приёмника
+                MIL_STD_COMWORD_ADDR(slot.addr);
 
-            int i = 0;
-            int index = MIL_STD_SUBADDR_WORD_INDEX(currSlot->subaddr_dest);
-
-            // Копировать из tx буфера данные в буфер контроллера MIL-STD
-            for (i=0; i<currSlot->words_count; ++i)
-                bc->reg->DATA[index + i] = bc->tx_buf[index + i];
-
+        arm_reg_t *preg = &mil->reg->DATA[slot.subaddr * MIL_SUBADDR_WORDS_COUNT];
+        if (pdata) {
+            unsigned wrdc = (slot.words_count == 0 ? 32 : slot.words_count);
 #if BC_DEBUG
-            debug_printf("bc->rt, slot = %x, %x, %x, %x, %x, dataToSend =",
-                         currSlot->addr_source,
-                         currSlot->subaddr_source,
-                         currSlot->addr_dest,
-                         currSlot->subaddr_dest,
-                         currSlot->words_count);
-            for (i=0; i<currSlot->words_count; ++i)
-                debug_printf(" %x", bc->tx_buf[index + i]);
-            debug_printf("\n");
+        uint16_t *que_elem_debug = pdata;
+        int wordscount = wrdc;
+#endif
+            while (wrdc) {
+                *preg++ = *pdata++;
+                wrdc--;
+            }
+#if BC_DEBUG
+        int i;
+        debug_printf("\n");
+        debug_printf("startslot wc=%d\n", wordscount);
+        for (i=0;i<wordscount;i++) {
+        	debug_printf("(%02d) %04x\n", i, *que_elem_debug++);
+        }
+        debug_printf("\n");
 #endif
         }
+    } else if (slot.transmit_mode == MIL_SLOT_RT_BC) {
         // Режим передачи ОУ-КШ
-        else if (currSlot->addr_dest == 0xff || currSlot->subaddr_dest == 0xff)
-        {
-            // Количество слов данных
-            bc->reg->CommandWord1 |=
-                    // Количество слов принимаемых данных
-                    MIL_STD_COMWORD_WORDSCNT_CODE(currSlot->words_count) |
-                    // Подадрес источника
-                    MIL_STD_COMWORD_SUBADDR_MODE(currSlot->subaddr_source) |
-                    // Направление передачи: ОУ-КШ
-                    MIL_STD_COMWORD_RT_BC |
-                    // Адрес источника
-                    MIL_STD_COMWORD_ADDR(currSlot->addr_source);
-            bc->rt_bc_slot = bc->curr_slot;
-
-#if BC_DEBUG
-            debug_printf("rt->bc, slot = %x, %x, %x, %x, %x\n",
-                         currSlot->addr_source,
-                         currSlot->subaddr_source,
-                         currSlot->addr_dest,
-                         currSlot->subaddr_dest,
-                         currSlot->words_count);
-#endif
-        }
+        mil->reg->CommandWord1 =
+                // Количество слов принимаемых данных
+                MIL_STD_COMWORD_WORDSCNT_CODE(slot.words_count) |
+                // Подадрес источника
+                MIL_STD_COMWORD_SUBADDR_MODE(slot.subaddr) |
+                // Направление передачи: ОУ-КШ
+                MIL_STD_COMWORD_RT_BC |
+                // Адрес источника
+                MIL_STD_COMWORD_ADDR(slot.addr);
+    } else {
         // Режим передачи ОУ-ОУ
-        else
-        {
-            bc->reg->CommandWord1 |=
-                    // Количество слов выдаваемых данных
-                    MIL_STD_COMWORD_WORDSCNT_CODE(currSlot->words_count) |
-                    // Подадрес источника
-                    MIL_STD_COMWORD_SUBADDR_MODE(currSlot->subaddr_source) |
-                    // Адрес источника
-                    MIL_STD_COMWORD_ADDR(currSlot->addr_source);
-            bc->reg->CommandWord2 |=
-                    // Количество слов принимаемых данных
-                    MIL_STD_COMWORD_WORDSCNT_CODE(currSlot->words_count) |
-                    // Подадрес приёмника
-                    MIL_STD_COMWORD_SUBADDR_MODE(currSlot->subaddr_dest) |
-                    // Направление передачи: ОУ-ОУ
-                    MIL_STD_COMWORD_RT_BC |
-                    // Адрес приёмника
-                    MIL_STD_COMWORD_ADDR(currSlot->addr_dest);
+        mil->reg->CommandWord1 =
+                // Количество слов выдаваемых данных
+                MIL_STD_COMWORD_WORDSCNT_CODE(slot.words_count) |
+                // Подадрес источника
+                MIL_STD_COMWORD_SUBADDR_MODE(slot.subaddr_src) |
+                // Адрес источника
+                MIL_STD_COMWORD_ADDR(slot.addr_src);
+        mil->reg->CommandWord2 =
+                // Количество слов принимаемых данных
+                MIL_STD_COMWORD_WORDSCNT_CODE(slot.words_count) |
+                // Подадрес приёмника
+                MIL_STD_COMWORD_SUBADDR_MODE(slot.subaddr) |
+                // Направление передачи: ОУ-ОУ
+                MIL_STD_COMWORD_RT_BC |
+                // Адрес приёмника
+                MIL_STD_COMWORD_ADDR(slot.addr);
+    }
 
-#if BC_DEBUG
-            debug_printf("rt->rt, slot = %x, %x, %x, %x, %x\n",
-                         currSlot->addr_source,
-                         currSlot->subaddr_source,
-                         currSlot->addr_dest,
-                         currSlot->subaddr_dest,
-                         currSlot->words_count);
-#endif
+    // Ожидаем освобождение передатчика
+    while(mil->reg->CONTROL & MIL_STD_CONTROL_BCSTART) {
+        ;
+    }
+    // Инициировать передачу команды в канал в режиме КШ
+    mil->reg->CONTROL |= MIL_STD_CONTROL_BCSTART;
+}
+
+void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
+{
+	mil1553_lock(&mil->milif);
+
+    if (status & MIL_STD_STATUS_VALMESS) {
+        int wc = 0; 
+        if (mil->urgent_desc.reserve) {
+            // Была передача вне очереди
+            if (mil->urgent_desc.command.req_pattern == 0 || mil->urgent_desc.command.req_pattern == 0x1f) {
+                mil->nb_commands++;
+            } else {
+                if (mil->pool && mil->urgent_desc.transmit_mode == MIL_SLOT_RT_BC) {
+                    copy_to_urgent_rxq(mil, mil->urgent_desc);
+                }
+                wc = mil->urgent_desc.words_count;
+            }
+        } else {
+            if (mil->cur_slot != 0) {
+                mil_slot_desc_t slot = mil->cur_slot->desc;
+                if (slot.command.req_pattern == 0 || slot.command.req_pattern == 0x1f) {
+                    mil->nb_commands++;
+                } else {
+                    wc = slot.words_count;
+                    if (mil->pool && slot.transmit_mode == MIL_SLOT_RT_BC) {
+                        copy_to_cyclogram_rxq(mil, slot);
+                    }
+                }
+            }
         }
+        mil->nb_words += (wc>0?wc:32);
+    } else if (status & MIL_STD_STATUS_ERR) {
+	    mil->nb_errors++;
+	    if (mil->urgent_desc.reserve) {
+	    	mil->nb_emergency_errors++;
+	    }
+	}
 
-        // Инициировать передачу команды в канал в режиме КШ
-        bc->reg->CONTROL |= MIL_STD_CONTROL_BCSTART;
-    }
-    else
-    {
-#if BC_DEBUG
-        debug_printf("empty\n");
-#endif
-    }
+	if (mil->urgent_desc.reserve) // Если была передача вне очереди, то сбрасываем дескриптор,
+		mil->urgent_desc.raw = 0; // чтобы не начать её повторно
+	else {
+		if (mil->cur_slot != 0) {
+			mil->cur_slot = mil->cur_slot->next;
+		}
+		if (mil->cur_slot == 0)
+			mil->cur_slot = mil->cyclogram;
+	}
 
-    // Перейти к следующему слоту в циклограмме.
-    bc->curr_slot = (bc->curr_slot + 1) % bc->slots_count;
+	if (mil->urgent_desc.raw != 0) {    // Есть требование на выдачу вне очереди
+		start_slot(mil, mil->urgent_desc, mil->urgent_data);
+		mil->urgent_desc.reserve = 1;   // Признак того, что идёт передача вне очереди
+	} else if ((mil->cur_slot != mil->cyclogram) || (mil->tim_reg == 0) || (mil->period_ms == 0)) {
+		// если таймер не задан, или его период равен нулю циклограмма начинается с начала
+		if (mil->cur_slot != 0) {
+			start_slot(mil, mil->cur_slot->desc, mil->cur_slot->data);
+		}
+	}
 
-    ARM_TIMER1->TIM_STATUS = 1;
-
-    arch_intr_allow(timer_irq);
-
-    return 0;
+    mil1553_unlock(&mil->milif);
 }
 
-static void my_timer_init(unsigned int khz, unsigned int msec_per_tick, mil_std_bc_t *bc)
-{
-    // Подача синхроимпульсов для таймера
-    ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_TIMER1;
 
-    // Регистр TIM_CLOCK: управление тактовой частотой таймеров
-    ARM_RSTCLK->TIM_CLOCK = ARM_TIM_CLOCK_BRG1(0) | ARM_TIM_CLOCK_EN1;
-
-    ARM_TIMER1->TIM_CNTRL = 0x00000000;
-
-    // Начальное значение счетчика
-    ARM_TIMER1->TIM_CNT = 0x00000000;
-    // Предделитель частоты
-    ARM_TIMER1->TIM_PSG = 0x00000000;
-    // Основание счета
-    ARM_TIMER1->TIM_ARR = msec_per_tick*khz;
-
-    // Разрешение генерировать прерывание при CNT = ARR
-    ARM_TIMER1->TIM_IE = 0x00000002;
-
-    // Счет вверх по TIM_CLK. Разрешение работы таймера.
-    ARM_TIMER1->TIM_CNTRL = 0x00000001;
-
-    // Attach fast handler to timer interrupt.
-    mutex_attach_irq(&timerMutex, timer_irq, mil_std_1553_timer_handler, bc);
-}
-
-void mil_std_1553_bc_init(mil_std_bc_t *bc,
-                          int port,
-                          int channel,
-                          const cyclogram_slot_t *cyclogram,
-                          int slot_time,
-                          int slots_count,
-                          int cpu_freq,
-                          void *rx_buf,
-                          void *tx_buf)
-{
-    MIL_STD_1553B_t *const mil_std_channel = bc_setup(port, channel);
-
-    bc->port = port;
-    bc->channel = channel;
-    bc->slots_count = slots_count;
-    bc->curr_slot = 0;
-    bc->rt_bc_slot = 0xff;
-    bc->reg = mil_std_channel;
-    bc->cyclogram = cyclogram;
-    bc->rx_buf = (unsigned short *)rx_buf;
-    bc->tx_buf = (unsigned short *)tx_buf;
-
-    mutex_init(&bc->lock);
-
-    int locIrqNum = port == 1 ? MIL_STD_1553B2_IRQn : MIL_STD_1553B1_IRQn;
-
-    // Настроить работу MIL-STD по прерыванию, указать функцию обработчик прерывания.
-    mutex_attach_irq(&bc->lock,
-                     locIrqNum,
-                     mil_std_1553_bc_handler,
-                     bc);
-
-    my_timer_init(cpu_freq, slot_time, bc);
-
-    // Разрешить прерывания:
-    // при приёме достоверного слова,
-    // при возникновении ошибки в сообщении.
-    bc->reg->INTEN =
-            MIL_STD_INTEN_RFLAGNIE |
-            MIL_STD_INTEN_ERRIE;
-}
-
-void mil_std_1553_set_bc_channel(mil_std_bc_t *bc, int channel)
-{
-    bc->channel = channel;
-    if (channel == 1)
-    {
-        // резервный канал
-        bc->reg->CONTROL |= MIL_STD_CONTROL_TRB;
-    }
-    else
-    {
-        // основной канал
-        bc->reg->CONTROL |= MIL_STD_CONTROL_TRA;
-    }
-}
-
-#endif
