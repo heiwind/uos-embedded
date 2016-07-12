@@ -20,6 +20,13 @@ static bool_t timer_handler(void *arg)
     milandr_mil1553_t *mil = arg;
 
     if (mil->urgent_desc.raw != 0) {
+    	//debug_printf("urgent_desc ");
+    	//int i;
+    	//int wc = (mil->urgent_desc.words_count==0?32:mil->urgent_desc.words_count);
+    	//for(i=0;i<wc;i++) {
+    	//	debug_printf("%04x ", mil->urgent_data[i]);
+    	//}
+    	//debug_printf("\n");
         mil->urgent_desc.reserve = 1;       // Признак того, что идёт передача вне очереди
         start_slot(mil, mil->urgent_desc, mil->urgent_data);
     } else if (mil->cur_slot == mil->cyclogram) {
@@ -559,10 +566,18 @@ void mil_rt_receive_16(mil1553if_t *_mil, int subaddr, void *data, int *nb_words
 	mil->rxbuf[subaddr].busy = 1;
 	*nb_words = mil->rxbuf[subaddr].nb_words;
 	int i;
+
+	//debug_printf("nb_words = %d", mil->rxbuf[subaddr].nb_words);
+    //
+	//for (i=0;i<mil->rxbuf[subaddr].nb_words;i++) {
+	//	debug_printf(" %04x", mil->txbuf[subaddr].data[i] & 0xffff);
+	//}
+	//debug_printf("\n");
+
 	uint16_t *dst = data;
-	volatile uint32_t *src = mil->txbuf[subaddr].data;
+	uint32_t *src = mil->txbuf[subaddr].data;
 	for(i=0;i<*nb_words;i++) {
-		*dst++ = *src++;
+		*dst++ = (*src++) & 0xffff;
 	}
 	mil->rxbuf[subaddr].busy = 0;
 }
