@@ -532,7 +532,9 @@ void mil_rt_send(mil1553if_t *_mil, int subaddr, void *data, int nb_words)
 {
 	milandr_mil1553_t *mil = (milandr_mil1553_t *)_mil;
 	mil->txbuf[subaddr].busy = 1;
-	memcpy(mil->txbuf[subaddr].data, data, nb_words * 8);
+	// nb_words умножаем на 2 для получения реального размера в байтах
+	// результат умножаем на 2 из за прореживания данных в памяти процессора
+	memcpy(mil->txbuf[subaddr].data, data, nb_words * 4);
 	mil->txbuf[subaddr].nb_words = nb_words;
 	mil->txbuf[subaddr].busy = 0;
 }
@@ -542,7 +544,9 @@ void mil_rt_receive(mil1553if_t *_mil, int subaddr, void *data, int *nb_words)
 	milandr_mil1553_t *mil = (milandr_mil1553_t *)_mil;
 	mil->rxbuf[subaddr].busy = 1;
 	*nb_words = mil->rxbuf[subaddr].nb_words;
-	memcpy(data, mil->rxbuf[subaddr].data, *nb_words * 8);
+	// nb_words умножаем на 2 для получения реального размера в байтах
+	// результат умножаем на 2 из за прореживания данных в памяти процессора
+	memcpy(data, mil->rxbuf[subaddr].data, *nb_words * 4);
 	mil->rxbuf[subaddr].busy = 0;
 }
 
