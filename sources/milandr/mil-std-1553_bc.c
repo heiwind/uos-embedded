@@ -200,6 +200,7 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
                     copy_to_urgent_rxq(mil, mil->urgent_desc);
                 }
                 wc = mil->urgent_desc.words_count;
+                mil->nb_words += (wc>0?wc:32);
             }
         } else {
             if (mil->cur_slot != 0) {
@@ -211,10 +212,11 @@ void mil_std_1553_bc_handler(milandr_mil1553_t *mil, const unsigned short status
                     if (mil->pool && slot.transmit_mode == MIL_SLOT_RT_BC) {
                         copy_to_cyclogram_rxq(mil, slot);
                     }
+                    mil->nb_words += (wc>0?wc:32);
                 }
             }
         }
-        mil->nb_words += (wc>0?wc:32);
+
     } else if (status & MIL_STD_STATUS_ERR) {
 	    mil->nb_errors++;
 	    if (mil->urgent_desc.reserve) {
