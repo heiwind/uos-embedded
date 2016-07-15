@@ -242,12 +242,14 @@ static int mil_bc_set_period(mil1553if_t *_mil, unsigned period_ms)
 
     return MIL_ERR_OK;
 }
-
+static unsigned short answerWordPreveous;
 static bool_t status_handler(void *arg)
 {
 	milandr_mil1553_t *mil = (milandr_mil1553_t *)arg;
 	MIL_STD_1553B_t   *reg = (MIL_STD_1553B_t *)mil->reg;
 	int word;
+
+	unsigned short answerWord = MIL_STD_STATUS_ADDR_OU(mil->addr_self);
 
 	uint32_t flag = reg->STATUS;
 	if (mil->mode == MIL_MODE_RT) {
@@ -266,7 +268,6 @@ static bool_t status_handler(void *arg)
 		// Количество слов данных в сообщении
 		const unsigned char wordsCount = (cmdCode == 0 ? 32 : cmdCode);
 
-		unsigned short answerWord = MIL_STD_STATUS_ADDR_OU(mil->addr_self);
 		switch (msg)
 		{
 		// приём данных от КШ (КШ-ОУ), формат сообщения 7
@@ -368,8 +369,6 @@ static bool_t status_handler(void *arg)
 				}
 				else
 				{
-					// Установить ответное слово
-					mil->reg->StatusWord1 = answerWord;
 					// Команда "блокировать передатчик"
 					if (cmdCode == CMD_LockSender)
 					{
@@ -378,7 +377,9 @@ static bool_t status_handler(void *arg)
 							mil->reg->CONTROL &= ~MIL_STD_CONTROL_TRB;
 						}
 						else if ((flag & MIL_STD_STATUS_RCVB) != 0)
+						{
 							mil->reg->CONTROL &= ~MIL_STD_CONTROL_TRA;
+						}
 					}
 					// Команда "разблокировать передатчик"
 					else if (cmdCode == CMD_UnlockSender)
@@ -396,6 +397,13 @@ static bool_t status_handler(void *arg)
 					    mil->reg->CONTROL |= MIL_STD_CONTROL_TRA;
 					    mil->reg->CONTROL |= MIL_STD_CONTROL_TRB;
 					}
+					// Команды установить ответное слово (ответ на предыдущую груповую команду)
+					else if (cmdCode == CMD_SendAnswerWord)
+					{
+						answerWord = answerWordPreveous;
+					}
+					// Установить ответное слово
+					mil->reg->StatusWord1 = answerWord;
 				}
 			}
 			break;
@@ -440,13 +448,6 @@ static bool_t status_handler(void *arg)
 				{
 					// Установить ответное слово
 					mil->reg->StatusWord1 = answerWord;
-					// Команда "синхронизация (со словом данных)"
-					if (cmdCode == CMD_SynchronizeWithDataWord)
-					{
-						// Заменить собственный адрес ОУ значением, которое получено в команде от КШ.
-						const unsigned short newCtrl = (mil->reg->CONTROL & ~MIL_STD_CONTROL_ADDR_MASK) | ((mil->reg->ModeData & 0x1F)<<MIL_STD_CONTROL_ADDR_SHIFT);
-						mil->reg->CONTROL = newCtrl;
-					}
 				}
 			}
 			break;
@@ -460,12 +461,16 @@ static bool_t status_handler(void *arg)
 			status_array[write_idx].command_word_1 = reg->CommandWord1;
 			status_array[write_idx].msg = reg->MSG;
 			status_array[write_idx].time_stamp = ARM_TIMER2->TIM_CNT;
+			status_array[write_idx].status_word_1 = reg->StatusWord1;
 			status_array[write_idx].done = 1;
 			write_idx = (write_idx+1>=STATUS_ITEMS_SIZE?0:write_idx+1);
 		}
 	}
 
 out:
+
+	answerWordPreveous = answerWord;
+
 	if (reg == ARM_MIL_STD_1553B1) {
 		arch_intr_allow(MIL_STD_1553B1_IRQn);
 	} else {

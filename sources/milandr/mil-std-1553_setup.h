@@ -17,7 +17,7 @@
 #define RT_DEBUG               0
 #define BC_DEBUG               0
 
-#define MIL_STD_CLOCK_DIV      4
+#define MIL_STD_CLOCK_DIV      2
 
 #define LEFT_LED	4
 #define RIGHT_LED	2
@@ -81,6 +81,7 @@ struct status_item_t {
     volatile uint32_t time_stamp;
     volatile uint32_t done;
     volatile uint32_t error;
+    volatile uint32_t status_word_1;
 };
 
 typedef struct status_item_t status_item_t;
