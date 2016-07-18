@@ -101,6 +101,7 @@ printf("Coming from port %d\n",ntohs(pin.sin_port));
 			if (msg[i] != count) {
 				fprintf(stderr, "bad counter: %d, expected: %d\n", msg[i], count);
 				count = msg[i] + 1;
+				old_count = count;
 				continue;
 			}
 			++count;
