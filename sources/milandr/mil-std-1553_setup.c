@@ -243,6 +243,7 @@ static int mil_bc_set_period(mil1553if_t *_mil, unsigned period_ms)
     return MIL_ERR_OK;
 }
 static unsigned short answerWordPreveous;
+static unsigned short commandWordPreveous;
 static bool_t status_handler(void *arg)
 {
 	milandr_mil1553_t *mil = (milandr_mil1553_t *)arg;
@@ -250,14 +251,15 @@ static bool_t status_handler(void *arg)
 	int word;
 
 	unsigned short answerWord = MIL_STD_STATUS_ADDR_OU(mil->addr_self);
-
+	unsigned short comWrd1;
 	uint32_t flag = reg->STATUS;
 	if (mil->mode == MIL_MODE_RT) {
 		if (flag & MIL_STD_STATUS_ERR) {
+			answerWord |= MIL_STD_STATUS_MSG_ERR;
 			mil->nb_errors++;
 			goto out;
 		}
-		const unsigned int comWrd1 = reg->CommandWord1;
+		comWrd1 = reg->CommandWord1;
 		const unsigned int msg = reg->MSG;
 
 		// Подадрес из командного слова 1
@@ -296,21 +298,21 @@ static bool_t status_handler(void *arg)
 			answerWord |= MIL_STD_STATUS_GROUP_COMMAND_RECEIVED;
 		// приём данных от ОУ (ОУ-ОУ), формат сообщения 3
 		case MSG_DATARECV__RT_RT__SINGLE:
+			// #4
 			// Получено достоверное слово из канала
 			if ((flag & MIL_STD_STATUS_RFLAGN) != 0)
 			{
 				// Установить ответное слово
 				mil->reg->StatusWord1 = answerWord;
+				// Прием от оконечного устройства
+				if (!mil->txbuf[subaddr].busy) {
+					int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
+					for (word = 0; word < wordsCount; ++word)
+						mil->reg->DATA[index + word] = mil->txbuf[subaddr].data[word] & 0xFFFF;
+				}
 			}
 			if ((flag & MIL_STD_STATUS_VALMESS) != 0) {
 				mil->nb_words += wordsCount;
-				int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-				if (!mil->rxbuf[subaddr].busy) {
-					for (word = 0; word < wordsCount; ++word) {
-						mil->rxbuf[subaddr].data[word] = mil->reg->DATA[index + word] & 0xFFFF;
-					}
-					mil->rxbuf[subaddr].nb_words = wordsCount;
-				}
 			}
 			break;
 		// передача данных в КШ (ОУ-КШ), формат сообщения 2
@@ -336,19 +338,23 @@ static bool_t status_handler(void *arg)
 			answerWord |= MIL_STD_STATUS_GROUP_COMMAND_RECEIVED;
 		// передача данных в ОУ (ОУ-ОУ), формат сообщения 3
 		case MSG_DATASEND__RT_RT__SINGLE:
+			// #1008 в оконечное устройство
 			// Получено достоверное слово из канала
 			if ((flag & MIL_STD_STATUS_RFLAGN) != 0)
 			{
 				// Установить ответное слово
 				mil->reg->StatusWord1 = answerWord;
-				if (!mil->txbuf[subaddr].busy) {
-					int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-					for (word = 0; word < wordsCount; ++word)
-						mil->reg->DATA[index + word] = mil->txbuf[subaddr].data[word] & 0xFFFF;
-				}
+
 			}
 			if ((flag & MIL_STD_STATUS_VALMESS) != 0) {
 				mil->nb_words += wordsCount;
+				int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
+				if (!mil->rxbuf[subaddr].busy) {
+					for (word = 0; word < wordsCount; ++word) {
+						mil->rxbuf[subaddr].data[word] = mil->reg->DATA[index + word] & 0xFFFF;
+					}
+					mil->rxbuf[subaddr].nb_words = wordsCount;
+				}
 			}
 			break;
 		// команда управления 0-15 от КШ без слов данных, формат сообщения 9
@@ -422,9 +428,12 @@ static bool_t status_handler(void *arg)
 				}
 				else
 				{
+					if (cmdCode == CMD_SendLastCommand)
+					{
+						mil->reg->ModeData = commandWordPreveous;
+					}
 					// Установить ответное слово
 					mil->reg->StatusWord1 = answerWord;
-					// (!) to be implemented
 				}
 			}
 			break;
@@ -470,6 +479,7 @@ static bool_t status_handler(void *arg)
 out:
 
 	answerWordPreveous = answerWord;
+	commandWordPreveous = comWrd1;
 
 	if (reg == ARM_MIL_STD_1553B1) {
 		arch_intr_allow(MIL_STD_1553B1_IRQn);
