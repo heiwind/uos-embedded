@@ -235,16 +235,18 @@ typedef void (*func_ptr)(void);
 
 #ifdef UOS_HAVE_CTORS
 /*  you should place such code to linkes script to provide initialisers table
+    . = ALIGN(0x4);
      __CTOR_LIST__ = .;
-      LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
+      LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 1)
       KEEP(*(.ctors))
-      LONG(0)
       __CTOR_END__ = .;
-      __DTOR_LIST__ = .;
-      LONG((__DTOR_END__ - __DTOR_LIST__) / 4 - 2)
-      KEEP(*(.dtors))
       LONG(0)
+
+      __DTOR_LIST__ = .;
+      LONG((__DTOR_END__ - __DTOR_LIST__) / 4 - 1)
+      KEEP(*(.dtors))
       __DTOR_END__ = .;
+      LONG(0)
  * */
 
 /*
@@ -259,7 +261,8 @@ void uos_call_global_initializers (void)
     funcptr_t *func;
 
     if (__CTOR_END__[0] == 0)
-    for (func = __CTOR_END__-1; func >= __CTOR_LIST__; --func)
+    //if (__CTOR_LIST__[0] == (__CTOR_END__ - __CTOR_LIST__ - 1) )
+    for (func = __CTOR_END__-1; func > __CTOR_LIST__; --func)
         (*func) ();
     //this prevents secondary initialisation
     __CTOR_END__[0] = (funcptr_t)(~0);
@@ -277,7 +280,8 @@ void uos_call_global_destructors (void)
     funcptr_t *func;
 
     if (__DTOR_END__[0] == 0)
-    for (func = __DTOR_LIST__; func < __DTOR_END__; ++func)
+    //if (__CTOR_LIST__[0] == (__CTOR_END__ - __CTOR_LIST__ - 1) )
+    for (func = __DTOR_LIST__+1; func < __DTOR_END__; ++func)
         (*func) ();
     //this prevents secondary finalisation
     __DTOR_END__[0] = (funcptr_t)(~0);
