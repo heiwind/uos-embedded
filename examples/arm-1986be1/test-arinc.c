@@ -26,11 +26,10 @@
 // 14 - OUT1+
 // 15 - OUT1–
 //
-// Для работы теста выбрать номера каналов передачи и приёма. Замкнуть соответствующие
-// выводы разъёма. Для правильной работы каналы на передачу и приём должны иметь разные номера.
+// Для работы теста выбрать номера каналов передачи и приёма. Замкнуть соответствующие выводы разъёма.
 
-#define MY_IN_CHANNEL 0
-#define MY_OUT_CHANNEL 0
+#define MY_IN_CHANNEL 1
+#define MY_OUT_CHANNEL 1
 
 unsigned int func_tx = -1;
 unsigned int func_rx = -1;
@@ -54,7 +53,7 @@ void test_arinc_main()
     ARINC_msg_t *const pCounter = (ARINC_msg_t *)&counter;
     pCounter->label = 0x30;
     pCounter->sdi = 1;
-    pCounter->data = 0x1e;
+    pCounter->data = 0x1f;
 
     const int fifoCnt = 60;
     int i = 0;
@@ -82,7 +81,8 @@ void test_arinc_main()
             if (arinc_read(&arx, pData))
             {
                 ++received;
-                debug_printf("received = %08x = %x %x %x %x, status1 = %x, status2 = %x\n", data, pData->ssm, pData->data, pData->sdi, pData->label, ARM_ARINC429R->STATUS1, ARM_ARINC429R->STATUS2);
+                debug_printf("received=%08x (ssm=%x data=%x sdi=%x label=%x), status1 = %x, status2 = %x\n",
+                		data, pData->ssm, pData->data, pData->sdi, pData->label, ARM_ARINC429R->STATUS1, ARM_ARINC429R->STATUS2);
 
                 // debug
                 if (timer_passed(&timer, time0, 1000))
@@ -121,10 +121,9 @@ timer_t timer;
 void uos_init (void)
 {
     arinc_init(&atx, MY_OUT_CHANNEL, 0, 0, ARINC_FLAG_PAR_EN | ARINC_FLAG_PAR_ODD);
+    arinc_init_pins(&atx);
 
     arinc_init(&arx, MY_IN_CHANNEL, 0, 0, ARINC_FLAG_PAR_EN | ARINC_FLAG_PAR_ODD | ARINC_FLAG_RX);
-        
-    arinc_init_pins(&atx);
     arinc_init_pins(&arx);
 
     timer_init(&timer, KHZ, MSEC_PER_TICK);

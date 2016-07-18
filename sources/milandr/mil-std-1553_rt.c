@@ -1,22 +1,63 @@
-#ifdef ARM_1986BE1
-
+// ID: SPO-UOS-milandr-mil-std-1553_rt.c VER: 1.0.0
+//
+// История изменений:
+//
+// 1.0.0	Начальная версия
+//
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 #include <milandr/mil-std-1553_setup.h>
 #include <milandr/mil-std-1553_rt.h>
-#include <milandr/mil-std-1553_bc.h>
 
-#define RT_DEBUG 0
-
-static bool_t mil_std_1553_rt_handler(void *arg)
+#if 0
+static void copy_to_rt_rxq(milandr_mil1553_t *mil, uint8_t subaddr, uint8_t wordscount)
 {
-    mil_std_rt_t *rt = (mil_std_rt_t *)arg;
-    int locIrqNum = rt->port == 1 ? MIL_STD_1553B2_IRQn : MIL_STD_1553B1_IRQn;
+    if (mem_queue_is_full(&mil->rt_rxq)) {
+        mil->nb_lost++;
+    } else {
+        uint16_t *que_elem = mem_alloc_dirty(mil->pool, 2*wordscount + 4);
+        if (!que_elem) {
+            mil->nb_lost++;
+            return;
+        }
+        mem_queue_put(&mil->rt_rxq, que_elem);
+        *que_elem = wordscount;
+        *(que_elem + 1) = subaddr;
+        // Копируем данные слота
+        arm_reg_t *preg = &mil->reg->DATA[subaddr * MIL_SUBADDR_WORDS_COUNT];
+        que_elem += 2;  // Область данных
 
-    const unsigned short status = rt->reg->STATUS;
-    const unsigned short comWrd1 = rt->reg->CommandWord1;
-    const unsigned short msg = rt->reg->MSG;
+#if RT_DEBUG
+        uint16_t *que_elem_debug = que_elem;
+        int wrc = wordscount;
+        debug_printf("wc=%d\n", wordscount);
+#endif
+
+        while (wordscount) {
+            *que_elem++ = *preg++;
+            wordscount--;
+        }
+
+#if RT_DEBUG
+        int i;
+        debug_printf("\n");
+        for (i=0;i<wrc;i++) {
+        	debug_printf("%04x\n", *que_elem_debug++);
+        }
+        debug_printf("\n");
+#endif
+    }
+}
+#endif
+// Хендлер не вызывается
+#if 0
+void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
+{
+    if (status & MIL_STD_STATUS_ERR) {
+        mil->nb_errors++;
+        return;
+    }
 
     // Подадрес из командного слова 1
     const unsigned char subaddr = (comWrd1 & MIL_STD_COMWORD_SUBADDR_MODE_MASK) >> MIL_STD_COMWORD_SUBADDR_MODE_SHIFT;
@@ -25,17 +66,12 @@ static bool_t mil_std_1553_rt_handler(void *arg)
     const unsigned int cmdCode = (comWrd1 & MIL_STD_COMWORD_WORDSCNT_CODE_MASK) >> MIL_STD_COMWORD_WORDSCNT_CODE_SHIFT;
 
     // Количество слов данных в сообщении
-    const unsigned char wordsCount = cmdCode == 0 ? 32 : cmdCode;
+    const unsigned char wordsCount = (cmdCode == 0 ? 32 : cmdCode);
 
-#if RT_DEBUG
-    debug_printf("\nMSG=%x, ComWrd1=%x, subaddr=%x, wc=%x\n",
-                 msg,
-                 comWrd1,
-                 subaddr,
-                 wordsCount);
-#endif
+    unsigned short answerWord = MIL_STD_STATUS_ADDR_OU(mil->addr_self);
 
-    unsigned short answerWord = MIL_STD_STATUS_ADDR_OU(rt->addr_self);
+    mil1553_lock(&mil->milif);
+
     switch (msg)
     {
     // приём данных от КШ (КШ-ОУ), формат сообщения 7
@@ -44,45 +80,25 @@ static bool_t mil_std_1553_rt_handler(void *arg)
     // приём данных от КШ (КШ-ОУ), формат сообщения 1
     case MSG_DATARECV__BC_RT__SINGLE:
         // Получено достоверное слово из канала
-        if ((status & MIL_STD_STATUS_RFLAGN) != 0)
-        {
+        if ((status & MIL_STD_STATUS_RFLAGN) != 0) {
             // Установить ответное слово
-            rt->reg->StatusWord1 = answerWord;
+            mil->reg->StatusWord1 = answerWord;
+        }
+        if ((status & MIL_STD_STATUS_VALMESS) != 0) {
+            mil->nb_words += wordsCount;
+            //copy_to_rt_rxq(mil, subaddr, wordsCount);
+        }
 
+#if RT_DEBUG
+        if ((status & MIL_STD_STATUS_RFLAGN) != 0) {
             int i;
             const int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-
-#if RT_DEBUG
-            debug_printf("STATUS1(F1,7)=%x, dataReceived =", status);
-#endif
-
-            if (rt->dma_chan >= 0) {
-                ARM_DMA->CHNL_ENABLE_CLR = ARM_DMA_SELECT(rt->dma_chan);
-                rt->dma_prim->SOURCE_END_POINTER = (unsigned)&rt->reg->DATA[index + wordsCount - 1];
-                rt->dma_prim->DEST_END_POINTER = (unsigned)&rt->rx_buf[index + wordsCount - 1];
-                rt->dma_prim->CONTROL = ARM_DMA_DST_INC(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_DST_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_SRC_INC(ARM_DMA_WORD) |
-                                   ARM_DMA_SRC_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_RPOWER(1) |
-                                   ARM_DMA_TRANSFERS(wordsCount) |
-                                   ARM_DMA_AUTOREQ;
-                ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(rt->dma_chan);
-                ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(rt->dma_chan);
-                
-                while ((rt->dma_prim->CONTROL &
-                        (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
-            } else {
-                for (i=0; i<wordsCount; ++i)
-                    rt->rx_buf[index + i] = rt->reg->DATA[index + i];
-            }
-
-#if RT_DEBUG
-            for (i=0; i<wordsCount; ++i)
-                debug_printf(" %x", rt->rx_buf[index + i]);
-            debug_printf("\n");
-#endif
+            debug_printf("MSG_DATARECV__BC_RT__SINGLE n=%u\n", wordsCount);
+//            for (i=0; i<wordsCount; ++i)
+//                debug_printf(" %x", mil->rx_buf[index + i]);
+//            debug_printf("\n");
         }
+#endif
         break;
     // приём данных от ОУ (ОУ-ОУ), формат сообщения 8
     case MSG_DATARECV__RT_RT__GROUP:
@@ -93,41 +109,21 @@ static bool_t mil_std_1553_rt_handler(void *arg)
         if ((status & MIL_STD_STATUS_RFLAGN) != 0)
         {
             // Установить ответное слово
-            rt->reg->StatusWord1 = answerWord;
-
+            mil->reg->StatusWord1 = answerWord;
+#if RT_DEBUG
             int i;
             int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
+            debug_printf("STATUS(F3,8 in)=%x", status);
+            //            for (i=0; i<wordsCount; ++i)
+            //                debug_printf(" %x", mil->rx_buf[index + i]);
+            //            debug_printf("\n");
 
-#if RT_DEBUG
-            debug_printf("STATUS(F3,8 in)=%x, dataReceived =", status);
 #endif
 
-            if (rt->dma_chan >= 0) {
-                ARM_DMA->CHNL_ENABLE_CLR = ARM_DMA_SELECT(rt->dma_chan);
-                rt->dma_prim->SOURCE_END_POINTER = (unsigned)&rt->reg->DATA[index + wordsCount - 1];
-                rt->dma_prim->DEST_END_POINTER = (unsigned)&rt->rx_buf[index + wordsCount - 1];
-                rt->dma_prim->CONTROL = ARM_DMA_DST_INC(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_DST_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_SRC_INC(ARM_DMA_WORD) |
-                                   ARM_DMA_SRC_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_RPOWER(1) |
-                                   ARM_DMA_TRANSFERS(wordsCount) |
-                                   ARM_DMA_AUTOREQ;
-                ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(rt->dma_chan);
-                ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(rt->dma_chan);
-                
-                while ((rt->dma_prim->CONTROL &
-                        (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
-            } else {
-                for (i=0; i<wordsCount; ++i)
-                    rt->rx_buf[index + i] = rt->reg->DATA[index + i];
-            }
-
-#if RT_DEBUG
-            for (i=0; i<wordsCount; ++i)
-                debug_printf(" %x", rt->rx_buf[index + i]);
-            debug_printf("\n");
-#endif
+        }
+        if ((status & MIL_STD_STATUS_VALMESS) != 0) {
+            mil->nb_words += wordsCount;
+            //copy_to_rt_rxq(mil, subaddr, wordsCount);
         }
         break;
     // передача данных в КШ (ОУ-КШ), формат сообщения 2
@@ -136,38 +132,21 @@ static bool_t mil_std_1553_rt_handler(void *arg)
         if ((status & MIL_STD_STATUS_RFLAGN) != 0)
         {
             // Установить ответное слово
-            rt->reg->StatusWord1 = answerWord;
+            mil->reg->StatusWord1 = answerWord;
 
-            int i;
-            int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
+//            int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
 
 #if RT_DEBUG
+            int i;
             debug_printf("STATUS(F2)=%x, dataToSend =", status);
             for (i=0; i<wordsCount; ++i)
-                debug_printf(" %x", rt->tx_buf[index + i]);
+                debug_printf(" %x", mil->tx_buf[index + i]);
             debug_printf("\n");
 #endif
 
-            if (rt->dma_chan >= 0) {
-                ARM_DMA->CHNL_ENABLE_CLR = ARM_DMA_SELECT(rt->dma_chan);
-                rt->dma_prim->SOURCE_END_POINTER = (unsigned)&rt->tx_buf[index + wordsCount - 1];
-                rt->dma_prim->DEST_END_POINTER = (unsigned)&rt->reg->DATA[index + wordsCount - 1];
-                rt->dma_prim->CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) |
-                                   ARM_DMA_DST_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_SRC_INC(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_SRC_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_RPOWER(1) |
-                                   ARM_DMA_TRANSFERS(wordsCount) |
-                                   ARM_DMA_AUTOREQ;
-                ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(rt->dma_chan);
-                ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(rt->dma_chan);
-                
-                while ((rt->dma_prim->CONTROL &
-                        (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
-            } else {
-                for (i=0; i<wordsCount; ++i)
-                    rt->reg->DATA[index + i] = rt->tx_buf[index + i];
-            }
+//			for (i=0; i<wordsCount; ++i)
+//				mil->reg->DATA[index + i] = mil->tx_buf[index + i];
+
         }
         break;
     // передача данных в ОУ (ОУ-ОУ), формат сообщения 8
@@ -179,42 +158,24 @@ static bool_t mil_std_1553_rt_handler(void *arg)
         if ((status & MIL_STD_STATUS_RFLAGN) != 0)
         {
             // Установить ответное слово
-            rt->reg->StatusWord1 = answerWord;
+            mil->reg->StatusWord1 = answerWord;
 
 #if RT_DEBUG
             debug_printf("STATUS(F3,8 out)=%x\n", status);
 #endif
 
             // Подадрес из командного слова 2
-            const unsigned char subaddr2 = (rt->reg->CommandWord2 & MIL_STD_COMWORD_SUBADDR_MODE_MASK) >> MIL_STD_COMWORD_SUBADDR_MODE_SHIFT;
+ //           const unsigned char subaddr2 = (mil->reg->CommandWord2 & MIL_STD_COMWORD_SUBADDR_MODE_MASK) >> MIL_STD_COMWORD_SUBADDR_MODE_SHIFT;
 
             // Количество слов данных в сообщении
-            int wcField2 = (rt->reg->CommandWord2 & MIL_STD_COMWORD_WORDSCNT_CODE_MASK) >> MIL_STD_COMWORD_WORDSCNT_CODE_SHIFT;
-            const unsigned char wordsCount2 = wcField2 == 0 ? 32 : wcField2;
+//            int wcField2 = (mil->reg->CommandWord2 & MIL_STD_COMWORD_WORDSCNT_CODE_MASK) >> MIL_STD_COMWORD_WORDSCNT_CODE_SHIFT;
+//            const unsigned char wordsCount2 = wcField2 == 0 ? 32 : wcField2;
 
-            int i;
-            int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr2);
-            
-            if (rt->dma_chan >= 0) {
-                ARM_DMA->CHNL_ENABLE_CLR = ARM_DMA_SELECT(rt->dma_chan);
-                rt->dma_prim->SOURCE_END_POINTER = (unsigned)&rt->tx_buf[index + wordsCount2 - 1];
-                rt->dma_prim->DEST_END_POINTER = (unsigned)&rt->reg->DATA[index + wordsCount2 - 1];
-                rt->dma_prim->CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) |
-                                   ARM_DMA_DST_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_SRC_INC(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_SRC_SIZE(ARM_DMA_HALFWORD) |
-                                   ARM_DMA_RPOWER(1) |
-                                   ARM_DMA_TRANSFERS(wordsCount2) |
-                                   ARM_DMA_AUTOREQ;
-                ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(rt->dma_chan);
-                ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(rt->dma_chan);
-                
-                while ((rt->dma_prim->CONTROL &
-                        (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
-            } else {
-                for (i=0; i<wordsCount2; ++i)
-                    rt->reg->DATA[index + i] = rt->tx_buf[index + i];
-            }
+//            int i;
+//            int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr2);
+
+//            for (i=0; i<wordsCount2; ++i)
+//            	mil->reg->DATA[index + i] = mil->tx_buf[index + i];
         }
         break;
     // команда управления 0-15 от КШ без слов данных, формат сообщения 9
@@ -231,12 +192,12 @@ static bool_t mil_std_1553_rt_handler(void *arg)
                 answerWord |= MIL_STD_STATUS_MSG_ERR;
 
                 // Установить ответное слово
-                rt->reg->StatusWord1 = answerWord;
+                mil->reg->StatusWord1 = answerWord;
             }
             else
             {
                 // Установить ответное слово
-                rt->reg->StatusWord1 = answerWord;
+                mil->reg->StatusWord1 = answerWord;
 
 #if RT_DEBUG
                 debug_printf("STATUS(F4,9)=%x, com=%x\n", status, cmdCode);
@@ -247,20 +208,20 @@ static bool_t mil_std_1553_rt_handler(void *arg)
                 {
                     if ((status & MIL_STD_STATUS_RCVA) != 0)
                     {
-                        rt->reg->CONTROL &= ~MIL_STD_CONTROL_TRA;
+                        mil->reg->CONTROL &= ~MIL_STD_CONTROL_TRA;
                     }
                     else if ((status & MIL_STD_STATUS_RCVB) != 0)
-                        rt->reg->CONTROL &= ~MIL_STD_CONTROL_TRB;
+                        mil->reg->CONTROL &= ~MIL_STD_CONTROL_TRB;
                 }
                 // Команда "разблокировать передатчик"
                 else if (cmdCode == CMD_UnlockSender)
                 {
                     if ((status & MIL_STD_STATUS_RCVA) != 0)
                     {
-                        rt->reg->CONTROL |= MIL_STD_CONTROL_TRA;
+                        mil->reg->CONTROL |= MIL_STD_CONTROL_TRA;
                     }
                     else if ((status & MIL_STD_STATUS_RCVB) != 0)
-                        rt->reg->CONTROL |= MIL_STD_CONTROL_TRB;
+                        mil->reg->CONTROL |= MIL_STD_CONTROL_TRB;
                 }
                 // Команда "установить ОУ в исходное состояние"
                 else if (cmdCode == CMD_SetRtInitialState)
@@ -281,12 +242,12 @@ static bool_t mil_std_1553_rt_handler(void *arg)
                 answerWord |= MIL_STD_STATUS_MSG_ERR;
 
                 // Установить ответное слово
-                rt->reg->StatusWord1 = answerWord;
+                mil->reg->StatusWord1 = answerWord;
             }
             else
             {
                 // Установить ответное слово
-                rt->reg->StatusWord1 = answerWord;
+                mil->reg->StatusWord1 = answerWord;
 
 #if RT_DEBUG
                 debug_printf("STATUS(F5)=%x\n", status);
@@ -310,12 +271,12 @@ static bool_t mil_std_1553_rt_handler(void *arg)
                 answerWord |= MIL_STD_STATUS_MSG_ERR;
 
                 // Установить ответное слово
-                rt->reg->StatusWord1 = answerWord;
+                mil->reg->StatusWord1 = answerWord;
             }
             else
             {
                 // Установить ответное слово
-                rt->reg->StatusWord1 = answerWord;
+                mil->reg->StatusWord1 = answerWord;
 
 #if RT_DEBUG
                 debug_printf("STATUS(F6,10)=%x\n", status);
@@ -325,58 +286,14 @@ static bool_t mil_std_1553_rt_handler(void *arg)
                 if (cmdCode == CMD_SynchronizeWithDataWord)
                 {
                     // Заменить собственный адрес ОУ значением, которое получено в команде от КШ.
-                    const unsigned short newCtrl = (rt->reg->CONTROL & ~MIL_STD_CONTROL_ADDR_MASK) | ((rt->reg->ModeData & 0x1F)<<MIL_STD_CONTROL_ADDR_SHIFT);
-                    rt->reg->CONTROL = newCtrl;
+                    const unsigned short newCtrl = (mil->reg->CONTROL & ~MIL_STD_CONTROL_ADDR_MASK) | ((mil->reg->ModeData & 0x1F)<<MIL_STD_CONTROL_ADDR_SHIFT);
+                    mil->reg->CONTROL = newCtrl;
                 }
             }
         }
         break;
-    }
-
-    arch_intr_allow(locIrqNum);
-
-    return 0;
-}
-
-void mil_std_1553_rt_init(mil_std_rt_t *rt, int port, int addr_self, void *rx_buf, void *tx_buf,
-                          int dma_channel, DMA_Data_t *dma_struct)
-{
-    MIL_STD_1553B_t *const mil_std_channel = mil_std_1553_port_setup(port);
-
-    unsigned int locControl = 0;
-    locControl |= MIL_STD_CONTROL_DIV(KHZ/1000);
-    locControl |= MIL_STD_CONTROL_MODE(MIL_STD_MODE_RT);
-    locControl |= MIL_STD_CONTROL_ADDR(addr_self) | MIL_STD_CONTROL_TRA | MIL_STD_CONTROL_TRB;
-    mil_std_channel->StatusWord1 = MIL_STD_STATUS_ADDR_OU(addr_self);
-
-    mil_std_channel->CONTROL = MIL_STD_CONTROL_MR;
-    mil_std_channel->CONTROL = locControl;
-
-    rt->addr_self = addr_self;
-    rt->port = port;
-    rt->reg = mil_std_channel;
-    rt->rx_buf = (unsigned short *)rx_buf;
-    rt->tx_buf = (unsigned short *)tx_buf;
-    rt->dma_chan = dma_channel;
-	rt->dma_prim = dma_struct;
-
-    int locIrqNum = port == 1 ? MIL_STD_1553B2_IRQn : MIL_STD_1553B1_IRQn;
-
-    // Настроить работу MIL-STD по прерыванию, указать функцию обработчик прерывания.
-    mutex_attach_irq(&rt->lock,
-                     locIrqNum,
-                     mil_std_1553_rt_handler,
-                     rt);
-
-    // Разрешить прерывания:
-    // при приёме достоверного слова,
-    // при успешном завершении транзакции в канале,
-    // при возникновении ошибки в сообщении.
-    rt->reg->INTEN =
-            MIL_STD_INTEN_RFLAGNIE |
-            MIL_STD_INTEN_VALMESSIE |
-            MIL_STD_INTEN_ERRIE;
-}
+    } // switch (msg)
+    mil1553_unlock(&mil->milif);
+} // static void mil_std_1553_rt_handler(milandr_mil1553_t *mil, const unsigned short status, const unsigned short comWrd1, const unsigned short msg)
 
 #endif
-

@@ -4,7 +4,7 @@ include target.cfg
 
 PROG		= uuloader
 
-TEST		= test-tcp
+TEST		= test-arinc
 TESTS		= test-tcp.bin
 TESTS       += test-eth.bin test-timer-lcd.bin test-task-lcd.bin
 TESTS		+= test-task.bin test-timer.bin test-dma.bin test-irq.bin

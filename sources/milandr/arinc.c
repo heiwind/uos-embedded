@@ -3,7 +3,6 @@
 #include <runtime/lib.h>
 #include "arinc.h"
 
-
 void arinc_init_pins(arinc_t *u)
 {
 	if (u->flags & ARINC_FLAG_RX) {
