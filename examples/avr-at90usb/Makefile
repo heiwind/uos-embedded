@@ -2,8 +2,8 @@ TARGET		= $(CURDIR)
 OS		= $(shell cd ../..; pwd)
 include target.cfg
 
-TEST		= test_debug
-TESTS		= test_debug.bin
+TEST		= test_task
+TESTS		= test_debug.bin test_task.bin
 OUTS		= $(TESTS:%.bin=%.elf)
 
 # Using avrdude programmer with STK200 LPT adapter.
