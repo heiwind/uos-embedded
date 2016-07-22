@@ -75,19 +75,21 @@ static inline int socketpair (int d, int type, int protocol, int sv[2])
 }
 
 #if UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_DELAY
+
+#   ifdef POSIX_timer
+
 INLINE void usleep (unsigned long usec)
 {
-	extern timer_t *uos_timer;
-
-	timer_delay (uos_timer, usec / 1000);
+    timer_delay (&POSIX_timer, usec / 1000);
 }
 
 INLINE void sleep (unsigned long sec)
 {
-    extern timer_t *uos_timer;
     while (sec > 0)
-        timer_delay (uos_timer, 1000);
+        timer_delay (&POSIX_timer, 1000);
 }
+
+#   endif//POSIX_timer
 
 #elif UOS_USLEEP_STYLE == UOS_USLEEP_STYLE_ETIMER_SLEEP
 #define usleep(usec) etimer_usleep(usec)
