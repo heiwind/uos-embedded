@@ -37,6 +37,9 @@ extern volatile uint32_t __timer_ticks_uos;
 #   ifdef __AVR_ATmega168__
 #      define TIMER_IRQ     10
 #   endif
+#   ifdef __AVR_AT90USB647__
+#      define TIMER_IRQ     16
+#   endif
 #endif  /*__AVR__*/
 
 #if ARM_S3C4530
