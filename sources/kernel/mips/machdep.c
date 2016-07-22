@@ -481,7 +481,14 @@ _arch_interrupt_ (void)
             status &= ~ST_IM_SW1;
             mips_write_c0_register (C0_STATUS, status);
 		} else
-			break;
+#ifdef ST_IM_DSP
+        if (pending & ST_IM_DSP) {
+            irq = 27;
+            status &= ~ST_IM_DSP;
+            mips_write_c0_register (C0_STATUS, status);
+        } else
+#endif
+            break;
 #endif
 #ifdef ELVEES_NVCOM02
 		/* TODO */
@@ -771,14 +778,20 @@ arch_intr_allow (int irq)
 		unsigned status = mips_read_c0_register (C0_STATUS);
 		status |= ST_IM_COMPARE;
 		mips_write_c0_register (C0_STATUS, status);
-	} else if (irq == 28) {
+	} else if (irq == MC_IRQ_EVT_SW0) {
 		unsigned status = mips_read_c0_register (C0_STATUS);
 		status |= ST_IM_SW0;
 		mips_write_c0_register (C0_STATUS, status);
-	} else if (irq == 29) {
+	} else if (irq == MC_IRQ_EVT_SW1) {
 		unsigned status = mips_read_c0_register (C0_STATUS);
 		status |= ST_IM_SW1;
-		mips_write_c0_register (C0_STATUS, status);	    
+		mips_write_c0_register (C0_STATUS, status);
+#ifdef ST_IM_DSP
+    } else if (irq == MC_IRQ_EVT_DSP) {
+        unsigned status = mips_read_c0_register (C0_STATUS);
+        status |= ST_IM_DSP;
+        mips_write_c0_register (C0_STATUS, status);
+#endif
 	} else if (irq < 32) {
 		/* QSTR0 interrupt: 0..31. */
 		MC_MASKR0 |= 1 << irq;

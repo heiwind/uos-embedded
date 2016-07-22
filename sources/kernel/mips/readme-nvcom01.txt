@@ -27,9 +27,9 @@ IRQ numbers for Elvees NVCom-01 microcontroller:
    24 - Unused
    25 - Unused
    26 - Unused
-   27 - Unused
-   28 - Софтверное SW0
-   29 - Софтверное SW1
+   27 - Прерывание от DSP	(see io-elvees.h:MC_IRQ_EVT_DSP)
+   28 - Софтверное SW0		(see io-elvees.h:MC_IRQ_EVT_SW0)
+   29 - Софтверное SW1		(see io-elvees.h:MC_IRQ_EVT_SW1)
    30 - Прерывание COMPARE
    31 - Прерывание от МСС
    32 - От канала DMA MEM_CH0
