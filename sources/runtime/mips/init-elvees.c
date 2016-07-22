@@ -267,24 +267,17 @@ _init_ (void)
 #if defined (ENABLE_ICACHE) || defined (ENABLE_DCACHE)
 	/* Enable cache for kseg0 segment. */
 	mips_write_c0_register (C0_CONFIG, 3);
-#   if defined (ENABLE_ICACHE)
-	csr |= MC_CSR_FLUSH_I;
-#   endif
-#   if defined (ENABLE_DCACHE)
-	csr |= MC_CSR_FLUSH_D;
-#   endif
 #else
 	/* Disable cache for kseg0 segment. */
 	mips_write_c0_register (C0_CONFIG, 2);
-#   ifndef EXTERNAL_SETUP
-#       ifndef ENABLE_ICACHE
-	    csr &= ~MC_CSR_FLUSH_I;
-#       endif
-#       ifndef ENABLE_DCACHE
-	    csr &= ~MC_CSR_FLUSH_D;
-#       endif
-#   endif
 #endif
+
+#   if defined (ENABLE_ICACHE)
+    csr |= MC_CSR_FLUSH_I;
+#   endif
+#   if defined (ENABLE_DCACHE)
+    csr |= MC_CSR_FLUSH_D;
+#   endif
 	MC_CSR = csr;
 	}
 
