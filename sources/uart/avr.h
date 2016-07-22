@@ -81,7 +81,7 @@
 #ifdef UBRR1
 #define setup_baud_rate(port, khz, baud) \
 	if (port) UBRR1 = ((int) (khz*1000L / baud) + 8) / 16 - 1; \
-	else	  UBRR0 = ((int) (khz*1000L / baud) + 8) / 16 - 1
+	else	  UBRR = ((int) (khz*1000L / baud) + 8) / 16 - 1 /* UBRR0 в AT90USB647 нет */
 #else
 #define setup_baud_rate(port, khz, baud) \
 	if (port) UBRR1L = ((int) (khz*1000L / baud) + 8) / 16 - 1; \
