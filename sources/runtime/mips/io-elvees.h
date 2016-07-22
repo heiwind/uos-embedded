@@ -416,6 +416,44 @@
 #define MC_MASKR1_DMAMEM_CH1	(1 << 1)	/* от канала DMA MEM_CH1 */
 #define MC_MASKR1_DMAMEM_CH0	(1 << 0)	/* от канала DMA MEM_CH0 */
 
+#ifdef ELVEES_NVCOM02T
+
+#define MC_MASKR0_IRT0      (1 << 22)   /* от таймера IT0 */
+#define MC_MASKR0_IRT1      (1 << 21)   /* от таймера IT1 */
+
+#define MC_MASKR2_MFBSPn(flag, n) (flag << (n*8))
+#ifdef __STDC_VERSION__
+enum _MC_IRQ_MFBSP_Flag {
+      MC_MASKR2_SRQx          = (1 << 0)    //* Запрос обслуживания от порта MFBSPx
+    , MC_MASKR2_MFBSP_TXBUFx  = (1 << 1)  // Формируется, если порт включен на передачу данных
+    , MC_MASKR2_MFBSP_RXBUFx  = (1 << 2)  // Формируется, если порт включен на прием данных
+    , MC_MASKR2_DMA_MFBSP_TXx = (1 << 4)  // Прерывание от канала DMA порта MFBSPx при передаче данных
+    , MC_MASKR2_DMA_MFBSP_RXx = (1 << 5)  // Прерывание от канала DMA порта MFBSPx при приеме данных
+
+    , MC_MASKR2_DMA_MFBSP_RX3 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 3)
+    , MC_MASKR2_DMA_MFBSP_TX3 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 3)
+    , MC_MASKR2_MFBSP_RXBUF3  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 3)
+    , MC_MASKR2_MFBSP_TXBUF3  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 3)
+    , MC_MASKR2_SRQ3          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 3)
+    , MC_MASKR2_DMA_MFBSP_RX2 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 2)
+    , MC_MASKR2_DMA_MFBSP_TX2 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 2)
+    , MC_MASKR2_MFBSP_RXBUF2  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 2)
+    , MC_MASKR2_MFBSP_TXBUF2  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 2)
+    , MC_MASKR2_SRQ2          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 2)
+    , MC_MASKR2_DMA_MFBSP_RX1 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 1)
+    , MC_MASKR2_DMA_MFBSP_TX1 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 1)
+    , MC_MASKR2_MFBSP_RXBUF1  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 1)
+    , MC_MASKR2_MFBSP_TXBUF1  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 1)
+    , MC_MASKR2_SRQ1          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 1)
+    , MC_MASKR2_DMA_MFBSP_RX0 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 0)
+    , MC_MASKR2_DMA_MFBSP_TX0 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 0)
+    , MC_MASKR2_MFBSP_RXBUF0  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 0)
+    , MC_MASKR2_MFBSP_TXBUF0  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 0)
+    , MC_MASKR2_SRQ0          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 0)
+};
+#endif
+
+#else
 #define MC_MASKR2_DMA_MFBSP3	(1 << 15)	/* от канала DMA порта MFBSP3 */
 #define MC_MASKR2_MFBSP_TX3	(1 << 14)	/* готовность MFBSP3 к приёму по DMA */
 #define MC_MASKR2_MFBSP_RX3	(1 << 13)	/* готовность MFBSP3 к выдаче по DMA */
@@ -432,7 +470,8 @@
 #define MC_MASKR2_MFBSP_TX0	(1 << 2)	/* готовность MFBSP0 к приёму по DMA */
 #define MC_MASKR2_MFBSP_RX0	(1 << 1)	/* готовность MFBSP0 к выдаче по DMA */
 #define MC_MASKR2_SRQ0		(1 << 0)	/* Запрос обслуживания от порта MFBSP0 */
-#endif
+#endif //ELVEES_NVCOM02T
+#endif //ELVEES_NVCOM01
 
 #ifdef ELVEES_NVCOM02
 /* TODO */
