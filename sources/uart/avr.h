@@ -22,6 +22,11 @@
 #   define TRANSMIT_IRQ(p)	18		/* UART transmit empty */
 #endif
 
+#ifdef __AVR_AT90USB647__
+#   define RECEIVE_IRQ(p)	25	    /* USART1 Rx Complete */
+#   define TRANSMIT_IRQ(p)	27	    /* UART transmit empty */
+#endif
+
 #ifdef UCSR1B
 /*
  * Using UART 0 and UART 1.
@@ -76,7 +81,7 @@
 #ifdef UBRR1
 #define setup_baud_rate(port, khz, baud) \
 	if (port) UBRR1 = ((int) (khz*1000L / baud) + 8) / 16 - 1; \
-	else	  UBRR0 = ((int) (khz*1000L / baud) + 8) / 16 - 1
+	else	  UBRR = ((int) (khz*1000L / baud) + 8) / 16 - 1 /* UBRR0 в AT90USB647 нет */
 #else
 #define setup_baud_rate(port, khz, baud) \
 	if (port) UBRR1L = ((int) (khz*1000L / baud) + 8) / 16 - 1; \

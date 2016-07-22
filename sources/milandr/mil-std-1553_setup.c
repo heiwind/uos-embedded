@@ -258,14 +258,22 @@ static bool_t status_handler(void *arg)
             mil->nb_errors++;
         } else {
             const unsigned short comWrd1 = reg->CommandWord1;
+            const unsigned short comWrd2 = reg->CommandWord2;
             const unsigned int msg = reg->MSG;
             // Подадрес из командного слова 1
             const unsigned char subaddr = (comWrd1 & MIL_STD_COMWORD_SUBADDR_MODE_MASK) >> MIL_STD_COMWORD_SUBADDR_MODE_SHIFT;
             // Код команды
             const unsigned int cmdCode = (comWrd1 & MIL_STD_COMWORD_WORDSCNT_CODE_MASK) >> MIL_STD_COMWORD_WORDSCNT_CODE_SHIFT;
 
+            // Подадрес из командного слова 2
+            const unsigned char subaddr2 = (comWrd2 & MIL_STD_COMWORD_SUBADDR_MODE_MASK) >> MIL_STD_COMWORD_SUBADDR_MODE_SHIFT;
+            // Код команды
+            const unsigned int cmdCode2 = (comWrd2 & MIL_STD_COMWORD_WORDSCNT_CODE_MASK) >> MIL_STD_COMWORD_WORDSCNT_CODE_SHIFT;
+
+
             // Количество слов данных в сообщении
             const unsigned char wordsCount = (cmdCode == 0 ? 32 : cmdCode);
+            const unsigned char wordsCount2 = (cmdCode2 == 0 ? 32 : cmdCode2);
 
             switch (msg)
             {
@@ -301,15 +309,17 @@ static bool_t status_handler(void *arg)
                 {
                     // Установить ответное слово
                     mil->reg->StatusWord1 = answerWord;
-                    // Прием от оконечного устройства
-                    if (!mil->txbuf[subaddr].busy) {
-                        int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-                        for (word = 0; word < wordsCount; ++word)
-                            mil->reg->DATA[index + word] = mil->txbuf[subaddr].data[word] & 0xFFFF;
-                    }
                 }
                 if ((flag & MIL_STD_STATUS_VALMESS) != 0) {
                     mil->nb_words += wordsCount;
+                    // Прием от оконечного устройства
+                    if (!mil->rxbuf[subaddr].busy) {
+                        int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
+                        for (word = 0; word < wordsCount; ++word) {
+                        	mil->rxbuf[subaddr].data[word] = mil->reg->DATA[index + word] & 0xFFFF;
+                        }
+                        mil->rxbuf[subaddr].nb_words = wordsCount;
+                    }
                 }
                 break;
             // передача данных в КШ (ОУ-КШ), формат сообщения 2
@@ -341,16 +351,14 @@ static bool_t status_handler(void *arg)
                 {
                     // Установить ответное слово
                     mil->reg->StatusWord1 = answerWord;
-
+                    if (!mil->txbuf[subaddr2].busy) {
+                        int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr2);
+                        for (word = 0; word < wordsCount2; ++word) {
+                        	mil->reg->DATA[index + word] = mil->txbuf[subaddr2].data[word] & 0xFFFF;
+                        }
+                    }
                 }
                 if ((flag & MIL_STD_STATUS_VALMESS) != 0) {
-                    int index = MIL_STD_SUBADDR_WORD_INDEX(subaddr);
-                    if (!mil->rxbuf[subaddr].busy) {
-                        for (word = 0; word < wordsCount; ++word) {
-                            mil->rxbuf[subaddr].data[word] = mil->reg->DATA[index + word] & 0xFFFF;
-                        }
-                        mil->rxbuf[subaddr].nb_words = wordsCount;
-                    }
                     mil->nb_words += wordsCount;
                 }
                 break;
@@ -428,6 +436,7 @@ static bool_t status_handler(void *arg)
                         if (cmdCode == CMD_SendLastCommand)
                         {
                             mil->reg->ModeData = commandWordPreveous;
+                            answerWord = answerWordPreveous;
                         }
                         // Установить ответное слово
                         mil->reg->StatusWord1 = answerWord;
@@ -547,7 +556,13 @@ void mil_rt_send(mil1553if_t *_mil, int subaddr, void *data, int nb_words)
     mil->txbuf[subaddr].busy = 1;
     // nb_words умножаем на 2 для получения реального размера в байтах
     // результат умножаем на 2 из за прореживания данных в памяти процессора
-    memcpy(mil->txbuf[subaddr].data, data, nb_words * 4);
+    // memcpy(mil->txbuf[subaddr].data, data, nb_words * 4);
+    uint32_t *src = data;
+    uint32_t *dst = mil->txbuf[subaddr].data;
+    int i;
+    for(i=0;i<nb_words;i++) {
+        *dst++ = *src++;
+    }
     mil->txbuf[subaddr].nb_words = nb_words;
     mil->txbuf[subaddr].busy = 0;
 }
@@ -559,7 +574,13 @@ void mil_rt_receive(mil1553if_t *_mil, int subaddr, void *data, int *nb_words)
     *nb_words = mil->rxbuf[subaddr].nb_words;
     // nb_words умножаем на 2 для получения реального размера в байтах
     // результат умножаем на 2 из за прореживания данных в памяти процессора
-    memcpy(data, mil->rxbuf[subaddr].data, *nb_words * 4);
+    // memcpy(data, mil->rxbuf[subaddr].data, *nb_words * 4);
+    uint32_t *src = mil->rxbuf[subaddr].data;
+    uint32_t *dst = data;
+    int i;
+    for(i=0;i<*nb_words;i++) {
+        *dst++ = *src++;
+    }
     mil->rxbuf[subaddr].busy = 0;
 }
 
@@ -583,16 +604,8 @@ void mil_rt_receive_16(mil1553if_t *_mil, int subaddr, void *data, int *nb_words
     mil->rxbuf[subaddr].busy = 1;
     *nb_words = mil->rxbuf[subaddr].nb_words;
     int i;
-
-    //debug_printf("nb_words = %d", mil->rxbuf[subaddr].nb_words);
-    //
-    //for (i=0;i<mil->rxbuf[subaddr].nb_words;i++) {
-    //  debug_printf(" %04x", mil->txbuf[subaddr].data[i] & 0xffff);
-    //}
-    //debug_printf("\n");
-
     uint16_t *dst = data;
-    uint32_t *src = mil->txbuf[subaddr].data;
+    uint32_t *src = mil->rxbuf[subaddr].data;
     for(i=0;i<*nb_words;i++) {
         *dst++ = (*src++) & 0xffff;
     }

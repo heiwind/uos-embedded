@@ -14,7 +14,7 @@
 
 bool_t debug_onlcr = 1;
 
-static int debug_char;
+static int debug_char = -1;
 
 /*
  * Send a byte to the UART transmitter, with interrupts disabled.
