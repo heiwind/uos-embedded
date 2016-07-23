@@ -268,7 +268,10 @@
 #endif
 
 /* EEPROM Control Register */
+#ifndef EERIE
 #define    EERIE        3
+#endif
+
 #define    EEMWE        2
 #define    EEWE         1
 #define    EERE         0

@@ -265,6 +265,9 @@ _intr##n (void) \
 #ifdef __AVR_ATmega128__
 #  include "ATmega128.c"
 #endif
+#ifdef __AVR_AT90USB647__
+#  include "AT90USB647.c"
+#endif
 #ifdef __AVR_ATmega161__
 #  include "ATmega161.c"
 #endif

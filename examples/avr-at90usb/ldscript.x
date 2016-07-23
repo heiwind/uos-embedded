@@ -69,7 +69,6 @@ SECTIONS
     *(.init)	/* Start here after reset.  */
     *(.trampolines*)
     *(.progmem*)
-    *(.rodata*)
     . = ALIGN(2);
     *(.init1*)
     *(.init2*)	/* Clear __zero_reg__, set up stack pointer.  */
@@ -91,6 +90,7 @@ SECTIONS
   {
      PROVIDE (__data_start = .) ;
     *(.data*)
+    *(.rodata*)    
     *(.gnu.linkonce.d*)
      _edata = . ;
     PROVIDE (__data_end = .) ;
