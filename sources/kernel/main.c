@@ -24,8 +24,7 @@ task_t *task_idle;			/* background system task */
 mutex_irq_t mutex_irq [ARCH_INTERRUPTS]; /* interrupt handlers */
 
 #ifndef IDLE_TASK_STACKSZ
-// Уменьшено с 256 до 240 так как на AVR происходил крах шедулера
-#define IDLE_TASK_STACKSZ   240
+#define IDLE_TASK_STACKSZ   256
 #endif
 
 #define ALIGNED_IDLE_TASK_STACKSZ ((IDLE_TASK_STACKSZ + sizeof(void *) - 1) & ~(sizeof(void *) - 1))

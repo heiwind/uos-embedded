@@ -29,7 +29,7 @@
 	HANDLE (26, clearb_r30 (TXCIE1, UCSR1B))
 	HANDLE (27, clearb_r30 (ACIE, ACSR))
 	HANDLE (28, clearb_r30 (ADIE, ADCSRA))
-	HANDLE (29, clearb_r30 (3, EECR))
+	HANDLE (29, clearb_r30 (EERIE, EECR))
 	HANDLE (30, clearb_r30 (ICIE3, TIMSK3))
 	HANDLE (31, clearb_r30 (OCIE3A, TIMSK3))
 	HANDLE (32, clearb_r30 (OCIE3B, TIMSK3))
@@ -68,7 +68,7 @@ void arch_intr_allow (int irq)
 	case 26: setb (TXCIE1, UCSR1B); break;
 	case 27: setb (ACIE, ACSR); break;
 	case 28: setb (ADIE, ADCSRA); break;
-	case 29: setb (3, EECR); break;
+	case 29: setb (EERIE, EECR); break;
 	case 30: setb (ICIE3, TIMSK3); break;
 	case 31: setb (OCIE3A, TIMSK3); break;
 	case 32: setb (OCIE3B, TIMSK3); break;
