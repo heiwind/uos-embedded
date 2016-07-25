@@ -4,31 +4,40 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 
-ARRAY (task, 400);
+mutex_t lock;
 
-void hello (void *arg)
+ARRAY (stack1, 512);
+ARRAY (stack2, 512);
+
+#if 1
+static void task1 (void *arg)
 {
 	for (;;) {
-		debug_printf ("aa");
-		//debug_getchar ();
+	    mutex_lock (&lock);
+    	debug_puts ("-");
+	    mutex_unlock (&lock);
 	}
 }
 
+static void task2 (void *arg)
+{
+	for (;;) {
+	    mutex_lock (&lock);
+    	debug_printf ("+");
+	    mutex_unlock (&lock);
+	}
+}
+#endif
+
 void uos_init (void)
 {
-    
 	/* Baud 9600. */
 	UBRR = ((int) (KHZ * 1000L / 9600) + 8) / 16 - 1;
 
-	// Запускаем прерывание системного таймера для работы планировщика
+	debug_dump ("Memory", (void*)0x0, 4096 + 0x100);
 
-    TCCR1A = 0;
-    TCCR1B = 0;
-    OCR1A = KHZ  * 10 / 8;
-    TCNT1 = 0;
-    TCCR1B = 0x0A;  /* clock source CK/8, clear on match A */
+	task_create (task1, "task1", "hello1", 10, stack1, sizeof (stack1));
+	task_create (task2, "task2", "hello2", 10, stack2, sizeof (stack2));
 
-	debug_puts ("\nTesting task.\n");
-	task_create (hello, "task", "hello", 1, task, sizeof (task));
 }
 

@@ -2,7 +2,7 @@ TARGET		= $(CURDIR)
 OS		= $(shell cd ../..; pwd)
 include target.cfg
 
-TEST  = test_timer.bin
+TEST  = test_task.bin
 
 TESTS = test_debug.bin test_task.bin test_timer.bin
 

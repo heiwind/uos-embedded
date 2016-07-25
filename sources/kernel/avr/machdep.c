@@ -199,11 +199,23 @@ void __attribute__ ((naked))
 handle_interrupt (void)
 {
 	register mutex_irq_t *h;
+	register char a;	
 
 	SAVE_REGS();
+	
+debug_puts ("<interrupt>\n");
 
 	/* Assign h = r30:r31. */
 	asm volatile ("" : "=z" (h));
+	
+	if (! h->lock) {
+		/* Cannot happen. Временно */
+debug_puts ("<unexpected interrupt>\n");
+    a = h - mutex_irq;
+    debug_putchar (0, a );
+    
+		asm volatile ("rjmp restore_and_ret");
+	}
 
 	if (h->handler) {
 		/* If the lock is free -- call fast handler. */
