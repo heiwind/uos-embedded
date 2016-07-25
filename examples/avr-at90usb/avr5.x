@@ -16,7 +16,7 @@ __USER_SIGNATURE_REGION_LENGTH__ = DEFINED(__USER_SIGNATURE_REGION_LENGTH__) ? _
 MEMORY
 {
   text   (rx)   : ORIGIN = 0, LENGTH = __TEXT_REGION_LENGTH__
-  data   (rw!x) : ORIGIN = 0x800060, LENGTH = __DATA_REGION_LENGTH__
+  data   (rw!x) : ORIGIN = 0x800100, LENGTH = __DATA_REGION_LENGTH__
   eeprom (rw!x) : ORIGIN = 0x810000, LENGTH = __EEPROM_REGION_LENGTH__
   fuse      (rw!x) : ORIGIN = 0x820000, LENGTH = __FUSE_REGION_LENGTH__
   lock      (rw!x) : ORIGIN = 0x830000, LENGTH = __LOCK_REGION_LENGTH__
@@ -85,8 +85,13 @@ SECTIONS
   /* Internal text space or external memory.  */
   .text   :
   {
-    *(.vectors)
-    KEEP(*(.vectors))
+  
+    /* we reaplce with  *(.init) */
+    /* *(.vectors) */ 
+    /* KEEP(*(.vectors)) */
+    *(.init)	/* Start here after reset.  */
+    KEEP(*(.init))
+        
     /* For data that needs to reside in the lower 64k of progmem.  */
      *(.progmem.gcc*)
     /* PR 13812: Placing the trampolines here gives a better chance
