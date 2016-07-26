@@ -13,6 +13,7 @@ MEMORY
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
+  .init          : { *(.init)		}
   .hash          : { *(.hash)		}
   .dynsym        : { *(.dynsym)		}
   .dynstr        : { *(.dynstr)		}

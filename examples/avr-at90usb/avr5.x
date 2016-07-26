@@ -26,6 +26,7 @@ MEMORY
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
+  .init          : { *(.init)		}  
   .hash          : { *(.hash)		}
   .dynsym        : { *(.dynsym)		}
   .dynstr        : { *(.dynstr)		}
@@ -258,5 +259,5 @@ SECTIONS
   .debug_ranges   0 : { *(.debug_ranges) }
   /* DWARF Extension.  */
   .debug_macro    0 : { *(.debug_macro) }
-  PROVIDE (__stack = 0xFFF) ;
+  PROVIDE (__stack = 0xFFF) ; /* push приведёт к записи ячейки памяти с этим адресом */
 }
