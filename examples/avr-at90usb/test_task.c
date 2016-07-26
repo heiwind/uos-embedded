@@ -4,42 +4,26 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 
-static mutex_t lock;
+ARRAY (task_space, 256);
 
-ARRAY (stack1, 512);
-ARRAY (stack2, 512);
-
-static void task1 (void *arg)
+static void task (void *arg)
 {
 	for (;;) {
-	    mutex_lock (&lock);
-    	debug_puts ("-");
-    	watchdog_alive();
-	    mutex_unlock (&lock);
+		debug_printf ("Hello from `%s'!\n", arg);
+		debug_printf ("Task space %d bytes, free %d bytes.\n",
+			sizeof (task_space), task_stack_avail ((task_t*) task_space));
+		debug_puts ("(Press Enter)\n");
+		debug_getchar ();
 	}
-}
 
-static void task2 (void *arg)
-{
-	for (;;) {
-	    mutex_lock (&lock);
-    	debug_puts ("-");
-    	watchdog_alive();
-	    mutex_unlock (&lock);
-	}
 }
 
 void uos_init (void)
 {
 	/* Baud 9600. */
 	UBRR = ((int) (KHZ * 1000L / 9600) + 8) / 16 - 1;
-	debug_puts ("Hello\n");
 
-	task_create (task1, "argument1", "hello1", 10, stack1, sizeof (stack1));
-	task_create (task2, "argument2", "hello2", 11, stack2, sizeof (stack2));
-
-	//debug_dump ("\nMutex", (void*)&lock, sizeof(lock));// tmp
-	//task_print (&debug, 0);
-	//task_print (&debug, t);
+    debug_printf ("\nTesting task on AVR\n");
+	task_create (task, "task", "task", 1, task_space, sizeof (task_space));
 }
 
