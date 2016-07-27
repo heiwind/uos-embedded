@@ -180,7 +180,7 @@ arch_task_switch (task_t *target)
 	"pop	r20\n	pop	r21\n	pop	r22\n	pop	r23\n"
 	"pop	r24\n	pop	r25\n	pop	r26\n	pop	r27\n"
 	"pop	r28\n	pop	r29\n	pop	r30\n	pop	r31\n"
-	"sbrc	r31, 7\n"		/* test I flag */
+	"sbrs	r31, 7\n"		/* test I flag == 1*/
 	"rjmp	enable_interrupts\n"
 	"out	__SREG__, r31\n"
 	"pop	r31\n"
@@ -201,23 +201,19 @@ void __attribute__ ((naked))
 handle_interrupt (void)
 {
 	register mutex_irq_t *h;
-	register char a;	
 
 	SAVE_REGS();
 	
-debug_puts ("<interrupt>\n");
-
 	/* Assign h = r30:r31. */
 	asm volatile ("" : "=z" (h));
 	
+#if 0
 	if (! h->lock) {
 		/* Cannot happen. Временно */
-debug_puts ("<unexpected interrupt>\n");
-    a = h - mutex_irq;
-    debug_putchar (0, a );
-    
+		debug_printf  ("<unexpected interrupt>\n");
 		asm volatile ("rjmp restore_and_ret");
 	}
+#endif
 
 	if (h->handler) {
 		/* If the lock is free -- call fast handler. */

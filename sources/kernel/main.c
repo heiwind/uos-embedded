@@ -55,6 +55,7 @@ mutex_activate (mutex_t *m, void *message)
 	task_t *t;
 	mutex_slot_t *s;
 
+
 	assert (m != 0);
 	if (! m->item.next)
 		mutex_init (m);

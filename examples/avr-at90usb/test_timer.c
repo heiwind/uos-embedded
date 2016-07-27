@@ -5,14 +5,13 @@
 #include <kernel/uos.h>
 #include <timer/timer.h>
 
-ARRAY (task, 200);
+ARRAY (task, 256);
 timer_t timer;
 
 void hello (void *arg)
 {
 	for (;;) {
-		debug_printf ("Hello from `%S'! msec = %d\n",
-			arg, timer_milliseconds (&timer));
+		debug_printf ("Hello from %s! msec = %lu\n", arg, timer_milliseconds (&timer));
 		mutex_wait (&timer.decisec);
 	}
 }

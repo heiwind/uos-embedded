@@ -213,19 +213,19 @@ void timer_update (timer_t *t)
         t->next_decisec -= TIMER_MSEC_PER_DAY;
     }
 
-    /* Send signal every 100 msec. */
+    /* Send signal every 100 msec. */ /* Потенциально не работает, если t->msec_per_tick > 100 */
 #ifdef USEC_TIMER
     if (t->usec_per_tick / 1000 <= 100 &&
 #else
     if (t->msec_per_tick <= 100 &&
 #endif
-        t->milliseconds >= t->next_decisec) {
+        t->milliseconds >= t->next_decisec)
+    {
         t->next_decisec += 100;
-/*debug_printf ("<ms=%lu,nxt=%lu> ", t->milliseconds, t->next_decisec);*/
-        if (! list_is_empty (&t->decisec.waiters) ||
-            ! list_is_empty (&t->decisec.groups)) {
-            mutex_activate (&t->decisec,
-                (void*) (size_t) t->milliseconds);
+/* debug_printf ("<ms=%lu,nxt=%lu> ", t->milliseconds, t->next_decisec); */
+        if (! list_is_empty (&t->decisec.waiters) || ! list_is_empty (&t->decisec.groups))
+        {
+            mutex_activate (&t->decisec, (void*) (size_t) t->milliseconds);
         }
     }
 
@@ -266,6 +266,7 @@ bool_t
 timer_handler (timer_t *t)
 {
 /*debug_printf ("<ms=%ld> ", t->milliseconds);*/
+
 #if defined (ELVEES)
     /* Clear interrupt. */
     MC_ITCSR &= ~MC_ITCSR_INT;
