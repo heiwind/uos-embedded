@@ -399,6 +399,9 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
 	chain the first buf on the queue together with that. */
 	if (useg != 0 && TCP_TCPLEN(useg) != 0
 	    && !((flags | s->flags) & TF_NOCORK)
+#ifdef UTCP_RAW
+	    && (queue->handle == 0)
+#endif
 	    && ! (useg->tcphdr->flags & (TCP_SYN | TCP_FIN)) &&
 	    ! (flags & (TCP_SYN | TCP_FIN)) &&
 	    useg->len + queue->len <= s->mss)
@@ -406,12 +409,15 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
 		/* Remove TCP header from first segment. */
 		buf_add_header (queue->p, -TCP_HLEN);
 		buf_chain (useg->p, queue->p);
+		queue->p = 0;
 
 		useg->len += queue->len;
 		useg->next = queue->next;
+		queue->next = 0;
+        tcp_segment_free(s, queue);
 
 		tcp_debug ("tcp_enqueue: chaining, new len %u\n", useg->len);
-		mem_free (queue);
+		--queuelen;
 	} else {
 		if (useg == 0) {
 			s->unsent = queue;
