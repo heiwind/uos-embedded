@@ -1211,6 +1211,7 @@
 #define ANALOG_COMP_vect		_VECTOR(28) /* Analog Comparator */
 #define ADC_vect			    _VECTOR(29) /* ADC Conversion Complete */
 #define EE_READY_vect			_VECTOR(30) /* EEPROM Ready */
+#define SIG_EEPROM_READY        _VECTOR(30) /* Keep for compatibility */
 #define TIMER3_CAPT_vect		_VECTOR(31) /* Timer/Counter3 Capture Event */
 #define TIMER3_COMPA_vect		_VECTOR(32) /* Timer/Counter3 Compare Match A */
 #define TIMER3_COMPB_vect		_VECTOR(33) /* Timer/Counter3 Compare Match B */

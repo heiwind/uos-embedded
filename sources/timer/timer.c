@@ -260,7 +260,7 @@ void timer_update (timer_t *t)
     t->milliseconds = msec;
 
 #ifndef TIMER_NO_DECISEC
-    /* Send signal every 100 msec. */
+    /* Send signal every 100 msec. */ /* Потенциально не работает, если t->msec_per_tick > 100 */
 #ifdef USEC_TIMER
     if ((interval >= (TIMER_DECISEC_MS*1000ul)) ||
 #else
@@ -269,7 +269,7 @@ void timer_update (timer_t *t)
         (msec >= nextdec)) 
     {
         nextdec += TIMER_DECISEC_MS;
-/*debug_printf ("<ms=%lu,nxt=%lu> ", t->milliseconds, t->next_decisec);*/
+/* debug_printf ("<ms=%lu,nxt=%lu> ", t->milliseconds, t->next_decisec); */
         timer_mutex_note(&t->decisec, msec);
     }
     t->next_decisec = nextdec;
@@ -329,6 +329,7 @@ CODE_TIMER
 bool_t 
 timer_handler (timer_t *t)
 {
+
 #if defined (ELVEES)
     /* Clear interrupt. */
     MC_ITCSR &= ~MC_ITCSR_INT;

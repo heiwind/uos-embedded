@@ -47,7 +47,6 @@ CODE_ISR
 void task_schedule ()
 {
 	task_t *new_task;
-
 	if (task_need_schedule != (unsigned)task_current){
 	    task_yelds          = 0;
 	}
@@ -106,6 +105,7 @@ mutex_activate (mutex_t *m, void *message)
 {
 	task_t *t;
 	mutex_slot_t *s;
+
 
 	assert (m != 0);
 	if (! m->item.next)
@@ -183,7 +183,7 @@ main (void)
 	assert_task_good_stack (task_idle);
 
 	/* Move stack pointer to task_idle stack area */
-    unsigned sp = (unsigned)(&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
+    unsigned sp = (unsigned)(&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ-1]);
     /* stack pointer should align to doubles */
     set_stack_pointer ((void *)( sp & ~(sizeof(double)-1) ));
 
