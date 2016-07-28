@@ -3,10 +3,15 @@
 #include <elvees/spi.h>
 #include <timer/timer.h>
 
+#ifdef TST4153
+#define M25PXX
+//#define S25FL
+#else
 //#define M25PXX
 //#define AT45DBXX
 //#define SDHC_SPI
 #define S25FL
+#endif
 
 #define SPI_NUM     0
 #define SPI_CS_NUM  0
@@ -14,27 +19,28 @@
 #if defined(M25PXX)
     #include <flash/m25pxx.h>
     const char *flash_name = "M25Pxx";
-    m25pxx_t flash;
+    typedef m25pxx_t flash_t;
 #elif defined(AT45DBXX)
     #include <flash/at45dbxx.h>
     const char *flash_name = "AT45DBxx";
-    at45dbxx_t flash;
+    typedef at45dbxx_t flash_t;
 #elif defined(SDHC_SPI)
     #include <flash/sdhc-spi.h>
     const char *flash_name = "SD over SPI";
-    sdhc_spi_t flash;
+    typedef sdhc_spi_t flash_t;
 #elif defined(S25FL)
     #include <flash/s25fl.h>
     const char *flash_name = "S25FL";
-    s25fl_t flash;
+    typedef s25fl_t flash_t;
 #endif
 
-#define SPI_FREQUENCY   40000000
+#define SPI_FREQUENCY   10000000ul
 
 #define ERASE_SECTOR    5
 
-ARRAY (task, 1000);
+ARRAY (task, 2000);
 elvees_spim_t spi;
+flash_t flash;
 timer_t timer;
 
 uint32_t buf[1024] __attribute__((aligned(8)));
@@ -48,16 +54,21 @@ void hello (void *arg)
     
     debug_printf("Checking SD\n");
 
-    if (flash_connect(f) == FLASH_ERR_OK)
-        debug_printf("Found %s, size: %u Kb, nb pages: %u, page size: %d b\n\
-            nb sectors: %u, sector size: %d b\n",
-            flash_name, (unsigned)(flash_size(f) >> 10),
-            flash_nb_pages(f), flash_page_size(f),
-            flash_nb_sectors(f), flash_sector_size(f));
-    else {
-        debug_printf("%s not found\n", flash_name);
-        for (;;);
+    while (flash_connect(f) != FLASH_ERR_OK){
+        debug_printf("%s not found, ack %*#D\n", flash_name
+                , sizeof(flash.databuf), flash.databuf
+                );
     }
+
+    debug_printf("Found %s, size: %u Kb, nb pages: %u, page size: %d b\n\
+        nb sectors: %u, sector size: %d b\n"
+            , flash_name
+            , (unsigned)(flash_size(f) >> 10)
+            , flash_nb_pages(f)
+            , flash_page_size(f)
+            , flash_nb_sectors(f)
+            , flash_sector_size(f)
+            );
     
     debug_printf("Erasing all... ");
     t0 = timer_milliseconds(&timer);
@@ -92,7 +103,8 @@ void hello (void *arg)
     debug_printf("\b\b\bOK! took %d ms, rate: %d bytes/sec\n", 
             t1 - t0, 1000 * (int)(flash_size(f) / (t1 - t0)));
             
-    debug_printf("Filling memory with counter... 00%%");
+    debug_printf("Filling memory(%dpages * %d) with counter... 00%%"
+                , flash_nb_pages(f), flash_page_size(f));
     t0 = timer_milliseconds(&timer);
     i = 0;
     for (i = 0; i < flash_nb_pages(f); ++i) {
@@ -121,8 +133,9 @@ void hello (void *arg)
         }
         for (j = 0; j < flash_page_size(f) / 4; ++j)
             if (buf[j] != cnt++) {
-                debug_printf("FAIL, page #%d, word#%d, data = %08X\n", 
+                debug_printf("FAIL, page #%x, word%d, data = %08X\n",
                     i, j, buf[j]);
+                debug_printf("dump:%256D\n", buf);
                 for (;;);
             }
         if (i % 1000 == 0)
@@ -151,21 +164,24 @@ void hello (void *arg)
             for (;;);
         }
         if (i >= ERASE_SECTOR * flash_nb_pages_in_sector(f) &&
-            i < (ERASE_SECTOR + 1) * flash_nb_pages_in_sector(f)) {
+            i < (ERASE_SECTOR + 1) * flash_nb_pages_in_sector(f))
+        {
             for (j = 0; j < flash_page_size(f) / 4; ++j) {
                 if (buf[j] != 0xFFFFFFFF && buf[j] != 0x00000000) {
-                    debug_printf("FAIL, page #%d, word#%d, data = %08X\n",
+                    debug_printf("FAIL, page #%x, word%d, data = %08X\n",
                         i, j, buf[j]);
-                    for (;;);
+                    //for (;;);
+                    break;
                 }
-                cnt++;
             }
         } else {
-            for (j = 0; j < flash_page_size(f) / 4; ++j)
-                if (buf[j] != cnt++) {
-                    debug_printf("FAIL, page #%d, word#%d, data = %08X\n",
-                        i, j, buf[j]);
-                    for (;;);
+            cnt = (flash_page_size(f)/4)*i;
+            for (j = 0; j < flash_page_size(f) / 4; ++j, ++cnt)
+                if (buf[j] != cnt) {
+                    debug_printf("FAIL, page #%x, word%d, data = %08X, expect %08X\n",
+                        i, j, buf[j], cnt);
+                    //for (;;);
+                    break;
                 }
         }
         if (i % 1000 == 0)
@@ -188,15 +204,15 @@ void uos_init (void)
     
     timer_init(&timer, KHZ, 1);
 
-    spim_init(&spi, SPI_NUM, SPI_MOSI_OUT | SPI_SS0_OUT | SPI_SS1_OUT | SPI_SS0_OUT | SPI_TSCK_OUT);
+    spim_init(&spi, SPI_NUM, SPI_MOSI_OUT | SPI_SS0_OUT | SPI_TSCK_OUT); // | SPI_SS1_OUT
 #if defined(M25PXX)
-    m25pxx_init(&flash, (spimif_t *)&spi, SPI_FREQUENCY, SPI_MODE_CS_NUM(1));
+    m25pxx_init(&flash, (spimif_t *)&spi, SPI_FREQUENCY, SPI_MODE_CS_NUM(SPI_CS_NUM));
 #elif defined(AT45DBXX)
-    at45dbxx_init(&flash, (spimif_t *)&spi, SPI_FREQUENCY, SPI_MODE_CS_NUM(1));
+    at45dbxx_init(&flash, (spimif_t *)&spi, SPI_FREQUENCY, SPI_MODE_CS_NUM(SPI_CS_NUM));
 #elif defined(SDHC_SPI)
     sd_spi_init(&flash, (spimif_t *)&spi, SPI_MODE_CS_NUM(SPI_CS_NUM));
 #elif defined(S25FL)
-    s25fl_init(&flash, (spimif_t *)&spi, SPI_FREQUENCY, SPI_MODE_CS_NUM(0));
+    s25fl_init(&flash, (spimif_t *)&spi, SPI_FREQUENCY, SPI_MODE_CS_NUM(SPI_CS_NUM));
 #endif
 	
 	task_create (hello, &flash, "hello", 1, task, sizeof (task));
