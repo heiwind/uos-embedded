@@ -72,9 +72,13 @@ uart_transmit_start (uart_t *u)
 static void
 uart_fflush (uart_t *u)
 {
-	mutex_lock (&u->transmitter);
+    if (u->out_first == u->out_last)
+        return;
+
+    mutex_lock (&u->transmitter);
 
 	/* Check that transmitter is enabled. */
+	if (u->out_first != u->out_last)
 	if (test_transmitter_enabled (u->port))
 		while (u->out_first != u->out_last)
 			mutex_wait (&u->transmitter);
