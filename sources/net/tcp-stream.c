@@ -17,6 +17,7 @@ stream_flush (tcp_stream_t *u)
 	while (u->outptr != u->outdata){
 	    int len = u->outptr - u->outdata;
 	    int sent = tcp_enqueue (u->socket, (void*) u->outdata, len, 0);
+	    tcp_debug("tcp-stream: sent %d bytes\n", sent);
 	    u->outptr   += sent;
 	    if (sent != len) {
 #         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
@@ -218,6 +219,14 @@ tcp_stream_receiver (tcp_stream_t *u)
 	return &u->socket->lock;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] =
+#define item(i) .i =
+#endif
+
 static stream_interface_t tcp_interface = {
 	.putc = (void (*) (stream_t*, short))	tcp_stream_putchar,
 	.getc = (unsigned short (*) (stream_t*))tcp_stream_getchar,
@@ -226,6 +235,11 @@ static stream_interface_t tcp_interface = {
 	.eof = (bool_t (*) (stream_t*))		tcp_stream_eof,
 	.close = (void (*) (stream_t*))		tcp_stream_close,
 	.receiver = (mutex_t *(*) (stream_t*))	tcp_stream_receiver,
+#if STREAM_HAVE_ACCEESS > 0
+    //* позволяют потребовать монопольного захвата потока
+    item(access_rx)                             0
+    , item(access_tx)                           0
+#endif
 };
 
 /*

@@ -270,6 +270,14 @@ telnet_receiver (telnet_t *u)
 	return freceiver (&u->ts.stream);
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] =
+#define item(i) .i =
+#endif
+
 static stream_interface_t telnet_interface = {
 	.putc = (void (*) (stream_t*, short))	telnet_putchar,
 	.getc = (unsigned short (*) (stream_t*))telnet_getchar,
@@ -278,6 +286,11 @@ static stream_interface_t telnet_interface = {
 	.eof = (bool_t (*) (stream_t*))		telnet_eof,
 	.close = (void (*) (stream_t*))		telnet_close,
 	.receiver = (mutex_t *(*) (stream_t*))	telnet_receiver,
+#if STREAM_HAVE_ACCEESS > 0
+    //* позволяют потребовать монопольного захвата потока
+    item(access_rx)                             0
+    , item(access_tx)                           0
+#endif
 };
 
 /*

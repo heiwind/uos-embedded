@@ -265,6 +265,11 @@ static stream_interface_t uart_interface = {
 	item(eof)   (bool_t (*) (stream_t*))        0,
 	item(close) (void (*) (stream_t*))          0,
 	item(receiver) (mutex_t *(*) (stream_t*))		uart_receive_lock,
+#if STREAM_HAVE_ACCEESS > 0
+    //* позволяют потребовать монопольного захвата потока
+    item(access_rx)                             0
+    , item(access_tx)                           0
+#endif
 };
 
 void
