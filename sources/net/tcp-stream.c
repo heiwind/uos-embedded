@@ -14,11 +14,12 @@ stream_flush (tcp_stream_t *u)
 {
 /*debug_printf ("tstream output"); buf_print_data (u->outdata, len);*/
     tcp_socket_t*  s = u->socket;
-	while (u->outptr != u->outdata){
-	    int len = u->outptr - u->outdata;
+    unsigned char* src = u->outdata;
+	while (u->outptr != src){
+	    int len = u->outptr - src;
 	    int sent = tcp_enqueue (u->socket, (void*) u->outdata, len, 0);
 	    tcp_debug("tcp-stream: sent %d bytes\n", sent);
-	    u->outptr   += sent;
+	    src   += sent;
 	    if (sent != len) {
 #         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
 	        mutex_unlock (&s->lock);
@@ -30,6 +31,7 @@ stream_flush (tcp_stream_t *u)
 	        mutex_wait (&s->lock);
 	    }
 	}
+	u->outptr = u->outdata;
 }
 
 static void
