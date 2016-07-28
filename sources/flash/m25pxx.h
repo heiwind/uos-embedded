@@ -10,6 +10,11 @@ extern "C" {
 #endif
 
 
+#ifndef FLASH_M25_VALIDATE
+// this is turn on flash jedec manufacter id validation on connect
+// TODO valid jedec codes hardcoded with m25_connect code!
+#define FLASH_M25_VALIDATE 0
+#endif
 
 struct _m25pxx_t
 {
