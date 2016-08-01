@@ -1049,6 +1049,20 @@ enum _MC_IRQ_MFBSP_Flag {
 /*--------------------------------------
  * UART.
  */
+
+#define MC_UART_BASE        MC_RBR
+//declares register MC_XXX of MC_UARTn base
+//* example: MC_UART_REG(MC_UART1, MC_LCR)
+#define MC_UART_REG(ubase, ureg) (*( &(ubase) + (&(ureg)-&(MC_UART_BASE)) ))
+
+#define MC_UART_DIV_CALC(UART_BAUD_RATE,F_OSC) \
+    ( ( F_OSC + UART_BAUD_RATE*8UL ) / ( ( UART_BAUD_RATE ) * 16UL ) )
+
+#define MC_UART_BAUD_CALC(UART_BAUD_DIV, F_OSC) \
+    ( ( F_OSC ) / ( ( UART_BAUD_DIV ) * 16UL ) )
+
+//#define MC_RBR
+
 /*
  * Line control register
  */

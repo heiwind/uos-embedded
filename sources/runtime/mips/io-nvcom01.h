@@ -126,6 +126,9 @@
 #define MC_DLM1		MC_R (0x3804)	/* Регистр делителя старший */
 #define MC_SCLR1	MC_R (0x3814)	/* Регистр предделителя (scaler) */
 
+#define MC_UART0    MC_R (0x3000)
+#define MC_UART1    MC_R (0x3800)
+
 /*
  * Регистры интервального таймера IT0, IT1
  */
