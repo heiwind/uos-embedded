@@ -21,6 +21,9 @@
 #define __MACHINE_TYPES_H_ 1
 
 #include <stdint.h>
+//! TODO have to deside use standart GCC headers or not? should we allow use local std-types?
+//#include <stddef.h>
+
 
 #define INT_SIZE 4
 

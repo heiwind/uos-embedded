@@ -29,6 +29,9 @@ extern void longjmp (jmp_buf, int);
  * Debugging console interface.
  */
 extern struct _stream_t debug;
+// !!! thi is control EOL behaviour.
+//\value = 0 - no \n transforms
+//\value != 0 - generates \r after \n
 extern bool_t debug_onlcr;
 unsigned short debug_getchar (void) __cpp_decls;
 int debug_peekchar (void) __cpp_decls;
