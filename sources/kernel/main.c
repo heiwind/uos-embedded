@@ -205,7 +205,7 @@ main (void)
 	uos_init ();
 
     __uos_init_array();
-    uos_call_global_initializers();
+    //uos_call_global_initializers();
 
 	/* Additional machine-dependent initialization */
 	uos_post_init ();
