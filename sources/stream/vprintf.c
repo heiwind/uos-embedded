@@ -577,6 +577,7 @@ number:		if (sign && ((long) ul != 0L)) {
             }
             else
                 PUTC(dump_pad);
+            neg = 0;
             goto doswitch;
 
 #ifdef ARCH_HAVE_FPU
