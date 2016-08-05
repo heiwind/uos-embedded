@@ -59,7 +59,8 @@
 #define SIZEOF_ALIGN    SIZEOF_POINTER
 #endif
 
-#define MEM_ALIGN(x)		(((x) + SIZEOF_ALIGN-1) & -SIZEOF_ALIGN)
+#define MASK_ALIGN      (SIZEOF_ALIGN-1)
+#define MEM_ALIGN(x)		(((x) + MASK_ALIGN) & ~MASK_ALIGN)
 
 /*
  * Every memory block has a header.
@@ -72,6 +73,7 @@ typedef struct {
 #define MEMORY_HOLE_MAGIC	0x4d48	/* Free memory block (hole) */
 #define MEMORY_BLOCK_MAGIC	0x4d42	/* Memory block in use */
 #endif
+	//mheader_t* next ;     //use macro NEXT instead!!! used by holes only
 } mheader_t;
 
 /*
@@ -79,6 +81,7 @@ typedef struct {
  * is used as a pointer to the next hole (linked free list).
  */
 #define NEXT(h)			(*(mheader_t**) ((h) + 1))
+#define MEM_HSIZE       MEM_ALIGN( sizeof(mheader_t) )
 
 /**
  * Allocate a block of memory.
@@ -109,7 +112,7 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
          * hole). */
 	if (required < SIZEOF_POINTER)
 		required = SIZEOF_POINTER;
-	required = MEM_ALIGN (required + sizeof(mheader_t));
+	required = MEM_ALIGN (required + MEM_HSIZE);
 
 	mutex_lock (&m->lock);
 
@@ -166,7 +169,7 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
 	m->free_size -= h->size;
 	mutex_unlock (&m->lock);
 	/*debug_printf ("mem %d bytes returned 0x%x\n", h->size, h+1);*/
-	return h+1;
+	return (void*)((size_t)h+MEM_HSIZE);
 }
 
 /*
@@ -414,6 +417,7 @@ void mem_print_free_list (mem_pool_t *m)
  */
 void mem_init (mem_pool_t *m, size_t start, size_t stop)
 {
+    start = MEM_ALIGN(start);
 	mheader_t *h = (mheader_t*) start;
 
 /*debug_printf ("mem_init start=0x%x, size %d bytes\n", start, size);*/
