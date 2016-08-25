@@ -73,6 +73,7 @@ int etimer_wait(etimer *t, bool_t sanity){
     do {
     /* Suspend the task. */
     list_unlink (&task_current->item);
+    task_need_schedule = 1;
     task_schedule ();
     ok = etimer_not_active(t);
     if (ok)
