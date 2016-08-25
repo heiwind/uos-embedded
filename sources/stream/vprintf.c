@@ -53,7 +53,7 @@
  *
  *  extended dump %@Dxxx introduced:
  *      precision denotes size of groups delimited by space
- *      sharp flag - assign group delimiter \n
+ *      sharp flag - assign group delimiter \n when groupwidth >0, else delimiter sets ':' (base old behaviour)
  *      xxx - is format specifier of dumped items. supports all simple numeric formats
  *          it recognise size of items at provided dump pointer
  *              by default - 1 byte
@@ -218,7 +218,7 @@ doswitch:
             dump_prec = dwidth;
             dump_pad = padding;
             if (sharpflag)
-                dump_pad = '\n';
+                dump_pad = (dwidth > 0)?'\n' : ':';
             padding = ' ';
             dump_pos = 0;
             dwidth = -1;
@@ -299,9 +299,12 @@ doswitch:
             dump_prec = dwidth-1;
             dump_pad = padding;
             if (sharpflag)
-                dump_pad = ':';
+                if (dump_prec >= 0)
+                    dump_pad = '\n';
+                else
+                    padding = ':';
 			{
-			    int prec = dump_prec-1;
+			    int prec = dump_prec;
 			while (width--) {
 				c = *dump_s++;
 				PUTC (mkhex (c >> 4));
@@ -309,14 +312,14 @@ doswitch:
 				if (prec != 0) {
 				    //precision denotes size of groups delimited by space
 	                if (width)
-	                    PUTC (dump_pad);
+	                    PUTC (padding);
 				}
 				else {
-                    PUTC (' ');
+                    PUTC (dump_pad);
 				}
 				prec--;
 				if (prec < 0)
-				    prec = dump_prec-1;
+				    prec = dump_prec;
 			}//while (width--)
 			}
 			break;
