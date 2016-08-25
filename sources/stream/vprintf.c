@@ -556,11 +556,11 @@ number:		if (sign && ((long) ul != 0L)) {
 				} while (--width > 0);
 
 			for (; *s; --s) {
-				if (uppercase && *s>='a' && *s<='z') {
-					PUTC (*s + 'A' - 'a');
-				} else {
-					PUTC (*s);
-				}
+			    char tmpc = *s;
+                if (uppercase && tmpc>='a' && tmpc<='z') {
+                    tmpc += ('A' - 'a');
+                }
+                PUTC (tmpc);
 			}
 
 			if (ladjust && width && (width -= size) > 0)
