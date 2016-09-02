@@ -143,7 +143,7 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 #ifndef NDEBUG
     if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
         debug_puts("printf asserted stack task ");
-        debug_puts(task_current->name);
+        debug_puts(task_name(task_current));
         debug_putchar(0, '\n');
         return 0;//task_exit(0);
     }
@@ -298,11 +298,12 @@ doswitch:
                 dump_width = 16;
             dump_prec = dwidth-1;
             dump_pad = padding;
-            if (sharpflag)
+            if (sharpflag){
                 if (dump_prec >= 0)
                     dump_pad = '\n';
                 else
                     padding = ':';
+            }
 			{
 			    int prec = dump_prec;
 			while (width--) {
@@ -693,10 +694,9 @@ ksprintn (unsigned char *nbuf, unsigned long ul, unsigned char base, int width,
 
 	p = nbuf;
 	*p = 0;
-	if (base > 16)
-	    return p;
+	if (base <= 16)
 	for (;;) {
-		unsigned long rest = mkhex (ul % base);
+		unsigned rest = mkhex (ul % base);
 		ul /= base;
 		*++p = rest;
 		if (--width > 0)
