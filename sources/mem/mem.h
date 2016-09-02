@@ -14,6 +14,10 @@ struct _mem_pool_t {
 
 	void *free_list;	/* Linked list of memory holes,
 				 * ordered lowest-addressed block first. */
+#if MEM_DEBUG
+	void*   store;
+    size_t  size;
+#endif
 };
 
 /**
@@ -38,6 +42,13 @@ size_t mem_size (void *block) __cpp_decls;
 mem_pool_t *mem_pool (void *block) __cpp_decls;
 unsigned char *mem_strdup (mem_pool_t *region, const unsigned char *s) __cpp_decls;
 unsigned char *mem_strndup (mem_pool_t *region, const unsigned char *s, size_t n) __cpp_decls;
+
+
+
+#if MEM_DEBUG
+void mem_print_free_list (mem_pool_t *m);
+void mem_dump(mem_pool_t *m);
+#endif
 
 #ifdef __cplusplus
 }

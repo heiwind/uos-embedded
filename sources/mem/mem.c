@@ -80,8 +80,32 @@ typedef struct {
  * In memory holes (free blocks), the space just after the header
  * is used as a pointer to the next hole (linked free list).
  */
+/*
+static inline
+mheader_t& NEXT(mheader_t* h){
+    return (*(mheader_t**) ((h) + 1));
+}
+*/
 #define NEXT(h)			(*(mheader_t**) ((h) + 1))
+
+static inline
+mheader_t* SUCC(mheader_t* h){
+    return ( (mheader_t*)((size_t)h + h->size) );
+}
+//#define SUCC(h)         ( (mheader_t*)((size_t)h + h->size) )
+
 #define MEM_HSIZE       MEM_ALIGN( sizeof(mheader_t) )
+static inline
+void* BLOCK_OF(mheader_t* h){
+    return ((void*)((size_t)h + MEM_HSIZE));
+}
+
+static inline
+mheader_t* H_OF(void* block){
+    return ((mheader_t*)((size_t)block - MEM_HSIZE));
+}
+//#define H_OF(block) ((mheader_t*)((size_t)block - MEM_HSIZE))
+
 
 /**
  * Allocate a block of memory.
@@ -156,20 +180,20 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
 		newh->size = h->size - required;
 		h->size = required;
 		NEXT(newh) = NEXT(h);
-		*hprev = newh;
 #if MEM_DEBUG
 		newh->magic = MEMORY_HOLE_MAGIC;
 #endif
 	} else {
-		*hprev = NEXT(h);
+	    newh = NEXT(h);
 	}
+    *hprev = newh;
 #if MEM_DEBUG
 	h->magic = MEMORY_BLOCK_MAGIC;
 #endif
 	m->free_size -= h->size;
 	mutex_unlock (&m->lock);
 	/*debug_printf ("mem %d bytes returned 0x%x\n", h->size, h+1);*/
-	return (void*)((size_t)h+MEM_HSIZE);
+	return BLOCK_OF(h);
 }
 
 /*
@@ -248,10 +272,12 @@ void mem_free (void *block)
 	block = (void*) ARM_CACHED (block);
 #endif
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF(block);
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
-		debug_printf ("free: bad block magic\n");
+		debug_printf ("free[$%x]: bad block[$%x*$%x pool $%x] magic $%2s=$%hx \n"
+		        , block, h, h->size, h->pool
+		        , &h->magic, h->magic);
 		uos_halt(1);
         }
 #endif
@@ -269,7 +295,7 @@ void *mem_realloc (void *old_block, size_t bytes)
 		return 0;
 
 	/* Make the header pointer. */
-	h = (mheader_t*) old_block - 1;
+	h = H_OF(old_block);
 #ifdef ARM_CACHED
 	/* Clear the non-cached bit. */
 	h = (mheader_t*) ARM_CACHED (h);
@@ -316,7 +342,7 @@ void mem_truncate (void *block, size_t required)
 	required = MEM_ALIGN (required + sizeof(mheader_t));
 
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF( block );
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
 		debug_printf ("truncate: bad block magic\n");
@@ -361,7 +387,7 @@ size_t mem_size (void *block)
 		return 0;
 
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF(block);
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
 		debug_printf ("size: bad block magic\n");
@@ -382,7 +408,7 @@ mem_pool_t *mem_pool (void *block)
 		return 0;
 
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF( block );
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
 		debug_printf ("pool: bad block magic\n");
@@ -397,14 +423,41 @@ void mem_print_free_list (mem_pool_t *m)
 {
 	mheader_t *h;
 
-	debug_printf ("free list:");
+	debug_puts ("free list:");
 	mutex_lock (&m->lock);
-	for (h=m->free_list; h; h=NEXT(h)) {
+	for (h=(mheader_t*)m->free_list; h; h=NEXT(h)) {
 		debug_printf (" %p-%p", h, (char*)h + h->size - 1);
         }
 	mutex_unlock (&m->lock);
-	debug_printf ("\n");
+	debug_puts ("\n");
 }
+
+void mem_dump(mem_pool_t *m){
+    mheader_t *h;
+
+    //mutex_lock (&m->lock);
+    debug_printf ("\npool $%x:", m);
+    mheader_t* limit = (mheader_t*)((size_t)m->store+m->size);
+    for (h=(mheader_t*)m->store; h<limit; h=SUCC(h)) {
+        if (h->pool != m){
+            debug_printf ("bad block $%x[$%x]:$%hx on pool[$%x]\n"
+                    , h, h->size
+                    , h->magic, h->pool);
+            break;
+        }
+
+        if (h->magic == MEMORY_BLOCK_MAGIC)
+            debug_printf ("$%x[$%x] ", h, h->size);
+        else if (h->magic == MEMORY_HOLE_MAGIC)
+            debug_printf ("$%x[$%x]:->$%x\n", h, h->size, NEXT(h));
+        else {
+            debug_printf ("$%x[$%x]:bad magic %2s=$%hx\n", h, h->size, &h->magic, (int)(h->magic));
+            break;
+        }
+    }
+    //mutex_unlock (&m->lock);
+}
+
 #endif
 
 /**
@@ -426,6 +479,8 @@ void mem_init (mem_pool_t *m, size_t start, size_t stop)
 	h->pool = m;
 #if MEM_DEBUG
 	h->magic = MEMORY_HOLE_MAGIC;
+	m->store = h;
+    m->size  = h->size;
 #endif
 	mutex_lock (&m->lock);
 	NEXT(h) = (mheader_t *)(m->free_list);
