@@ -40,7 +40,7 @@
  *  этим занимается mt_stream_t
  * */
 #define STREAM_HAVE_ACCEESS 1
-//*****************************  ELVEES  ***************************************
+//*****************************  MIPS  ***************************************
 //*  MIPS_NOBEV  -  декларирует что код работает не во флеши а в РАМ
 //#undef MIPS_NOBEV
 
@@ -233,6 +233,16 @@
 //#define CODE_ISR  __attribute__((section(".text.isr_used")))
 //#define USED_ISR  __attribute__((section(".text.isr_used")))
 
+
+
+//************************   MIPS    *****************************************
+/* * MIPS have user exception handling of style
+ *      bool uos_on_exception(unsigned context[])
+ *      \return - 0 caused default general halt generation
+ *      \return - 1 cause normal interupt return? with task switch 
+    */
+//#define UOS_ON_EXCEPTION(context)  uos_on_exception(context)
+//#define UOS_ON_SEGFAULT(context)   uos_on_segfault(context)
 
 
  /**************************************************************************

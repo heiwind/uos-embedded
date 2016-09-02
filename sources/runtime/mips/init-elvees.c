@@ -608,12 +608,26 @@ static void dump_of_death (unsigned int context[])
     while(1);
 }
 
-DEBUG_NORETURN
+#ifdef UOS_ON_EXCEPTION
+__WEAK __NOINLINE 
+bool_t uos_on_exception(unsigned context[]) {return 0;}
+#else
+#define UOS_ON_EXCEPTION(context) 0
+#endif
+
+DEBUG_NORETURN __WEAK
 void _exception_handler_ (unsigned int context[])
 {
 	unsigned int cause, badvaddr, config;
 	unsigned int errEPC;
 	const char *code = 0;
+
+	if (UOS_ON_EXCEPTION(context)){
+	    /* Restore registers. */
+	    asm volatile (".globl _restore_regs_");
+	    asm volatile ("j _restore_regs_");
+	    return;
+	}
 
 	badvaddr = mips_read_c0_register (C0_BADVADDR);
     config = mips_read_c0_register (C0_CONFIG);
@@ -649,10 +663,25 @@ void _exception_handler_ (unsigned int context[])
 	dump_of_death (context);
 }
 
-DEBUG_NORETURN
+
+#ifdef UOS_ON_SEGFAULT
+__WEAK __NOINLINE 
+bool_t uos_on_segfault(unsigned context[]) {return 0;}
+#else
+#define UOS_ON_SEGFAULT(context) 0
+#endif
+
+DEBUG_NORETURN __WEAK
 void _pagefault_handler_ (unsigned int context[])
 {
-	unsigned int cause, badvaddr, config;
+    if (UOS_ON_SEGFAULT(context)){
+        /* Restore registers. */
+        asm volatile (".globl _restore_regs_");
+        asm volatile ("j _restore_regs_");
+        return;
+    }
+
+    unsigned int cause, badvaddr, config;
 
 	debug_printf ("\n\n*** 0x%08x: page fault\n", context [CONTEXT_PC]);
 
