@@ -32,6 +32,14 @@ void uos_on_task_switch(task_t *t)
 {}
 #endif
 
+#ifndef UOS_ON_IRQ
+#define UOS_ON_IRQ(nirq)
+#else
+__attribute__((weak, noinline))
+void uos_on_irq(int nirq)
+{}
+#endif
+
 
 #ifdef ELVEES_SAFE_LW_MXC0
 //suspects that commands lw, sw, mtc0, mfc0 are completed after next tackt, 
@@ -669,6 +677,7 @@ _arch_interrupt_ (void)
 		if (irq >= ARCH_INTERRUPTS)
 			break;
 
+		UOS_ON_IRQ(irq);
 		h = &mutex_irq [irq];
 		if (! h->lock)
 			continue;
@@ -694,6 +703,7 @@ _arch_interrupt_ (void)
 		/* Signal the interrupt handler, if any. */
 		mutex_activate (h->lock, h->arg);
 	}
+    UOS_ON_IRQ(-1);
 
 	/* LY: copy a few lines of code from task_schedule() here. */
 	if (task_need_schedule)	{

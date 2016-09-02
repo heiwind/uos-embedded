@@ -244,6 +244,12 @@
 //#define UOS_ON_EXCEPTION(context)  uos_on_exception(context)
 //#define UOS_ON_SEGFAULT(context)   uos_on_segfault(context)
 
+/* * MIPS have user IRQ hook:
+ *  void uos_on_irq(int nirq)
+ * before ISR call it pass IRQno and after ISRservice it finishes call with -1
+ */
+//#define UOS_ON_IRQ(nirq)        uos_on_irq(nirq)
+
 
  /**************************************************************************
  *                  global static initializer support
