@@ -265,7 +265,7 @@ void uos_call_global_initializers (void)
     for (func = __CTOR_END__-1; func > __CTOR_LIST__; --func)
         (*func) ();
     //this prevents secondary initialisation
-    __CTOR_END__[0] = (funcptr_t)(~0);
+    //__CTOR_END__[0] = (funcptr_t)(~0);
 }
 
 /*
@@ -284,7 +284,7 @@ void uos_call_global_destructors (void)
     for (func = __DTOR_LIST__+1; func < __DTOR_END__; ++func)
         (*func) ();
     //this prevents secondary finalisation
-    __DTOR_END__[0] = (funcptr_t)(~0);
+    //__DTOR_END__[0] = (funcptr_t)(~0);
 }
 
 #else
