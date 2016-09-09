@@ -10,6 +10,12 @@
 #include <milandr/mil-std-1553_setup.h>
 #include <milandr/mil-std-1553_bc.h>
 
+//! Режимы передачи командных данных между узлами MIL-STD 1553.
+typedef enum {
+    MIL_REQUEST_WRITE,           //!< Передача данных КШ->ОУ
+    MIL_REQUEST_READ             //!< Передача данных ОУ->КШ
+} mil_request_mode_t;
+
 static void copy_to_cyclogram_rxq(milandr_mil1553_t *mil, mil_slot_desc_t slot)
 {
     if (mem_queue_is_full(&mil->cyclogram_rxq)) {

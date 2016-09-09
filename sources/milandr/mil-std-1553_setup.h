@@ -26,6 +26,8 @@
 #define TOGLE(n)	((ARM_GPIOB->DATA & (n))?(ARM_GPIOB->DATA &= ~(n)):(ARM_GPIOB->DATA |= (n)))
 //#define MIL_STD_SUBADDR_WORD_INDEX(n)	(n*MIL_SUBADDR_WORDS_COUNT)
 
+#define MIL_SUBADDR_COUNT	32
+
 struct mil_txbuf_t
 {
 	uint32_t            data[MIL_SUBADDR_WORDS_COUNT];
