@@ -106,6 +106,18 @@ typedef enum
     CMD_UnlockSenderN = 0x15  //!< Разблокировать i-й передатчик
 } BC_COMMAND_CODES;
 
+struct command_t {
+    unsigned mode           : 2;  //!< Режим передачи данных из списка mil_request_mode_t
+    unsigned addr           : 5;  //!< Адрес ОУ для режимов КШ->ОУ
+    unsigned req_pattern    : 5;  //!< Признак команды управления. Должен быть равен b00000 либо b11111.
+    unsigned command        : 5;  //!< Команда управления.
+    unsigned reserve2       : 5;  //!< Адрес ОУ источника для режима ОУ->ОУ.
+    unsigned reserve3       : 5;  //!< Подадрес для адреса, указанного в поле \a addr_src.
+    unsigned reserve        : 5;  //!< не используется
+};
+
+typedef struct command_t command_t;
+
 //! Дескриптор слота
 typedef struct _mil_slot_desc_t
 {
@@ -120,6 +132,7 @@ typedef struct _mil_slot_desc_t
             unsigned reserve        : 5;  //!< не используется
         };
         unsigned raw;
+	command_t command;
     };
 } mil_slot_desc_t;
 

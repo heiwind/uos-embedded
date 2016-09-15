@@ -128,30 +128,6 @@
 #define    ZL           r30
 #define    ZH           r31
 
-/*
- * Only few devices come without EEPROM.  In order to assemble the
- * EEPROM library components without defining a specific device, we
- * keep the EEPROM-related definitions here, and catch the devices
- * without EEPROM (E2END == 0) below.  Obviously, the EEPROM library
- * functions will not work for them. ;-)
- */
-/* EEPROM Control Register */
-#define EECR	_SFR_IO8(0x1C)
-
-/* EEPROM Data Register */
-#define EEDR	_SFR_IO8(0x1D)
-
-/* EEPROM Address Register */
-#define EEAR	_SFR_IO16(0x1E)
-#define EEARL	_SFR_IO8(0x1E)
-#define EEARH	_SFR_IO8(0x1F)
-
-/* EEPROM Control Register */
-#define    EERIE        3
-#define    EEMWE        2
-#define    EEWE         1
-#define    EERE         0
-
 #if defined (__AVR_AT94K__)
 #  include <runtime/avr/ioat94k.h>
 #elif defined (__AVR_AT43USB320__)
@@ -247,11 +223,55 @@
 #  include <runtime/avr/iotn11.h>
 #elif defined (__AVR_ATmega2561__) || defined (__AVR_ATmega2560__)
 #  include <runtime/avr/iom256x.h>
+#elif defined (__AVR_AT90USB162__)
+#  include <runtime/avr/iousb162.h>
+#elif defined (__AVR_AT90USB646__)
+#  include <runtime/avr/iousb646.h>
+#elif defined (__AVR_AT90USB647__)
+#  include <runtime/avr/iousb647.h>
+#elif defined (__AVR_AT90USB1286__)
+#  include <runtime/avr/iousb1286.h>
+#elif defined (__AVR_AT90USB1287__)
+#  include <runtime/avr/iousb1287.h>
 #else
 #  if !defined(__COMPILING_AVR_LIBC__)
 #    warning "device type not defined"
 #  endif
 #endif
+
+/*
+ * Only few devices come without EEPROM.  In order to assemble the
+ * EEPROM library components without defining a specific device, we
+ * keep the EEPROM-related definitions here, and catch the devices
+ * without EEPROM (E2END == 0) below.  Obviously, the EEPROM library
+ * functions will not work for them. ;-)
+ */
+/* EEPROM Control Register */
+#ifndef EECR
+#define EECR	_SFR_IO8(0x1C)
+#endif
+
+/* EEPROM Data Register */
+#ifndef EEDR
+#define EEDR	_SFR_IO8(0x1D)
+#endif
+
+/* EEPROM Address Register */
+#ifndef EEAR
+#define EEAR	_SFR_IO16(0x1E)
+#endif
+#ifndef EEARL
+#define EEARL	_SFR_IO8(0x1E)
+#endif
+#ifndef EEARH
+#define EEARH	_SFR_IO8(0x1F)
+#endif
+
+/* EEPROM Control Register */
+#define    EERIE        3
+#define    EEMWE        2
+#define    EEWE         1
+#define    EERE         0
 
 #if FLASHEND > 0x2000
 #  define __NVECTORS (_VECTORS_SIZE/4 - 1)
@@ -289,20 +309,33 @@
 #endif
 
 /*
- * Make traditional UART0 register names.
+ * Make traditional UART0/1 register names.
  */
 #if !defined (UCR) && defined (UCSR0B)
 #  define UCR UCSR0B
 #endif
+#if !defined (UCR) && defined (UCSR1B)
+#  define UCR UCSR1B
+#endif
 #if !defined (USR) && defined (UCSR0A)
 #  define USR UCSR0A
+#endif
+#if !defined (USR) && defined (UCSR1A)
+#  define USR UCSR1A
 #endif
 #if !defined (UDR) && defined (UDR0)
 #  define UDR UDR0
 #endif
+#if !defined (UDR) && defined (UDR1)
+#  define UDR UDR1
+#endif
 #if !defined (UBRR) && defined (UBRR0L)
 #  define UBRR UBRR0L
 #endif
+#if !defined (UBRR) && defined (UBRR1L)
+#  define UBRR UBRR1L
+#endif
+
 
 /*
  *  Make traditional reg names for compatible.

@@ -59,8 +59,7 @@
 	"push	r11\n	push	r10\n	push	r9\n	push	r8\n"\
 	"push	r7\n	push	r6\n	push	r5\n	push	r4\n"\
 	"push	r3\n	push	r2\n	push	r1\n	push	r0\n"\
-	"clr	__zero_reg__\n")
-
+	"clr	__zero_reg__\n") // Последня строчка вроде лишняя
 /*
  * Build the initial task's stack frame.
  * Arguments:
@@ -72,27 +71,27 @@
 void
 arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg, unsigned stacksz)
 {
-	char *sp = (char*) t + stacksz;
+	char *sp = (char*) t + stacksz; // but not including???
 
-	*--sp = 0;			/* caller address low... */
+	*--sp = 0;			/* caller address low... */ /* для возврата из основной функции задачи */
 	*--sp = 0;			/* ...high */
 #ifdef __AVR_ATmega2561__
 	*--sp = 0;                      /* ...additional */
 #endif
-	*--sp = (unsigned) func;	/* callee address low... */
+	*--sp = (unsigned) func;	/* callee address low... */ /* для вызова основной функции задачи */
 	*--sp = (unsigned) func >> 8;	/* ...high */
 #ifdef __AVR_ATmega2561__
 	*--sp = 0;                      /* ...additional */
 #endif
-        *--sp = 0;			/* r31 */
-	*--sp = 0x80;			/* SREG - enable interrupts */
+    *--sp = 0;			/* r31 */
+	*--sp = 0x80;		/* SREG - enable interrupts */ /* задача стартует с включенными прерываниями */
 	*--sp = 0;			/* r30 */
 	*--sp = 0;			/* r29 */
 	*--sp = 0;			/* r28 */
 	*--sp = 0;			/* r27 */
 	*--sp = 0;			/* r26 */
 	*--sp = (unsigned) arg >> 8;	/* r25 - task argument high... */
-	*--sp = (unsigned) arg;		/* r24 ...low */
+	*--sp = (unsigned) arg;			/* r24 ...low */
 	*--sp = 0;			/* r23 */
 	*--sp = 0;			/* r22 */
 	*--sp = 0;			/* r21 */
@@ -121,11 +120,14 @@ arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg, unsigned sta
 
 	/*
 	 * Define assembler constant task_stack_context_offset,
-	 * which is a byte offset of stack_context field in tast_t structure.
+	 * which is a byte offset of stack_context field in task_t structure.
 	 * Needed for _init_ for saving task_current.
 	 */
+
+#if 0
 	ASSIGN_VIRTUAL_ADDRESS (task_stack_context_offset,
 		__builtin_offsetof (task_t, stack_context));
+#endif
 }
 
 /*
@@ -150,12 +152,12 @@ arch_task_switch (task_t *target)
 {
 	/* Skip function prologue. */
 	asm volatile (
-	"push	r31\n"
+	"push	r31\n"    /* r31 */
 	"in	r31, __SREG__\n"
 	"cli\n"
-	"push	r31\n"
-	"push	r30\n");
-	SAVE_REGS();
+	"push	r31\n"   /* SREC */
+	"push	r30\n"); /* r30 */
+	SAVE_REGS();     /* r29 - r0 */
 
 	/* Save current task stack. */
 	task_current->stack_context = arch_get_stack_pointer ();
@@ -178,7 +180,7 @@ arch_task_switch (task_t *target)
 	"pop	r20\n	pop	r21\n	pop	r22\n	pop	r23\n"
 	"pop	r24\n	pop	r25\n	pop	r26\n	pop	r27\n"
 	"pop	r28\n	pop	r29\n	pop	r30\n	pop	r31\n"
-	"sbrc	r31, 7\n"		/* test I flag */
+	"sbrs	r31, 7\n"		/* test I flag == 1*/
 	"rjmp	enable_interrupts\n"
 	"out	__SREG__, r31\n"
 	"pop	r31\n"
@@ -201,9 +203,17 @@ handle_interrupt (void)
 	register mutex_irq_t *h;
 
 	SAVE_REGS();
-
+	
 	/* Assign h = r30:r31. */
 	asm volatile ("" : "=z" (h));
+	
+#if 0
+	if (! h->lock) {
+		/* Cannot happen. Временно */
+		debug_printf  ("<unexpected interrupt>\n");
+		asm volatile ("rjmp restore_and_ret");
+	}
+#endif
 
 	if (h->handler) {
 		/* If the lock is free -- call fast handler. */
@@ -264,6 +274,9 @@ _intr##n (void) \
 #endif
 #ifdef __AVR_ATmega128__
 #  include "ATmega128.c"
+#endif
+#ifdef __AVR_AT90USB647__
+#  include "AT90USB647.c"
 #endif
 #ifdef __AVR_ATmega161__
 #  include "ATmega161.c"
