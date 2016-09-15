@@ -23,8 +23,8 @@ enum {
     KEY_7_PRESSED,
     KEY_8_PRESSED,
     KEY_9_PRESSED,
-    KEY_0_PRESSED,
     KEY_A_PRESSED,
+    KEY_0_PRESSED,
     KEY_B_PRESSED,
     KEY_1_RELEASED,
     KEY_2_RELEASED,
@@ -35,8 +35,8 @@ enum {
     KEY_7_RELEASED,
     KEY_8_RELEASED,
     KEY_9_RELEASED,
-    KEY_0_RELEASED,
     KEY_A_RELEASED,
+    KEY_0_RELEASED,
     KEY_B_RELEASED,
     NB_OF_EVENTS
 };
@@ -316,32 +316,228 @@ unsigned debounced_keys = 0;
 
 void key_1_pressed()
 {
-    static int on = 0;
-    
-    on = !on;
-    
-    lamp_01_white(on);
-    lamp_02_white(on);
-    lamp_03_white(on);
-    lamp_04_white(on);
-    lamp_05_white(on);
-    lamp_06_white(on);
-    lamp_07_white(on);
-    lamp_08_white(on);
-    lamp_09_white(on);
-    lamp_10_white(on);
-    lamp_11_white(on);
-    lamp_12_white(on);
-    lamp_13_white(on);
-    lamp_14_white(on);
-    lamp_15_white(on);
-    lamp_16_white(on);
-    lamp_17_white(on);
-    lamp_18_white(on);
+    // Все горят
+    lamp_01_white(1);
+    lamp_02_white(1);
+    lamp_03_white(1);
+    lamp_04_white(1);
+    lamp_05_white(1);
+    lamp_06_white(1);
+    lamp_07_white(1);
+    lamp_08_white(1);
+    lamp_09_white(1);
+    lamp_10_white(1);
+    lamp_11_white(1);
+    lamp_12_white(1);
+    lamp_13_white(1);
+    lamp_14_white(1);
+    lamp_15_white(1);
+    lamp_16_white(1);
+    lamp_17_white(1);
 }
 
 void key_2_pressed()
 {
+    // Прихожая
+    lamp_01_white(0);
+    lamp_02_white(0);
+    lamp_03_white(0);
+    lamp_04_white(0);
+    lamp_05_white(0);
+    lamp_06_white(0);
+    lamp_07_white(0);
+    lamp_08_white(0);
+    lamp_09_white(0);
+    lamp_10_white(0);
+    lamp_11_white(0);
+    lamp_12_white(0);
+    lamp_13_white(0);
+    lamp_14_white(0);
+    lamp_15_white(1);
+    lamp_16_white(1);
+    lamp_17_white(1);
+}
+
+void key_3_pressed()
+{
+    // Гостиная
+    lamp_01_white(1);
+    lamp_02_white(1);
+    lamp_03_white(1);
+    lamp_04_white(1);
+    lamp_05_white(1);
+    lamp_06_white(1);
+    lamp_07_white(1);
+    lamp_08_white(1);
+    lamp_09_white(1);
+    lamp_10_white(1);
+    lamp_11_white(1);
+    lamp_12_white(1);
+    lamp_13_white(1);
+    lamp_14_white(1);
+    lamp_15_white(1);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_4_pressed()
+{
+    // Глажка
+    lamp_01_white(0);
+    lamp_02_white(0);
+    lamp_03_white(0);
+    lamp_04_white(0);
+    lamp_05_white(1);
+    lamp_06_white(1);
+    lamp_07_white(0);
+    lamp_08_white(0);
+    lamp_09_white(1);
+    lamp_10_white(0);
+    lamp_11_white(0);
+    lamp_12_white(0);
+    lamp_13_white(0);
+    lamp_14_white(0);
+    lamp_15_white(0);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_5_pressed()
+{
+    // Подсветка по периметру гостиной
+    lamp_01_white(1);
+    lamp_02_white(1);
+    lamp_03_white(1);
+    lamp_04_white(1);
+    lamp_05_white(0);
+    lamp_06_white(1);
+    lamp_07_white(1);
+    lamp_08_white(0);
+    lamp_09_white(1);
+    lamp_10_white(1);
+    lamp_11_white(0);
+    lamp_12_white(1);
+    lamp_13_white(1);
+    lamp_14_white(1);
+    lamp_15_white(1);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_6_pressed()
+{
+    // Подсветка центра гостиной
+    lamp_01_white(0);
+    lamp_02_white(0);
+    lamp_03_white(0);
+    lamp_04_white(0);
+    lamp_05_white(1);
+    lamp_06_white(0);
+    lamp_07_white(0);
+    lamp_08_white(0);
+    lamp_09_white(0);
+    lamp_10_white(0);
+    lamp_11_white(1);
+    lamp_12_white(0);
+    lamp_13_white(0);
+    lamp_14_white(0);
+    lamp_15_white(0);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_7_pressed()
+{
+    // Шахматка 1 в гостиной
+    lamp_01_white(0);
+    lamp_02_white(1);
+    lamp_03_white(0);
+    lamp_04_white(1);
+    lamp_05_white(0);
+    lamp_06_white(1);
+    lamp_07_white(0);
+    lamp_08_white(1);
+    lamp_09_white(0);
+    lamp_10_white(1);
+    lamp_11_white(0);
+    lamp_12_white(1);
+    lamp_13_white(0);
+    lamp_14_white(1);
+    lamp_15_white(0);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_8_pressed()
+{
+    // Подсветка середины гостиной
+    lamp_01_white(0);
+    lamp_02_white(1);
+    lamp_03_white(0);
+    lamp_04_white(0);
+    lamp_05_white(1);
+    lamp_06_white(0);
+    lamp_07_white(0);
+    lamp_08_white(1);
+    lamp_09_white(0);
+    lamp_10_white(0);
+    lamp_11_white(1);
+    lamp_12_white(0);
+    lamp_13_white(0);
+    lamp_14_white(1);
+    lamp_15_white(0);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_9_pressed()
+{
+    // Шахматка 2 в гостиной
+    lamp_01_white(1);
+    lamp_02_white(0);
+    lamp_03_white(1);
+    lamp_04_white(0);
+    lamp_05_white(1);
+    lamp_06_white(0);
+    lamp_07_white(1);
+    lamp_08_white(0);
+    lamp_09_white(1);
+    lamp_10_white(0);
+    lamp_11_white(1);
+    lamp_12_white(0);
+    lamp_13_white(1);
+    lamp_14_white(0);
+    lamp_15_white(1);
+    lamp_16_white(0);
+    lamp_17_white(0);
+}
+
+void key_0_pressed()
+{
+    // Выключить белый свет
+    lamp_01_white(0);
+    lamp_02_white(0);
+    lamp_03_white(0);
+    lamp_04_white(0);
+    lamp_05_white(0);
+    lamp_06_white(0);
+    lamp_07_white(0);
+    lamp_08_white(0);
+    lamp_09_white(0);
+    lamp_10_white(0);
+    lamp_11_white(0);
+    lamp_12_white(0);
+    lamp_13_white(0);
+    lamp_14_white(0);
+    lamp_15_white(0);
+    lamp_16_white(0);
+    lamp_17_white(0);
+    lamp_18_white(0);
+}
+
+void key_ast_pressed()
+{
+    // Голубая подсветка
     static int on = 0;
     
     on = !on;
@@ -363,7 +559,11 @@ void key_2_pressed()
     lamp_15_blue(on);
     lamp_16_blue(on);
     lamp_17_blue(on);
-    lamp_18_blue(on);
+}
+
+void key_num_pressed()
+{
+    // Пока ничего
 }
 
 
@@ -437,6 +637,16 @@ while (1) {
     
     handlers[KEY_1_PRESSED] = key_1_pressed;
     handlers[KEY_2_PRESSED] = key_2_pressed;
+    handlers[KEY_3_PRESSED] = key_3_pressed;
+    handlers[KEY_4_PRESSED] = key_4_pressed;
+    handlers[KEY_5_PRESSED] = key_5_pressed;
+    handlers[KEY_6_PRESSED] = key_6_pressed;
+    handlers[KEY_7_PRESSED] = key_7_pressed;
+    handlers[KEY_8_PRESSED] = key_8_pressed;
+    handlers[KEY_9_PRESSED] = key_9_pressed;
+    handlers[KEY_0_PRESSED] = key_0_pressed;
+    handlers[KEY_A_PRESSED] = key_ast_pressed;
+    handlers[KEY_B_PRESSED] = key_num_pressed;
     
     GPIOD->BSRR = GPIO_SET(8) | GPIO_SET(9) | GPIO_SET(10) | GPIO_SET(11);
     
