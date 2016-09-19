@@ -49,6 +49,10 @@ void uos_on_irq(int nirq)
 #define SAFE_NOP()
 #endif
 
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_STACK        0
+#endif
 
 
 /*
@@ -150,11 +154,13 @@ _arch_task_switch_ ()
 	/* Save current task stack. */
 	task_current->stack_context = mips_get_stack_pointer ();
 
-	unsigned sp = (unsigned)(target->stack_context);
+    register unsigned sp = (unsigned)(target->stack_context);
+#if (UOS_STRICTS & UOS_STRICT_STACK) != 0
 	assert2(sp > (unsigned)(target->stack)
 	        , "fail on switch to %s:%p[stack=%p, sp=%p]\n"
 	        , task_name(target), target, target->stack, sp
 	        );
+#endif
 	
 	task_current = target;
 

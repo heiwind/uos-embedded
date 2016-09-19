@@ -40,6 +40,12 @@ static ARRAY (task_idle_data, sizeof(task_t) + ALIGNED_IDLE_TASK_STACKSZ - UOS_S
 //!!! задача task_current включается в список активных ниток
 unsigned task_need_schedule;
 
+
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_STACK        0
+#endif
+
 /*
  * Switch to most priority task if needed.
  */
@@ -79,7 +85,7 @@ void task_schedule ()
 
 	if (new_task != task_current) {
 		new_task->ticks++;
-#ifndef NDEBUG
+#if (UOS_STRICTS & UOS_STRICT_STACK) != 0
         unsigned sp = 0;
 #ifdef ARCH_CONTEXT_SIZE
         sp += ARCH_CONTEXT_SIZE;
@@ -91,7 +97,7 @@ void task_schedule ()
 #   endif
 #endif
         assert2( task_stack_enough(sp), uos_assert_task_name_msg, task_current->name);
-#endif
+#endif //NDEBUG
 		arch_task_switch (new_task);
 	}
 }

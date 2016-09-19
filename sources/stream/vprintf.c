@@ -90,13 +90,18 @@ static int cvt (double number, int prec, int sharpflag, unsigned char *negp,
 #define VPRINTF_FRAME 100
 #endif
 
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_STACK        0
+#endif
+
 #if STREAM_HAVE_ACCEESS > 0
 static
 int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap);
 
 int
 stream_vprintf (stream_t *stream, char const *fmt, va_list ap){
-#ifndef NDEBUG
+#if ((UOS_STRICTS & UOS_STRICT_STACK) != 0) && (NDEBUG <= 0)
     if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
         debug_puts("printf asserted stack task ");
         debug_puts(task_current->name);
@@ -140,7 +145,7 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 	if (! fmt)
 		fmt = "(null)\n";
 
-#ifndef NDEBUG
+#if ((UOS_STRICTS & UOS_STRICT_STACK) != 0) && (NDEBUG <= 0)
     if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
         debug_puts("printf asserted stack task ");
         debug_puts(task_name(task_current));
