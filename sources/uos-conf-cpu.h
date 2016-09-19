@@ -65,6 +65,25 @@
 #define RAM_HI      0x9801
 #endif
 
+
+/**************************************************************************
+ *                              PHYSICAL MEMORY SEGMENTING
+ ************************************************************************** */
+//* C0_STATUS.ERL affects memory mapping
+#define UOS_MIPS_USE_ERL        0
+//* memory mapping differ on Kseg2,3 - should it be in mind?
+#define UOS_MIPS_HAVE_KSEG23    0
+
+//* декларация того что система конфигурирует кеш, и инвалидация кеша должна учитывать
+//*       эту конфигурацию.
+//* caching this segments configurable, should it be in mind?
+#define UOS_MIPS_CACHEBLE_KSEG23    0
+#define UOS_MIPS_CACHEBLE_KUSEG     0
+//* caching this segments configurable, should it be in mind?
+//*     if no - ENABLE_I/DCACHE value used
+#define UOS_MIPS_CACHEBLE_KSEG0     0
+
+
 /**************************************************************************
  *                              IRQ
  ************************************************************************** */

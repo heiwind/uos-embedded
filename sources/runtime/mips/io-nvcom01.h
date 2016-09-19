@@ -273,4 +273,34 @@
 #define MC_INT_EN_MCC	MC_R (0xFFF4)	/* Разрешение прерывания от MCC */
 #define MC_INT_RST_MCC	MC_R (0xFFF8)	/* Сброс прерывания от MCC */
 
+
+
+//*         C0_CONFIG
+#define C0CONF_M            0x80000000L
+#define C0CONF_NOCACHED     2
+#define C0CONF_CACHED       3
+#define C0CONF_K23_VALUE(x) ((x & 0x7L) << 28)
+#define C0CONF_K23_FIELD(x) ((x >> 28) & 0x7)
+#define C0CONF_K23_MASK     C0CONF_K23_VALUE(7)
+#define C0CONF_K23_CACHED   C0CONF_K23_VALUE(C0CONF_CACHED)
+#define C0CONF_K23_NOCACHED C0CONF_K23_VALUE(C0CONF_NOCACHED)
+#define C0CONF_KU_VALUE(x)  ((x & 0x7L) << 25)
+#define C0CONF_KU_FIELD(x)  ((x >> 25) & 0x7)
+#define C0CONF_KU_MASK      C0CONF_KU_VALUE(7)
+#define C0CONF_KU_CACHED    C0CONF_KU_VALUE(C0CONF_CACHED)
+#define C0CONF_KU_NOCACHED  C0CONF_KU_VALUE(C0CONF_NOCACHED)
+#define C0CONF_MDU          0x100000L
+#define C0CONF_MM_MASK      0x060000L
+#define C0CONF_BM           0x010000L
+#define C0CONF_BE           0x008000L
+#define C0CONF_AT_MASK      0x006000L
+#define C0CONF_AR_MASK      0x001C00L
+#define C0CONF_MT_MASK      0x000380L
+#define C0CONF_K0_VALUE(x)  (x & 0x7L)
+#define C0CONF_K0_FIELD(x)  (x & 0x7L)
+#define C0CONF_K0_MASK      C0CONF_K0_VALUE(7)
+#define C0CONF_K0_CACHED    C0CONF_K0_VALUE(C0CONF_CACHED)
+#define C0CONF_K0_NOCACHED  C0CONF_K0_VALUE(C0CONF_NOCACHED)
+
+
 #endif /* _IO_NVCOM01_H */
