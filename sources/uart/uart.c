@@ -61,11 +61,21 @@ uart_transmit_start (uart_t *u)
 	}
 
 	/* Send byte. */
+#if	UART_PORT_FIFO_SIZE > 1
+	unsigned least = UART_PORT_FIFO_SIZE;
+    for (;(u->out_first != u->out_last) && (least > 0); --least ) {
+        transmit_byte (u->port, *u->out_first);
+        ++u->out_first;
+        if (u->out_first >= u->out_buf + UART_OUTBUFSZ)
+            u->out_first = u->out_buf;
+    }
+#else
 	transmit_byte (u->port, *u->out_first);
 
 	++u->out_first;
-	if (u->out_first >= u->out_buf + UART_OUTBUFSZ)
-		u->out_first = u->out_buf;
+    if (u->out_first >= u->out_buf + UART_OUTBUFSZ)
+        u->out_first = u->out_buf;
+#endif
 
 	/* Enable `transmitter empty' interrupt. */
 	enable_transmit_interrupt (u->port);
@@ -186,7 +196,7 @@ static void
 uart_receiver (void *arg)
 {
 	uart_t *u = (uart_t *)arg;
-	unsigned char c = 0, *newlast;
+	unsigned char* newlast;
 
 	/*
 	 * Enable transmitter.
@@ -234,22 +244,33 @@ uart_receiver (void *arg)
                 mutex_unlock (&u->transmitter);
 		}
 #endif
-		/* Check that receive data is available,
-		 * and get the received byte. */
-		if (! test_get_receive_data (u->port, &c))
-			continue;
+		/* Check that receive data is available, and get the received bytes. */
+#ifdef test_receiver_avail
+        while ( test_receiver_avail(u->port) )
+#else
+        unsigned char c = 0;
+        while (test_get_receive_data (u->port, &c))
+#endif
+		{
 /*debug_printf ("%02x", c);*/
 
 		newlast = u->in_last + 1;
 		if (newlast >= u->in_buf + UART_INBUFSZ)
 			newlast = u->in_buf;
 
-		/* Ignore input on buffer overflow. */
-		if (u->in_first == newlast)
-			continue;
-
-		*u->in_last = c;
+#ifdef test_receiver_avail
+        /* Ignore input on buffer overflow. */
+        if (u->in_first == newlast)
+            break;
+		*u->in_last = get_received_byte(u->port);
+#else
+        /* Ignore input on buffer overflow. */
+        if (u->in_first == newlast)
+            continue;
+        *u->in_last = c;
+#endif
 		u->in_last = newlast;
+		} //while (test_get_receive_data (u->port, &c))
 	}
 }
 
