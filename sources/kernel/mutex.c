@@ -21,6 +21,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_MUTEX_LOCK   0
+#endif
+
 void mutex_init (mutex_t *lock)
 {
 	list_init (&lock->item);
@@ -63,6 +68,14 @@ mutex_lock (mutex_t *m)
 
 	mutex_lock_yiedling(m);
 	arch_intr_restore (x);
+#endif
+#if ((UOS_STRICTS & UOS_STRICT_MUTEX_LOCK) != 0) && (NDEBUG <= 0)
+    assert2(m->master == task_current
+            , "mutex($%x) owned by $%x:%s but unlock by me $%x:%s\n"
+            , m
+            , m->master, task_name(m->master)
+            , task_current, task_name(task_current)
+           );
 #endif
 }
 
@@ -256,7 +269,12 @@ void
 mutex_unlock (mutex_t *m)
 {
     assert(m->master != NULL);
-    assert(m->master == task_current);
+    assert2(m->master == task_current
+            , "mutex($%x) owned by $%x:%s but unlock by me $%x:%s\n"
+            , m
+            , m->master, task_name(m->master)
+            , task_current, task_name(task_current)
+           );
 
     arch_state_t x;
     assert_task_good_stack(task_current);

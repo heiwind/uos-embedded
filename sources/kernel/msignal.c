@@ -19,6 +19,11 @@
 #include <kernel/internal.h>
 #include <stddef.h> 
 
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_MUTEX_LOCK   0
+#endif
+
 /*
  * Send the signal to the lock. All tasks waiting for the signal
  * on the lock are unblocked, possibly causing task switch.
@@ -196,6 +201,14 @@ bool_t mutex_wait_until (mutex_t *m
         m->deep = deep;
 #endif
     arch_intr_restore (x);
+#if ((UOS_STRICTS & UOS_STRICT_MUTEX_LOCK) != 0) && (NDEBUG <= 0)
+    assert2( ((m->master == task_current) || (waitfor))
+            , "mutex($%x) must by my $%x:%s but owned by $%x:%s\n"
+            , m
+            , task_current, task_name(task_current)
+            , m->master, task_name(m->master)
+           );
+#endif
     return res;
 }
 

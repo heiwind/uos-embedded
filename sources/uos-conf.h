@@ -213,7 +213,7 @@
 //* включает тесты целостности группы
 #define UOS_STRICT_MGROUP       1
 //* включает тест успешного захвата мутеха в вызовах mutex_lock()/mutex_signal()
-#define UOS_STRICT_MUTEX_LOCK   1
+#define UOS_STRICT_MUTEX_LOCK   2
 
 /* UOS_STRICT_xxx - задают перечень включаемых тестов aasert в модулях ядра
  * */
