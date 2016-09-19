@@ -96,6 +96,9 @@
 /* TCP sender buffer space (bytes). */
 //#define TCP_SND_BUF                     2048
 
+//* tcp_stream_t use it for default output buffer alocation size
+//#define TCP_STREAM_DEFAULT_BUFSIZE  TCP_MSS
+
 /* TCP sender buffer space (pbufs).
  * This must be at least = 2 * TCP_SND_BUF/TCP_MSS for things to work. */
 //#define TCP_SND_QUEUELEN                4 * TCP_SND_BUF/TCP_MSS

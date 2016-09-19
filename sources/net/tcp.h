@@ -521,11 +521,17 @@ typedef struct _tcp_stream_t {
 	unsigned char *inptr;
 	struct _buf_t *inbuf;
 
+	unsigned       outdata_size;
 	unsigned char *outptr;
-	unsigned char outdata [1000];
+	unsigned char *outdata;// [1000];
 } tcp_stream_t;
 
+#ifndef TCP_STREAM_DEFAULT_BUFSIZE
+#define TCP_STREAM_DEFAULT_BUFSIZE      TCP_MSS
+#endif
 stream_t *tcp_stream_init (tcp_stream_t *u, tcp_socket_t *sock);
+stream_t *tcp_stream_init4buf (tcp_stream_t *u, tcp_socket_t *sock
+                             , void* outdata_buf, unsigned size);
 #endif /* to_stream */
 
 

@@ -55,7 +55,7 @@ tcp_stream_putchar (tcp_stream_t *u, short c)
 	}
 	/* Put byte into output buffer. */
 	*u->outptr++ = c;
-	if (u->outptr < u->outdata + sizeof(u->outdata)) {
+	if (u->outptr < (u->outdata + u->outdata_size) ) {
 		mutex_unlock (&s->lock);
 		return;
 	}
@@ -66,6 +66,9 @@ tcp_stream_putchar (tcp_stream_t *u, short c)
 	socket_flush (s);
 }
 
+/* TODO stream is very inefficient of transmiting when receive -
+ *      receiver forces transmiter to accasionaly flush out-buffer
+ * */
 static unsigned short
 tcp_stream_getchar (tcp_stream_t *u)
 {
@@ -84,10 +87,10 @@ tcp_stream_getchar (tcp_stream_t *u)
 		mutex_lock (&s->lock);
 	}
 
-	/* Wait for data. */
 	if (u->inbuf)
 		mutex_unlock (&s->lock);
 	else {
+	    /* Wait for data. */
 		while (tcp_queue_is_empty (s)) {
 			if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
 				mutex_unlock (&s->lock);
@@ -199,8 +202,7 @@ static void
 tcp_stream_close (tcp_stream_t *u)
 {
     tcp_socket_t*  s = u->socket;
-	if (! s)
-		return;
+	if (s) {
 	mutex_lock (&s->lock);
 	mutex_signal (&s->lock, 0);
 	mutex_unlock (&s->lock);
@@ -208,6 +210,10 @@ tcp_stream_close (tcp_stream_t *u)
 	tcp_close (s);
 	mem_free (s);
 	u->socket = 0;
+	}
+
+	mem_free(u->outdata);
+	u->outdata = 0;
 }
 
 /*
@@ -249,8 +255,25 @@ static stream_interface_t tcp_interface = {
  */
 stream_t *tcp_stream_init (tcp_stream_t *u, tcp_socket_t *sock)
 {
-	u->stream.interface = &tcp_interface;
-	u->socket = sock;
-	u->outptr = u->outdata;
-	return &u->stream;
+    return tcp_stream_init4buf(u, sock, 0, 0);
+}
+
+stream_t *tcp_stream_init4buf (tcp_stream_t *u, tcp_socket_t *sock
+                             , void* outdata_buf, unsigned size)
+{
+    u->outdata = (unsigned char*)outdata_buf;
+    if (u->outdata == 0){
+        if (size == 0)
+            size = TCP_STREAM_DEFAULT_BUFSIZE;
+        u->outdata =(unsigned char*) mem_alloc(sock->ip->pool, size);
+    }
+    u->outdata_size = size;
+    assert(u->outdata != 0);
+    assert(u->outdata_size > 0);
+    //if (u->outdata == 0)
+    //    return 0;
+    u->stream.interface = &tcp_interface;
+    u->socket = sock;
+    u->outptr = u->outdata;
+    return &u->stream;
 }
