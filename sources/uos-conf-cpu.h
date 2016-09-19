@@ -49,6 +49,8 @@
 //      so inserts nop to sure thir value
 //#define ELVEES_SAFE_LW_MXC0
 
+//#define FLUSH_CACHE_IN_EXCEPTION
+
 /** форсирует настройку памяти при старте, если происходит запуск под отладчиком или настройка
  * производится внешним загрузчиком - то этот код необязателен, можно довериться настройкам загрузчика */
 //#define ELVEES_INIT_SDRAM

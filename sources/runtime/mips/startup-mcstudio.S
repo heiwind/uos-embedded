@@ -97,6 +97,7 @@ _reset_vector_: .globl  _reset_vector_
         .word   0                   # Контрольная сумма
 #endif
 
+
 #---------------------------------------
 # Macro: save all registers in stack
 #
@@ -151,8 +152,8 @@ _reset_vector_: .globl  _reset_vector_
         sw      $k0, (CONTEXT_LO * 4) ($sp)
         SAFE_NOP
 
-        mfc0    $k0, $C0_EPC
-        sw      $k0, (CONTEXT_PC * 4) ($sp)
+        mfc0    $k1, $C0_EPC
+        sw      $k1, (CONTEXT_PC * 4) ($sp)
         SAFE_NOP
 
         mfc0    $k0, $C0_STATUS
@@ -237,12 +238,12 @@ _exception_vector_: .globl _exception_vector_
         nop
         nop
         nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
-        mfc0  $27,  $14                 #save epc in gp 27
+        mfc0  $k1,  $14                 #save epc in gp 27
         and     $k0, $a0                # Clear EXL bit
         mtc0    $k0, $C0_STATUS         # Put SR back
-        nop  
-        jr    $27                       #go continue
-        nop  
+        nop
+        jr    $k1                       #go continue
+        nop
         nop                             # just to be safe
         nop
         nop
@@ -250,12 +251,12 @@ _exception_vector_: .globl _exception_vector_
         sync                            # Settle things down
         eret                            # PC <= EPC; EXL <= 0
         nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
-        mfc0  $27,  $14                 #save epc in gp 27
+        mfc0  $k1,  $14                 #save epc in gp 27
         and     $k0, $a0                # Clear IE bit
         mtc0    $k0, $C0_STATUS         # Put EXL back
         nop
-        jr    $27                       #go continue
-        nop  
+        jr    $k1                       #go continue
+        nop
 #endif
         .set mips0
 
@@ -285,9 +286,14 @@ _interrupt_vector_: .globl _interrupt_vector_
         j       _irq_handler_           # Jump to C code, no return
         nop
 #else
+	//for this case _irq_handler_ is normal routine,
+	// so it normaly returns back with:
+	// \resul = 0 - normal return
+	// \result != 0 - better task switch
         .extern _arch_interrupt_
         .extern switch_task
         jal     _arch_interrupt_
+        nop
         beq     $v0, $zero, _restore_regs_
         nop
         //j       _restore_regs_
@@ -312,8 +318,8 @@ exception:
 
         .extern _exception_handler_
         lui     $gp, RAM_HI                 # Set global pointer
-        la      $t0, _exception_handler_    #exception code can be far away from internal memory
-        jr      $t0                         # Jump to C code, no return
+        la      $k0, _exception_handler_    #exception code can be far away from internal memory
+        jr      $k0                         # Jump to C code, no return
         nop
         j       _restore_regs_
         nop
@@ -328,13 +334,13 @@ _restore_regs_: .globl _restore_regs_
         addi    $sp, MIPS_FSPACE        # Remove an arg frame
 #endif
 
-        lw      $a0, (CONTEXT_LO * 4) ($sp) # Load HI, LO registers
-        mtlo    $a0
-        lw      $a0, (CONTEXT_HI * 4) ($sp)
-        mthi    $a0
+        lw      $k0, (CONTEXT_LO * 4) ($sp) # Load HI, LO registers
+        mtlo    $k0
+        lw      $k1, (CONTEXT_HI * 4) ($sp)
+        mthi    $k1
 
-        lw      $a0, (CONTEXT_PC * 4) ($sp) # K1 = EPC
-        mtc0    $a0, $C0_EPC                # put PC in EPC
+        lw      $k0, (CONTEXT_PC * 4) ($sp) # K1 = EPC
+        mtc0    $k0, $C0_EPC                # put PC in EPC
 
         .set    noat
         lw  $1, (CONTEXT_R1 * 4) ($sp)      # Load general registers
@@ -395,11 +401,12 @@ _restore_regs_: .globl _restore_regs_
         nop
         nop
         nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
-        mfc0  $27,  $14                 #save epc in gp 27
+        mfc0  $k1,  $14                 #save epc in gp 27
+        mfc0    $k0, $C0_STATUS         # Get STATUS
         xori    $k0, ST_EXL             # allow interupts after eret
         mtc0    $k0, $C0_STATUS         # Put SR back
         SAFE_NOP
-        jr    $27                       #go continue
+        jr    $k1                       #go continue
         nop  
         nop                             # just to be safe
         nop
@@ -408,11 +415,13 @@ _restore_regs_: .globl _restore_regs_
         sync                            # settle things down
         eret                            # PC <= EPC; EXL <= 0
         nop                             # just to be safe, fix bug - JTAG-Emulator dropes eret
-        mfc0  $27,  $14                 #save epc in gp 27
+#        teq		$zero, $zero
+        mfc0  $k1,  $14                 #save epc in gp 27
+        mfc0    $k0, $C0_STATUS         # Get STATUS
         xori    $k0, ST_EXL             # allow interupts after eret
         mtc0    $k0, $C0_STATUS         # Put SR back
         SAFE_NOP
-        jr    $27                       #go continue
+        jr    $k1                       #go continue
         nop  
 #endif
         .set mips0
