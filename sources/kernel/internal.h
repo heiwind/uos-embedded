@@ -175,6 +175,7 @@ INLINE void mutex_do_lock(mutex_t *m)
     m->master = task_current;
 
     /* Put this lock into the list of task slaves. */
+    assert(task_current->slaves.next != 0);
     list_append (&task_current->slaves, &m->item);
 
     /* Update the value of task priority.
