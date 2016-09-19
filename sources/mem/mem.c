@@ -477,12 +477,12 @@ void mem_init (mem_pool_t *m, size_t start, size_t stop)
 	assert (stop > start);
 	h->size = stop - start;
 	h->pool = m;
+    mutex_lock (&m->lock);
 #if MEM_DEBUG
 	h->magic = MEMORY_HOLE_MAGIC;
 	m->store = h;
     m->size  = h->size;
 #endif
-	mutex_lock (&m->lock);
 	NEXT(h) = (mheader_t *)(m->free_list);
 	m->free_list = h;
 	m->free_size += h->size;
