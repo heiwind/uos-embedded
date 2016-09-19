@@ -24,6 +24,19 @@
 #define UOS_MGROUP_SMART 0
 #endif
 
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_MGROUP       1
+#endif
+
+#if (NDEBUG <= 0) && ( (UOS_STRICTS & UOS_STRICT_MGROUP) != 0 )
+#define gr_assert(...)  assert(__VA_ARGS__)
+#else
+#define gr_assert(...)
+#endif
+
+#define gr_assert_good(g)   gr_assert(g->size > g->num)
+
 /*
  * Initialize the group data structure.
  * Buffer must have at least sizeof(mutex_group_t) bytes.
@@ -37,6 +50,8 @@ mutex_group_init (array_t *buf, unsigned buf_size)
 	assert (buf_size >= sizeof(mutex_group_t));
 	g = (mutex_group_t*) buf;
 	g->size = 1 + (buf_size - sizeof(mutex_group_t)) / sizeof(mutex_slot_t);
+	g->waiter   = 0;
+	g->num      = 0;
 	return g;
 }
 
@@ -48,6 +63,7 @@ bool_t
 mutex_group_add (mutex_group_t *g, mutex_t *m)
 {
 	mutex_slot_t *s;
+	gr_assert_good(g);
 
 	if (! m->item.next)
 		mutex_init (m);
@@ -79,6 +95,7 @@ mutex_group_add (mutex_group_t *g, mutex_t *m)
 bool_t mutex_group_remove (mutex_group_t* g, mutex_t* m)
 {
     assert(UOS_MGROUP_SMART > 0);
+    gr_assert_good(g);
 
 #if UOS_MGROUP_SMART > 0
     // look 1st empty slot
@@ -109,6 +126,7 @@ mutex_group_listen (mutex_group_t *g)
 {
 	arch_state_t x;
 	mutex_slot_t *s;
+    gr_assert_good(g);
 
 	arch_intr_disable (&x);
 	assert_task_good_stack(task_current);
@@ -132,6 +150,7 @@ mutex_group_listen (mutex_group_t *g)
 void mutex_group_relisten(mutex_group_t* g){
     arch_state_t x;
     mutex_slot_t *s;
+    gr_assert_good(g);
 
     arch_intr_disable (&x);
     for (s = g->slot + g->num; --s >= g->slot; ) {
@@ -158,6 +177,7 @@ mutex_group_unlisten (mutex_group_t *g)
 {
 	arch_state_t x;
 	mutex_slot_t *s;
+    gr_assert_good(g);
 
 	arch_intr_disable (&x);
 	assert_task_good_stack(task_current);
@@ -207,6 +227,7 @@ mutex_group_wait (mutex_group_t *g, mutex_t **lock_ptr, void **msg_ptr)
 	arch_intr_disable (&x);
 	assert_task_good_stack(task_current);
 	assert (task_current->wait == 0);
+    gr_assert_good(g);
 	assert (g->num > 0);
 
 	for (;;) {
@@ -234,6 +255,7 @@ mutex_group_lockwaiting (mutex_t *m, mutex_group_t *g, mutex_t **lock_ptr, void 
     arch_intr_disable (&x);
     assert_task_good_stack(task_current);
     assert (task_current->wait == 0);
+    gr_assert_good(g);
     assert (g->num > 0);
     if (m != NULL)
     if (! m->item.next)
