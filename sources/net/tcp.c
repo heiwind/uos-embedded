@@ -393,21 +393,22 @@ tcp_debug_print_header (tcp_hdr_t *tcphdr)
 {
     tcp_debug ( "TCP header:\n"
                 "+-------------------------------+\n"
-	            "|      %04x     |      %04x     | (src port, dest port)\n"
+	            "|      %04u     |      %04u     | (src port, dest port)\n"
                 "+-------------------------------+\n"
-                "|            %08lu           | (seq no)\n"
-                "+-------------------------------+\n"
-                "|            %08lu           | (ack no)\n"
-            , tcphdr->src, tcphdr->dest
-            , tcphdr->seqno, tcphdr->ackno
+                "|            %08lx           | (seq no)\n"
+                "+------------------------------+\n"
+                "|            %08lx           | (ack no)\n"
+            , NTOHS(tcphdr->src), NTOHS(tcphdr->dest)
+            , NTOHL(tcphdr->seqno), NTOHL(tcphdr->ackno)
 		    );
     //                "| %2u |    |%u%u%u%u%u|    %5u      | (offset, flags (",
     tcp_debug ("+-------------------------------+\n"
                   "| %2u |    |%6b|    %5u      | (offset, flags (%b), win)\n"
 	            , tcphdr->offset
 	            , tcphdr->flags, "\2\0"
+                , NTOHS(tcphdr->wnd)
                 , tcphdr->flags, tcp_flags_dumpfmt
-	            , tcphdr->wnd);
+	            );
     tcp_debug ( "+-------------------------------+\n"
                 "|    0x%04x     |     %5u     | (chksum, urgp)\n"
                 "+-------------------------------+\n"

@@ -552,6 +552,11 @@ tcp_socket_t *tcp_alloc (ip_t *ip);
 int tcp_output_poll (tcp_socket_t *s);
 
 /* tcp_output - pull tcp segments until all unsent passed to netif
+ * Must be called with ip locked        if TCP_LOCK_LEGACY.
+ * suposed that sock is unlocked        if TCP_LOCK_SURE
+ *      and suposed that socket lock ensures by locked ip
+ * or ensures that socket locked        if TCP_LOCK_RELAXED
+ * Return 0 on error.
  * */
 int tcp_output (tcp_socket_t *s);
 

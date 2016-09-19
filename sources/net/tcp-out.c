@@ -433,7 +433,10 @@ tcp_enqueue_segments (tcp_socket_t *s, tcp_segment_t* queue, tcph_flag_set flags
 	s->snd_queuelen = queuelen;
 	tcp_debug ("tcp_enqueue: done, queuelen = %d\n", s->snd_queuelen);
 	if (s->snd_queuelen != 0) {
-		assert (s->unacked != 0 || s->unsent != 0);
+		assert2( (s->unacked != 0 || s->unsent != 0)
+		        , "tcp_enqueue: chain len %d but unacked=$%x unsent=$%x\n"
+		        , s->snd_queuelen, s->unacked, s->unsent
+		        );
 	}
 
 	//return 1;

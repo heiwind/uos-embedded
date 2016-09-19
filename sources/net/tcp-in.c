@@ -23,7 +23,8 @@ tcp_segment_t* tcp_release_window_segments(tcp_socket_t *s
             while (seg != 0 &&
                 TCP_SEQ_LEQ (tcp_segment_seqafter(seg), windowhi)) 
             {
-                tcp_debug ("tcp_receive: removing %lu:%lu\n"
+                tcp_debug ("tcp_receive: removing seg ($%x) %lu:%lu\n"
+                        , seg
                         , tcp_segment_seqno(seg)
                         , tcp_segment_seqafter(seg)
                         );
@@ -163,8 +164,9 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 						s->cwnd);
 				}
 			}
-			tcp_debug ("tcp_receive: ACK for %lu, unacked->seqno %lu:%lu\n",
+			tcp_debug ("tcp_receive: ACK for %lu, unacked($%x)->seqno %lu:%lu\n",
                 ip->tcp_input_ackno
+                , s->unacked
                 , s->unacked != 0 ? tcp_segment_seqno(s->unacked) : 0
                 , s->unacked != 0 ? tcp_segment_seqafter(s->unacked) : 0
                 );
@@ -174,9 +176,6 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
 			next = tcp_release_window_segments(s, s->unacked, ip->tcp_input_ackno);
 			if (next != s->unacked){
                 s->unacked = next;
-                if (s->snd_queuelen != 0) {
-                    assert (s->unacked != 0 || s->unsent != 0);
-                }
                 /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
                 signal_sock = 1;
                 tcp_debug ("tcp_receive: unack queuelen %u, snd_nxt = %u (after freeing unacked)\n",
@@ -196,9 +195,6 @@ tcp_receive (tcp_socket_t *s, tcp_segment_t *inseg, tcp_hdr_t *h)
                 s->unsent = next;
                 if (s->unsent != 0) {
                     s->snd_nxt = tcp_segment_seqno(s->unsent);
-                }
-                if (s->snd_queuelen != 0) {
-                    assert (s->unacked != 0 || s->unsent != 0);
                 }
                 /* Send a signal for tcp_write when s->snd_queuelen is decreased. */
                 signal_sock = 1;
@@ -732,8 +728,9 @@ drop:		netif_free_buf(netif, p);//buf_free (p);
 	                                    , IP_PROTO_TCP, p->tot_len)
 	                ) != 0) 
 	{
-		tcp_debug ("tcp_input: bad checksum\n");
+		tcp_debug ("tcp_input: bad checksum $[%x] on msglen %d\n", h->chksum, p->len);
 		tcp_debug_print_header (h);
+        tcp_debug ("tcp_input: tcpheader $%x: %#*.16D\n", p->payload, p->len, p->payload);
 		++ip->tcp_in_errors;
 		goto drop;
 	}
