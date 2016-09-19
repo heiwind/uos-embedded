@@ -65,16 +65,56 @@
 /*
  * Map virtual address to physical address in FM mode.
  */
-static unsigned
-virt_to_phys (unsigned virtaddr)
-{
-	switch (virtaddr >> 28 & 0xE) {
-	default:  return virtaddr + 0x40000000;		/* kuseg */
-	case 0x8: return virtaddr - 0x80000000;		/* kseg0 */
-	case 0xA: return virtaddr - 0xA0000000;		/* kseg1 */
-	case 0xC: return virtaddr;			/* kseg2 */
-	case 0xE: return virtaddr;			/* kseg3 */
-	}
+#define virt_to_phys(x) mips_virtual_addr_to_physical(x)
+
+void
+cache_invalidate_on_buf(const buf_t* p){
+    unsigned kseg = ( ( (unsigned long) (void*) (p->payload)) >> 28);
+    enum {
+          kuseg0 = 0
+        , kuseg1 = 1
+        , kuseg2 = 2
+        , kuseg3 = 3
+        , kseg0  = 4
+        , kseg1  = 5
+        , kseg_nocached    = kseg1
+        , kseg2  = 6
+        , kseg3  = 7
+    };
+#if ((UOS_MIPS_CACHEBLE_KSEG23 > 0) && (UOS_MIPS_HAVE_KSEG23 > 0))\
+    || ( (UOS_MIPS_CACHEBLE_KSEG0 > 0) ) || ( (UOS_MIPS_CACHEBLE_KUSEG > 0) )
+    unsigned c0 = mips_read_c0_register (C0_CONFIG);
+    switch(kseg){
+        case kseg_nocached: return;
+#if ( (UOS_MIPS_CACHEBLE_KSEG0 > 0) )
+        case kseg0        :
+            if (C0CONF_K0_FIELD(c0) == C0CONF_NOCACHED)
+                return;
+#endif
+#if ( (UOS_MIPS_CACHEBLE_KSEG23 > 0) )
+        case kseg2      :
+        case kseg3      :
+            if (C0CONF_K23_FIELD(c0) == C0CONF_NOCACHED)
+                return;
+#endif
+#if ( (UOS_MIPS_CACHEBLE_KUSEG > 0) )
+        case kuseg0     :
+        case kuseg1     :
+        case kuseg2     :
+        case kuseg3     :
+            if (C0CONF_KU_FIELD(c0) == C0CONF_NOCACHED)
+                return;
+#endif
+        default : return;
+    };
+#else
+#ifndef ENABLE_DCACHE
+    return;
+#endif
+    if (kseg == kseg_nocached)
+        return;
+#endif
+    MC_CSR = MC_CSR | MC_CSR_FLUSH_D;
 }
 
 #ifdef ETH_USE_YELDING_WAIT
@@ -1110,12 +1150,12 @@ eth_receive_frame (eth_t *u)
 #endif
 
     if (p != 0){
-#       if ETH_OPTIMISE_SPEED > 0
         buf_queueh_put (&u->inq, p);
+#       if ETH_OPTIMISE_SPEED > 0
         mutex_signal(&u->netif.lock, u);
 #       else
-        buf_queue_put (&u->inq, p);
 #       endif
+        cache_invalidate_on_buf(p);
         ETH_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
     }
 //    else
