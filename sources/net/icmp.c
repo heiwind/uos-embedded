@@ -81,7 +81,7 @@ icmp_dest_unreach (ip_t *ip, buf_t *p, small_uint_t op)
 	h->chksum = ~crc16_inet (0, q->payload, q->tot_len);
 
 	/*debug_printf ("icmp_dest_unreach: send %d bytes\n", q->tot_len);*/
-	ip_output (ip, q, iphdr->src.ucs, 0, IP_PROTO_ICMP);
+	ip_output2 (ip, q, iphdr->src.val, 0, IP_PROTO_ICMP);
 	++ip->icmp_out_msgs;
         ++ip->icmp_out_dest_unreachs;
 }
@@ -112,7 +112,7 @@ icmp_time_exceeded (ip_t *ip, buf_t *p)
 	h->chksum = 0;
 	h->chksum = ~crc16_inet (0, q->payload, q->len);
 
-	ip_output (ip, q, iphdr->src.ucs, 0, IP_PROTO_ICMP);
+	ip_output2 (ip, q, iphdr->src.val, 0, IP_PROTO_ICMP);
 	++ip->icmp_out_msgs;
 	++ip->icmp_out_time_excds;
 }

@@ -528,7 +528,7 @@ tcp_output_segment (tcp_segment_t *seg, tcp_socket_t *s)
     if ( (TF_IP_NOCACHE) && ((s->flags & TF_IP_NOCACHE) == 0) && (s->iph_cache) )
         res = ip_output_withheader(s->ip, p, s->iph_cache);
     else
-	res = ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP);
+	res = ip_output2(s->ip, p, s->remote_ip.val, s->local_ip, IP_PROTO_TCP);
 
 #if TCP_LOCK_STYLE >= TCP_LOCK_RELAXED2
 	tcpo_unlock_ensure(s_locked);
@@ -675,7 +675,7 @@ tcp_output_poll (tcp_socket_t *s)
       #if (TCP_LOCK_STYLE >= TCP_LOCK_RELAXED) && (IP_LOCK_STYLE != IP_LOCK_STYLE_OUT1)
 		mutex_t* ip_locked = iptx_lock_ensure(s->ip);
       #endif
-		if (ip_output (s->ip, p, s->remote_ip.ucs, ipref_as_ucs(s->local_ip), IP_PROTO_TCP) != 0)
+		if (ip_output2(s->ip, p, s->remote_ip.val, s->local_ip, IP_PROTO_TCP) != 0)
 		{
 		    s->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
 		}
@@ -882,7 +882,7 @@ tcp_rst (ip_t *ip, unsigned long seqno, unsigned long ackno,
 		remote_ip, IP_PROTO_TCP, p->tot_len));
 
 	++ip->tcp_out_datagrams;
-	ip_output (ip, p, remote_ip, local_ip, IP_PROTO_TCP);
+	ip_output(ip, p, remote_ip, local_ip, IP_PROTO_TCP);
 	tcp_debug ("tcp_rst: seqno %lu ackno %lu.\n", seqno, ackno);
 }
 

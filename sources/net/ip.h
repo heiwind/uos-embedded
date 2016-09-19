@@ -600,8 +600,15 @@ struct _netif_t;
 void ip_init (ip_t *ip, struct _mem_pool_t *pool, int prio,
 	struct _timer_t *timer, struct _arp_t *arp, mutex_group_t *g);
 void ip_input (ip_t *ip, struct _buf_t *p, struct _netif_t *inp);
+bool_t ip_output2(ip_t *ip, struct _buf_t *p
+        , ip_addr_const dest, ip_addr_const src
+        , small_uint_t proto);
+INLINE
 bool_t ip_output (ip_t *ip, struct _buf_t *p, unsigned char *dest,
-	unsigned char *src, small_uint_t proto);
+    unsigned char *src, small_uint_t proto)
+{
+    return ip_output2(ip, p, ipadr_4ucs(dest).val, ipadr_4ucs(src).val, proto);
+}
 bool_t ip_output_netif (ip_t *ip, struct _buf_t *p
         , ip_addr_const dest, ip_addr_const src
         , small_uint_t proto

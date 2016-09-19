@@ -320,19 +320,19 @@ ip_output_netif (ip_t *ip, buf_t *p
  * Send an IP packet.
  */
 bool_t
-ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
-	small_uint_t proto)
+ip_output2(ip_t *ip, struct _buf_t *p
+        , ip_addr_const dest, ip_addr_const src
+        , small_uint_t proto)
 {
 	netif_t *netif;
     ip_addr_const netif_ipaddr;
     ip_addr_const gateway;
-    ip_addr ipdest = ipadr_4ucs(dest);
 
 	/* Find the outgoing network interface. */
-	netif = route_lookup (ip, ipdest.var, &gateway, &netif_ipaddr);
+	netif = route_lookup (ip, dest, &gateway, &netif_ipaddr);
 	if (! netif) {
 		/* No route to host. */
-	    IP_printf("ip_output: no route to host %@.4D\n", dest);
+	    IP_printf("ip_output: no route to host %@.4D\n", ipref_as_ucs(dest));
 	    //mutex_t* iplock = iptx_lock_ensure(ip);
 		++ip->out_requests;
 		++ip->out_no_routes;
@@ -340,7 +340,7 @@ ip_output (ip_t *ip, buf_t *p, unsigned char *dest, unsigned char *src,
 		netif_free_buf (0, p);
 		return 0;
 	}
-	return ip_output_netif (ip, p, ipdest.var, ipref_4ucs(src), proto
+	return ip_output_netif (ip, p, dest, src, proto
 	        , gateway, netif, netif_ipaddr
 	        );
 }
@@ -434,7 +434,7 @@ bool_t ip_output_withheader(ip_t *ip, buf_t *p, ip_header_cache* iph)
     }
     else{ //if (ip_hcache_is_fresh(ip, iph))
         ip_hdr_t* iphdr = (ip_hdr_t*) (iph->payload + iph->tot_len - IP_HLEN);
-        return ip_output(ip, p, iphdr->dest.ucs, iphdr->src.ucs, iphdr->proto);
+        return ip_output2(ip, p, iphdr->dest.val, iphdr->src.val, iphdr->proto);
     }
 }
 
