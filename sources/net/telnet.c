@@ -293,10 +293,40 @@ static stream_interface_t telnet_interface = {
 #endif
 };
 
+
 /*
  * Initialize a telnet control block.
  */
-stream_t *telnet_init (tcp_socket_t *sock)
+void telnet_reset(telnet_t *u);
+
+stream_t *telnet_init (tcp_socket_t *sock){
+    return telnet_init4buf(sock, 0, 0);
+}
+
+stream_t *telnet_init4pool (tcp_socket_t *sock
+                        , mem_pool_t* region, unsigned size)
+{
+    if (size <= 0)
+        size = TCP_STREAM_DEFAULT_BUFSIZE;
+    void* outdata_buf = mem_alloc(region, size);
+    if(outdata_buf == 0)
+        return 0;
+
+    telnet_t *u;
+    u = (telnet_t *)mem_alloc (region, sizeof (*u));
+    if (! u) {
+        mem_free(outdata_buf);
+        return 0;
+    }
+    u->stream.interface = &telnet_interface;
+    tcp_stream_init4buf (&u->ts, sock, outdata_buf, size);
+
+    telnet_reset(u);
+    return &u->stream;
+}
+
+stream_t *telnet_init4buf (tcp_socket_t *sock
+                        , void* outdata_buf, unsigned size)
 {
 	telnet_t *u;
 
@@ -304,23 +334,27 @@ stream_t *telnet_init (tcp_socket_t *sock)
 	if (! u)
 		return 0;
 	u->stream.interface = &telnet_interface;
-	tcp_stream_init (&u->ts, sock);
+	tcp_stream_init4buf (&u->ts, sock, outdata_buf, size);
 
-	/* Setup telnet options */
-	do_option (u, TELOPT_ECHO);
-	do_option (u, TELOPT_SGA);
-	will_option (u, TELOPT_SGA);
-	fflush (&u->ts.stream);
-
-	/* We will receive:
-	 * ff-fd-03 - will_option TELOPT_SGA
-	 * ff-fb-18 - do_option TELOPT_TTYPE, reply "dont"
-	 * ff-fb-1f - do_option TELOPT_NAWS, reply "dont"
-	 * ff-fb-20 - do_option TELOPT_TSPEED, reply "dont"
-	 * ff-fb-21 - do_option TELOPT_LFLOW, reply "dont"
-	 * ff-fb-22 - do_option TELOPT_LINEMODE, reply "dont"
-	 * ff-fb-27 - do_option TELOPT_NEW_ENVIRON, reply "dont"
-	 * ff-fd-05 - will_option TELOPT_STATUS, reply "wont"
-	 */
+	telnet_reset(u);
 	return &u->stream;
+}
+
+void telnet_reset(telnet_t *u){
+    /* Setup telnet options */
+    do_option (u, TELOPT_ECHO);
+    do_option (u, TELOPT_SGA);
+    will_option (u, TELOPT_SGA);
+    fflush (&u->ts.stream);
+
+    /* We will receive:
+     * ff-fd-03 - will_option TELOPT_SGA
+     * ff-fb-18 - do_option TELOPT_TTYPE, reply "dont"
+     * ff-fb-1f - do_option TELOPT_NAWS, reply "dont"
+     * ff-fb-20 - do_option TELOPT_TSPEED, reply "dont"
+     * ff-fb-21 - do_option TELOPT_LFLOW, reply "dont"
+     * ff-fb-22 - do_option TELOPT_LINEMODE, reply "dont"
+     * ff-fb-27 - do_option TELOPT_NEW_ENVIRON, reply "dont"
+     * ff-fd-05 - will_option TELOPT_STATUS, reply "wont"
+     */
 }
