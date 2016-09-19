@@ -64,7 +64,8 @@ typedef struct _uart_t {
 	stream_interface_t *interface;
 	mutex_t transmitter;
 	mutex_t receiver;
-	small_uint_t port;
+	volatile unsigned* port;
+    //volatile unsigned* io;
 	bool_t onlcr;
 	unsigned int khz;
 	unsigned char out_buf [UART_OUTBUFSZ];

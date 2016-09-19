@@ -32,6 +32,11 @@
 #   include "linux.h"
 #endif
 
+#ifndef uart_io_base
+#define uart_io_base(port) (port)
+#else
+#endif
+
 #define SLIP_FLAG		0300
 #define SLIP_ESC		0333
 #define SLIP_ESC_FLAG		0334
@@ -434,7 +439,7 @@ slip_init (slip_t *u, small_uint_t port, const char *name, int prio,
 	u->netif.type = NETIF_SLIP;
 	u->netif.bps = baud;
 	u->pool = pool;
-	u->port = port;
+	u->port = uart_io_base(port);
 	u->khz = khz;
 	buf_queue_init (&u->inq, u->inqdata, sizeof (u->inqdata));
 	buf_queue_init (&u->outq, u->outqdata, sizeof (u->outqdata));

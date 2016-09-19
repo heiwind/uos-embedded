@@ -30,6 +30,12 @@
 #   include "linux.h"
 #endif
 
+#ifndef uart_io_base
+#define uart_io_base(port) (port)
+#else
+#endif
+
+
 /*
  * Start transmitting a byte.
  * Assume the transmitter is stopped, and the transmit queue is not empty.
@@ -288,7 +294,7 @@ uart_init (uart_t *u, small_uint_t port, int prio, unsigned int khz,
 #if (defined(ARM_1986BE9) || defined(ARM_1986BE1))
 	u->port = (port == 0) ? ARM_UART1_BASE : ARM_UART2_BASE;
 #else
-	u->port = port;
+	u->port = uart_io_base(port);
 #endif
 
 	mutex_init(&u->transmitter);
