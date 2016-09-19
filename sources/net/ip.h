@@ -56,7 +56,7 @@ extern "C" {
 //                               IP4 adress
 //*****************************************************************************
 typedef uint32_t ip_addr_t;
-typedef union  __attribute__ ((packed,aligned(4))) _ip_addr{
+typedef union  __attribute__ ((aligned(4))) _ip_addr{
     ip_addr_t       val;
     char            cs[4];
     unsigned char   ucs[4];
@@ -68,6 +68,10 @@ typedef union  __attribute__ ((packed,aligned(4))) _ip_addr{
 #endif
 } ip_addr;
 
+//эта структура должна помогать при доступе по невыравненому адресу
+typedef union __attribute__ ((packed)){
+    ip_addr_t       val;
+} ip_addr_float;
 
 //ссылки и константы - это ссылки на ип-адреса. на малых платформах (16бит-адрес)
 //  в этом качестве используеются указатель, на нормальных - значение. 
@@ -85,7 +89,7 @@ typedef const unsigned char* ip_addr_const;
 #define IP_PAYLOAD_ALIGN    4U
 #define IPREF_IS_VAL
 typedef ip_addr_t       ip_addr_ref;
-typedef ip_addr_t       ip_addr_const;
+typedef ip_addr_t       ip_addr_const; //const
 
 #define ipref_as_ucs(x) ((unsigned char*)&x)
 
@@ -119,7 +123,11 @@ ip_addr __PURE ipadr_4ucs(const unsigned char* x)
         res.val = 0;
         return res;
     }
-#if CPU_ACCESSW_ALIGNMASK > 0
+#if defined(MIPS32)
+    ip_addr_float* srcf = (ip_addr_float*)x;
+    res.val = srcf->val;
+    return res;
+#elif CPU_ACCESSW_ALIGNMASK > 0
     if (( (uintptr_t)x &CPU_ACCESSW_ALIGNMASK) == 0){
         res.val = *((const ip_addr_t*)x);
         return res;
@@ -157,12 +165,18 @@ unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
                                 , const unsigned char* __restrict__ src
                                 )
 {
-#if CPU_ACCESSW_ALIGNMASK > 0
+#if defined(MIPS32)
+    ip_addr_float* dstf = (ip_addr_float*)dst;
+    ip_addr_float* srcf = (ip_addr_float*)src;
+    dstf->val = srcf->val;
+    return dst;
+#elif CPU_ACCESSW_ALIGNMASK > 0
     if ((((uintptr_t)dst|(uintptr_t)src)&CPU_ACCESSW_ALIGNMASK) == 0){
         ((ip_addr*)dst)->val = ((ip_addr*)src)->val;
         return dst;
     }
-#endif
+#endif //defined(MIPS32)
+
 #if UOS_FOR_SIZE > 0
     memcpy(dst, src, 4);
 #elif defined (__AVR__)
@@ -170,7 +184,7 @@ unsigned char* ipadr_assign_ucs(        unsigned char* __restrict__ dst
     *dst++ = *src++;
     *dst++ = *src++;
     *dst++ = *src++;
-#else //ifdef MIPS32
+#else
     dst[0] = src[0];
     dst[1] = src[1];
     dst[2] = src[2];
@@ -184,7 +198,11 @@ unsigned char* ipadr_assignl_ucs( unsigned char* dst
                                         , ip_addr_t x
                                 ) __noexcept
 {
-#if CPU_ACCESSW_ALIGNMASK > 0
+#if defined(MIPS32)
+    ip_addr_float* dstf = (ip_addr_float*)dst;
+    dstf->val = x;
+    return dst;
+#elif CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)dst & CPU_ACCESSW_ALIGNMASK) == 0){
         ((ip_addr*)dst)->val = x;
         return dst;
@@ -230,7 +248,11 @@ bool_t __PURE ipadr_is_same_ucs( const unsigned char* __restrict__ a
                         , const unsigned char* __restrict__ b
                         )  __noexcept
 {
-#if CPU_ACCESSW_ALIGNMASK > 0
+#if defined(MIPS32)
+    ip_addr_float* af = (ip_addr_float*)a;
+    ip_addr_float* bf = (ip_addr_float*)b;
+    return ipadr_is_same( af->val, bf->val);
+#elif CPU_ACCESSW_ALIGNMASK > 0
     if ( (((uintptr_t)a|(uintptr_t)b)&CPU_ACCESSW_ALIGNMASK) == 0){
 #       ifdef IPREF_IS_VAL
         ip_addr_const* __restrict__ ipa = (ip_addr_const*) a;
@@ -324,7 +346,10 @@ bool_t __CONST ipadr_is_broadcast(ip_addr_const a)
 INLINE
 bool_t __PURE ipadr_not0_ucs(const unsigned char* a)
 {
-#if CPU_ACCESSW_ALIGNMASK > 0
+#if defined(MIPS32)
+    ip_addr_float* af = (ip_addr_float*)a;
+    return (af->val != 0)? true : false;
+#elif CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){
         return (((ip_addr*)a)->val != 0)? true : false;
     }
@@ -340,9 +365,14 @@ bool_t __PURE ipadr_not0_ucs(const unsigned char* a)
 INLINE
 bool_t __PURE ipadr_is_broadcast_ucs(const unsigned char* a)
 {
-#if CPU_ACCESSW_ALIGNMASK > 0
+#if defined(MIPS32)
+    ip_addr_float* af = (ip_addr_float*)a;
+    ip_addr_t tmpa = af->val;
+    return ((tmpa == 0) || (~tmpa == 0)) ? true : false;
+#elif CPU_ACCESSW_ALIGNMASK > 0
     if ( ((uintptr_t)a&CPU_ACCESSW_ALIGNMASK) == 0){
-        return (((ip_addr*)a)->val != 0)? true : false;
+        ip_addr_t tmp0 = ((ip_addr*)a)->val;
+        return ((tmp0 == 0) || (~tmp0 == 0)) ? true : false;
     }
 #endif
 #if defined (__AVR__)
@@ -357,7 +387,7 @@ bool_t __PURE ipadr_is_broadcast_ucs(const unsigned char* a)
     tmp0 |= a[3];
     tmpf &= a[3];
 #endif
-    return (tmp0 == 0) || (tmpf == 0xff);
+    return (tmp0 == 0) || (~tmpf == 0);
 }
 
 /** надо стараться придерживаться этого шаблона сокета, для создания протокольных сокетов
