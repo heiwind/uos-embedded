@@ -81,23 +81,25 @@ cache_invalidate_on_buf(const buf_t* p){
         , kseg2  = 6
         , kseg3  = 7
     };
-#if ((UOS_MIPS_CACHEBLE_KSEG23 > 0) && (UOS_MIPS_HAVE_KSEG23 > 0))\
-    || ( (UOS_MIPS_CACHEBLE_KSEG0 > 0) ) || ( (UOS_MIPS_CACHEBLE_KUSEG > 0) )
+#if ( ((UOS_MIPS_NOCACHEBLE_KSEG23 <= 0) && (UOS_MIPS_NOUSE_KSEG23 <= 0))\
+    || ( (UOS_MIPS_NOCACHEBLE_KSEG0 <= 0) ) \
+    || ( (UOS_MIPS_NOCACHEBLE_KUSEG <= 0) ) \
+    ) && defined(C0CONF_NOCACHED)
     unsigned c0 = mips_read_c0_register (C0_CONFIG);
     switch(kseg){
         case kseg_nocached: return;
-#if ( (UOS_MIPS_CACHEBLE_KSEG0 > 0) )
+#if ( (UOS_MIPS_NOCACHEBLE_KSEG0 <= 0) )
         case kseg0        :
             if (C0CONF_K0_FIELD(c0) == C0CONF_NOCACHED)
                 return;
 #endif
-#if ( (UOS_MIPS_CACHEBLE_KSEG23 > 0) )
+#if ( (UOS_MIPS_NOCACHEBLE_KSEG23 <= 0) && (UOS_MIPS_NOUSE_KSEG23 <= 0) )
         case kseg2      :
         case kseg3      :
             if (C0CONF_K23_FIELD(c0) == C0CONF_NOCACHED)
                 return;
 #endif
-#if ( (UOS_MIPS_CACHEBLE_KUSEG > 0) )
+#if ( (UOS_MIPS_NOCACHEBLE_KUSEG <= 0) )
         case kuseg0     :
         case kuseg1     :
         case kuseg2     :

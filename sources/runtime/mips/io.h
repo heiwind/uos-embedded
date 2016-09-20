@@ -409,13 +409,13 @@ mips_count_leading_zeroes (unsigned x)
 static unsigned int inline
 mips_virtual_addr_to_physical (unsigned int virt)
 {
-#if (UOS_MIPS_HAVE_KSEG23 <= 0) && (UOS_MIPS_USE_ERL <= 0)
+#if (UOS_MIPS_NOUSE_KSEG23 > 0) && (UOS_MIPS_NOUSE_ERL > 0)
     return (virt & 0x1fffffff);
 #endif
 	unsigned segment_desc = virt >> 28;
 	if (segment_desc <= 0x7) {
 		// kuseg
-#if UOS_MIPS_USE_ERL > 0
+#if UOS_MIPS_NOUSE_ERL <= 0
 		if (mips_read_c0_register(C0_STATUS) & ST_ERL )
 #else
 		if (1)
@@ -429,10 +429,10 @@ mips_virtual_addr_to_physical (unsigned int virt)
 		}
 	} else {
 		// kseg0, or kseg1, or kseg2, or kseg3
-#if UOS_MIPS_HAVE_KSEG23 > 0
-		if (UOS_MIPS_HAVE_KSEG23 == 0) || (segment_desc <= 0xb))
-#else
+#if UOS_MIPS_NOHAVE_KSEG23 > 0
         if (1)
+#else
+        if ((UOS_MIPS_NOUSE_KSEG23 > 0) || (segment_desc <= 0xb))
 #endif
 		{
 			// kseg0 или kseg1, cut bits A[31:29].
