@@ -62,6 +62,9 @@
 #define ETH_IRQ_DMA_RX		14	/* receive DMA interrupt */
 #define ETH_IRQ_DMA_TX		15	/* transmit DMA interrupt */
 
+//форсирую сброс DCACHE после чтения фрейма ДМА
+#define ETH_FORCE_CHACHE_SYNC 0
+
 /*
  * Map virtual address to physical address in FM mode.
  */
@@ -788,8 +791,9 @@ chip_wait_rxfifo (eth_t* u)
         done = (csr & MC_DMA_CSR_RUN) == 0;
     }
 
-#ifdef ENABLE_DCACHE
-    MC_CSR |= MC_CSR_FLUSH_D;
+#if defined(ENABLE_DCACHE) && (ETH_FORCE_CHACHE_SYNC > 0)
+    //сброс кеша делаю в eth_receive_frame
+    MC_CSR = MC_CSR| MC_CSR_FLUSH_D;
 #endif
     if (!done) {
         ETHFAIL_printf ("eth: RX DMA failed, CSR=%08x\n", csr);
