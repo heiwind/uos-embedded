@@ -113,6 +113,9 @@
 #define CONTEXT_HI	29
 #define CONTEXT_STATUS	30
 #define CONTEXT_PC	31
+// sp context actual after stack switch
+//  implemented on elvees when UOS_EXCEPTION_STACK declared
+#define CONTEXT_SP  32
 
 #define CONTEXT_WORDS	32
 
@@ -169,11 +172,26 @@
 #define ARCH_CONTEXT_SIZE (MIPS_FSPACE+CONTEXT_WORDS*4)
 #define ARCH_ISR_FSPACE    MIPS_FSPACE
 
+
+
 #ifndef __ASSEMBLER__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef UOS_EXCEPTION_STACK
+//* обработчик исключения может много всего печатать, ему нужен приличный стек,
+//*     выпасть он может и на ситуации облома стека. и следовательно обработка
+//* падения может привести к переполнению стека и дополнительной порче системы
+//*     вынесу стек исключений отдельно, чтобы иметь коректный дамп и избежать
+//*     рекурсивного падения
+//* по умолчанию стартовая (верхняя) точка в этот стек берется переменной
+//*     extern long* uos_exception_stack;
+extern long* uos_exception_stack;
+#endif
+
+
 
 /*
  * Set value of stack pointer register.

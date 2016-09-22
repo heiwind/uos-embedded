@@ -312,11 +312,30 @@ _interrupt_vector_: .globl _interrupt_vector_
 #---------------------------------------
 # Hangle exceptions
 #
+#if UOS_EXCEPTION_STACK > 0
+       .globl uos_exception_stack
+#endif
+
 #ifdef  MIPS_VEC_SECTIONS
         .section .init.exception.handle
 #endif
 
 exception:
+#ifdef UOS_EXCEPTION_STACK
+#       switch to exception stack, on top of context save
+        la      $k1, uos_exception_stack
+        lw      $k0, ($k1)
+        beq     $k0, $zero, exception_nostack
+        nop
+        addi    $k0, $k0, - CONTEXT_WORDS*4-4 # Allocate space for context
+        #force align sp at 8 bytes
+        srl     $k0, 3
+        sll     $k0, 3
+#       save last pred sp to context
+        sw      $sp, (CONTEXT_SP*4)($k0)
+        move    $sp, $k0
+exception_nostack:
+#endif
         SAVE_REGS                       # Save all registers in stack
         move    $a0, $sp                # Arg0: pointer to saved state
 #if MIPS_FSPACE > 0

@@ -35,6 +35,16 @@ void _irq_handler_ ();
 void _exception_handler_ (unsigned int context[]);
 void _pagefault_handler_ (unsigned int context[]);
 
+#ifdef UOS_EXCEPTION_STACK
+long* uos_exception_stack;
+#endif
+#if UOS_EXCEPTION_STACK > 0
+#if ( UOS_EXCEPTION_STACK < (MIPS_FSPACE + (CONTEXT_WORDS+1)*4 ) )
+#error  "too small stack for exceptions, try to define more with UOS_EXCEPTION_STACK"
+#endif
+long* uos_exception_stackstore[ UOS_EXCEPTION_STACK/sizeof(long) ];
+#endif
+
 #ifdef __cplusplus
 }
 #endif
@@ -531,6 +541,15 @@ _init_ (void)
 	limit = __bss_end;
 	while (dest < limit)
 		*dest++ = 0;
+
+#ifdef UOS_EXCEPTION_STACK
+#if UOS_EXCEPTION_STACK > 0
+    const unsigned es_items = sizeof(uos_exception_stackstore)/sizeof(uos_exception_stackstore[0]);
+    uos_exception_stack = (long*)&(uos_exception_stackstore[es_items-1]);
+#else
+    uos_exception_stack = 0;
+#endif
+#endif
 		
 	for (;;)
 		main ();
@@ -603,9 +622,15 @@ static void dump_of_death (unsigned int context[])
 	debug_printf ("a0 = %8x   t4 = %8x   s4 = %8x   gp = %8x\n",
 		context [CONTEXT_R4], context [CONTEXT_R12],
 		context [CONTEXT_R20], context [CONTEXT_GP]);
+#ifndef UOS_EXCEPTION_STACK
 	debug_printf ("a1 = %8x   t5 = %8x   s5 = %8x   sp = %8x\n",
 		context [CONTEXT_R5], context [CONTEXT_R13],
 		context [CONTEXT_R21], context + CONTEXT_WORDS);
+#else
+    debug_printf ("a1 = %8x   t5 = %8x   s5 = %8x   sp = %8x (context %8x)\n",
+        context [CONTEXT_R5], context [CONTEXT_R13],
+        context [CONTEXT_R21], context [CONTEXT_SP], context + CONTEXT_WORDS);
+#endif
 	debug_printf ("a2 = %8x   t6 = %8x   s6 = %8x   fp = %8x\n",
 		context [CONTEXT_R6], context [CONTEXT_R14],
 		context [CONTEXT_R22], context [CONTEXT_FP]);

@@ -47,7 +47,17 @@ void tasks_print(struct _stream_t *stream){
 void uos_debug_dump(){
     tasks_print(&debug);
 
-    debug_dump_stack (task_name (task_current), __builtin_alloca (0),
+    size_t sp = (size_t)__builtin_alloca (0);
+    size_t low_stack = (size_t)task_current->stack_context + task_stack_avail(task_current);
+    if ( (sp < low_stack)
+#ifndef NDEBUG
+        || (sp >= (size_t)task_current->stack_limit)
+#endif
+      )
+        // if now out of task stack, use total affected stack
+        sp = low_stack;
+
+    debug_dump_stack (task_name (task_current), (void*)sp,
         (void*) task_current->stack_context, __builtin_return_address (0));
     debug_printf ("\n*** Please report this information");
 }
