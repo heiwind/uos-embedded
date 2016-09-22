@@ -63,17 +63,24 @@
 #
         .org    0
 _reset_vector_: .globl  _reset_vector_
+_TLBrefill_vector_: .globl  _TLBrefill_vector_
 
         .extern _init_
-        mtc0    $zero, $C0_COUNT    # Zero count registers (needed for RTL model)
-
         # запрет прерываний.
-        mfc0    $a0, $C0_STATUS         # Get SR
+        mfc0    $k0, $C0_STATUS         # Get SR
         SAFE_NOP
+        andi    $k1, $k0, ST_ERL        # check that here is after Reset/NMI
+        bne     $k1, $zero, _reset_is_by_reset_
+        nop
+        la      $k0, _exception_TLBrefill_  # go to exception handle
+        jr      $k0                     # Jump to _exception_TLBrefill_
+        nop
+_reset_is_by_reset_:
         li      $k0, -1 - ST_IE         # Prepare bitmask
         and     $k0, $a0                # Clear IE bit
         mtc0    $k0, $C0_STATUS         # Put SR back
 
+        mtc0    $zero, $C0_COUNT    # Zero count registers (needed for RTL model)
         la      $sp, _estack        # Stack at end of internal SRAM
 #if 1
         lui     $gp, 0xb840         # Set global pointer
@@ -81,7 +88,6 @@ _reset_vector_: .globl  _reset_vector_
         SAFE_NOP
         sw      $a0, ($gp)          # Store start time to XYRAM0
 #endif
-
         lui     $gp, RAM_HI         # Set global pointer
         la      $t0,_init_          # init code can be far away from reset/isr internal mem
         jr      $t0                 # Jump to _init_()
@@ -202,6 +208,7 @@ _pagefault_vector_: .globl _pagefault_vector_
 #endif
 
 _exception_vector_: .globl _exception_vector_
+_exception_TLBrefill_: .globl _exception_TLBrefill_
 
         FLUSH_CACHE
         mfc0    $k0, $C0_CAUSE          # Get CAUSE
