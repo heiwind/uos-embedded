@@ -216,6 +216,8 @@
 #define UOS_STRICT_MUTEX_LOCK   2
 //* включает тесты выхода за границы стека
 #define UOS_STRICT_STACK        4
+//* тесты промаха памяти данных или кода
+#define UOS_STRICT_TASKS_MEM    8
 
 /* UOS_STRICT_xxx - задают перечень включаемых тестов aasert в модулях ядра
  * */

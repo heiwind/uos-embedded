@@ -54,6 +54,9 @@ void uos_on_irq(int nirq)
 #define UOS_STRICT_STACK        0
 #endif
 
+#ifndef UOS_STRICT_TASKS_MEM
+#define UOS_STRICT_TASKS_MEM 0
+#endif
 
 /*
  * Perform the task switch.
@@ -161,7 +164,7 @@ _arch_task_switch_ ()
 	        , task_name(target), target, target->stack, sp
 	        );
 #endif
-	
+	UOS_STRICT(TASKS_MEM, assert(uos_valid_code_address(((void**)sp)[CONTEXT_PC + MIPS_FSPACE/4])));
 	task_current = target;
 
 	/* Switch to the new task. */

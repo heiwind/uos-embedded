@@ -104,6 +104,7 @@ void mdelay (small_uint_t) __cpp_decls;
  * Check memory address.
  */
 bool_t uos_valid_memory_address (const void*);
+bool_t uos_valid_code_address (const void*);
 
 /*
  * Halt the system.

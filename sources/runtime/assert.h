@@ -61,4 +61,9 @@ extern "C" {
 #   define assert2(expr, msg, ...) assertmsg_always(expr, msg, __VA_ARGS__)
 #endif
 
+
+//* this selects action on UOS_STRICT_ХХХ
+//* usage: UOS_STRICT( XXX , some assert(some) );
+#define UOS_STRICT( level, body ) if ((UOS_STRICTS & UOS_STRICT_##level) != 0) body
+
 #endif /* __UOS_ASSERT__H_ */

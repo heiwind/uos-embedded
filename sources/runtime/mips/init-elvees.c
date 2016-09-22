@@ -566,6 +566,17 @@ uos_valid_memory_address (const void *ptr)
 	return 0;
 }
 
+__WEAK
+bool_t uos_valid_code_address (const void* x){
+    extern unsigned _stext[];
+    //extern unsigned _etext[];
+    unsigned address = (unsigned) x;
+    if (address >= (unsigned) &_stext &&
+        address < (unsigned) &_etext)
+        return 1;
+    return 0;
+}
+
 void __attribute__ ((weak))
 CODE_ISR
 _irq_handler_ ()
