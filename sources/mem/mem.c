@@ -454,8 +454,59 @@ void mem_dump(mem_pool_t *m){
             debug_printf ("$%x[$%x]:bad magic %2s=$%hx\n", h, h->size, &h->magic, (int)(h->magic));
             break;
         }
+        if ( (h->size != MEM_ALIGN(h->size))
+             || (h->size < (MEM_HSIZE+ SIZEOF_ALIGN))
+             || ( h->size > ((size_t)limit - (size_t)h) )
+           )
+        {
+            debug_printf ("bad block $%x size $%x\n", h, h->size);
+            break;
+        }
     }
     //mutex_unlock (&m->lock);
+}
+
+void mem_validate(mem_pool_t *m){
+    mheader_t *h;
+    //mutex_lock (&m->lock);
+    mheader_t* limit = (mheader_t*)((size_t)m->store+m->size);
+    for (h=(mheader_t*)m->store; h<limit; h=SUCC(h)) {
+        assert2( (h->pool == m)
+                , "bad block $%x[$%x]:$%hx on pool[$%x]\n"
+                , h, h->size
+                , h->magic, h->pool
+        );
+
+        assert2( (h->magic == MEMORY_BLOCK_MAGIC) || (h->magic == MEMORY_HOLE_MAGIC)
+                , "$%x[$%x]:bad magic %2s=$%hx\n"
+                , h, h->size, &h->magic, (int)(h->magic)
+                );
+        assert2( ( (h->size == MEM_ALIGN(h->size))
+                && (h->size >= (MEM_HSIZE+ SIZEOF_ALIGN))
+                && (h->size <= ((size_t)limit - (size_t)h) )
+                  )
+                , "bad block $%x size $%x\n"
+                , h, h->size
+                );
+    }
+    //mutex_unlock (&m->lock);
+}
+
+void mem_validate_block(void *p){
+    mheader_t *h;
+    if (! p)
+        return;
+
+    /* Make the header pointer. */
+    h = H_OF( p );
+    mem_pool_t *m = h->pool;
+    assert(uos_valid_memory_address(m));
+#if MEM_DEBUG
+    assert( (size_t)h >= (size_t)m->store );
+    assert( ((size_t)h + h->size) < ((size_t)m->store)+m->size );
+    assert(h->magic == MEMORY_BLOCK_MAGIC);
+           //, "mem block $%x have bad magic\n", p);
+#endif
 }
 
 #endif

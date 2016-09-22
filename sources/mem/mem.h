@@ -48,6 +48,11 @@ unsigned char *mem_strndup (mem_pool_t *region, const unsigned char *s, size_t n
 #if MEM_DEBUG
 void mem_print_free_list (mem_pool_t *m);
 void mem_dump(mem_pool_t *m);
+void mem_validate(mem_pool_t *m);
+void mem_validate_block(void *p);
+#else
+#define mem_validate_block(x)
+#define mem_validate(m);
 #endif
 
 #ifdef __cplusplus
