@@ -726,10 +726,12 @@ tcp_output_poll (tcp_socket_t *s)
                 break;
             }
 
-		tcp_debug ("tcp_output: snd_wnd %lu, cwnd %lu, wnd %lu, effwnd %lu, seq %lu, ack %lu\n",
+		tcp_debug ("tcp_output: snd_wnd %lu, cwnd %lu, wnd %lu, effwnd %lu\n",
 			s->snd_wnd, s->cwnd, wnd,
-			tcp_segment_seqno(seg) + seg->len - s->lastack,
-			tcp_segment_seqno(seg), s->lastack);
+			tcp_segment_seqno(seg) + seg->len - s->lastack
+			);
+        tcp_debug ("tcp_output: seq %lu, ack %lu\n",
+            tcp_segment_seqno(seg), s->lastack);
 
 		if (s->state != SYN_SENT) {
 			seg->tcphdr->flags |= TCP_ACK;
