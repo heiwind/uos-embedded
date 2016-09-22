@@ -174,7 +174,7 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
         /* Remove a chunk of space and, if we can, release any of what's left
 	 * as a new hole.  If we can't release any then allocate more than was
 	 * requested and remove this hole from the hole list. */
-	if (h->size >= required + sizeof(mheader_t) + 2*SIZEOF_POINTER) {
+	if (h->size >= required + MEM_HSIZE + 2*SIZEOF_POINTER) {
 		newh = (mheader_t*) ((size_t)h + required);
 		newh->pool = h->pool;
 		newh->size = h->size - required;
@@ -306,7 +306,7 @@ void *mem_realloc (void *old_block, size_t bytes)
 		uos_halt(1);
         }
 #endif
-	old_size = h->size - sizeof(mheader_t);
+	old_size = h->size - MEM_HSIZE;
 	if (old_size >= bytes)
 		return old_block;
 
@@ -339,7 +339,7 @@ void mem_truncate (void *block, size_t required)
 	/* Add the size of header. */
 	if (required < SIZEOF_POINTER)
 		required = SIZEOF_POINTER;
-	required = MEM_ALIGN (required + sizeof(mheader_t));
+	required = MEM_ALIGN (required + MEM_HSIZE);
 
 	/* Make the header pointer. */
 	h = H_OF( block );
@@ -350,7 +350,7 @@ void mem_truncate (void *block, size_t required)
         }
 #endif
 	/* Is there enough space to split? */
-	if (h->size >= required + sizeof(mheader_t) + 2*SIZEOF_POINTER) {
+	if (h->size >= required + MEM_HSIZE + 2*SIZEOF_POINTER) {
 		/* Split into two blocks. */
 		newh = (mheader_t*) ((size_t)h + required);
 		newh->pool = h->pool;
@@ -394,7 +394,7 @@ size_t mem_size (void *block)
 		uos_halt(1);
         }
 #endif
-	return h->size - sizeof(mheader_t);
+	return h->size - MEM_HSIZE;
 }
 
 /**
