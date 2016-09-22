@@ -105,7 +105,17 @@ ip_input (ip_t *ip, buf_t *p, netif_t *inp)
 
 	/* Trim buf. This should have been done at the netif layer,
 	 * but we'll do it anyway just to be sure that its done. */
-	buf_truncate (p, iphdr->len_h << 8 | iphdr->len_l);
+    {
+        unsigned req_len = iphdr->len_h << 8 | iphdr->len_l;
+
+        if ( (netif_is_overlaped(p) != 0)           //overlaped buffers should not be reallocated
+             || ((p->tot_len - req_len) < req_len)  //TCP_CAPLEN
+           )
+            buf_truncate_soft (p, req_len);
+        else {
+            buf_truncate (p, req_len);
+        }
+    }
 
 	IP_printf("ip:have packet : %@.4D ->%@.4D len %d proto %x\n"
 	            ,iphdr->src.ucs, iphdr->dest.ucs, p->len
