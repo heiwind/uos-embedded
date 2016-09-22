@@ -36,10 +36,12 @@
 #define ETH_printf(...) ETH_PRINTF(__VA_ARGS__)
 #define EDMA_printf(...) ETH_PRINTF(__VA_ARGS__)
 #define ETH_printf2(...) ETH_PRINTF(__VA_ARGS__)
+#define ETH_dump(...)
 #else
 #define ETH_printf(...)
 #define ETH_printf2(...)
 #define EDMA_printf(...)
+#define ETH_dump(...)
 #endif
 
 #ifdef DEBUG_NET_ETH_FAIL
@@ -825,7 +827,7 @@ chip_transmit_packet (eth_t *u, buf_t *p)
 	 * buf is kept in the ->len variable. */
 	buf_t *q;
 
-    ETH_printf ("eth_send_data: length %d bytes %#12.6D %#2D\n"
+    ETH_dump ("eth_send_data: length %d bytes %#12.6D %#2D\n"
                 , p->tot_len
                 , p->payload, p->payload+12
                 );
@@ -1126,6 +1128,7 @@ eth_receive_frame (eth_t *u)
 	else {
 	    /* Allocate a buf chain with total length 'len' */
 	    p = buf_alloc (u->pool, len, 2);
+	    //ETH_printf("eth_receive_data:alloc $%x[%d] for len %d\n", p, mem_size(p), len);
 	    if (! p) {
 	        /* Could not allocate a buf - skip received frame */
 	        ETHFAIL_printf("eth_receive_data: ignore packet - out of memory\n");
@@ -1163,14 +1166,10 @@ eth_receive_frame (eth_t *u)
 #       endif
         cache_invalidate_on_buf(p);
         ETH_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, len);
+        ETH_dump ("eth_receive_data: mac:%#12.6D msg:%#*.16D\n", p->payload, len-12, p->payload+12);
     }
 //    else
 //        debug_putchar(0, '#');
-
-    if (0)
-    {
-        ETH_printf ("eth_receive_data: %#12.6D %#2D\n", buf, buf+12);
-    }
 
 #else //defined(ELVEES_NVCOM02T) || defined (ELVEES_NVCOM02)
     /* Extract data from RX FIFO. */
