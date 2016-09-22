@@ -10,7 +10,7 @@ snprintf (unsigned char *buf, int size, const char *fmt, ...)
 
 	stropen (&u, buf, size);
 	va_start (args, fmt);
-	err = vprintf ((stream_t*)&u, fmt, args);
+	err = vprintf ((stream_t*)&u.interface, fmt, args);
 	va_end (args);
 	strclose (&u);
 	return err;

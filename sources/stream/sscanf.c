@@ -17,7 +17,7 @@ int
 vsscanf (const unsigned char *buf, const char *fmt, va_list args){
     stream_buf_t u;
     stropen (&u, (unsigned char*) buf, 0);
-    return vscanf ((stream_t*)&u, fmt, args);
+    return vscanf ((stream_t*)&u.interface, fmt, args);
 }
 
 #ifdef TEST
