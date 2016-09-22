@@ -46,6 +46,11 @@ small_int_t buf_free (buf_t *p) __cpp_decls;
  * Shrink the buf to the size given by the size parameter.
  */
 void buf_truncate (buf_t *p, unsigned short size) __cpp_decls;
+//* same as buf_truncate, but leave buffer memory allocation as is
+void buf_truncate_soft (buf_t *p, unsigned short size) __cpp_decls;
+//* truncates memory blocks on buffers to actual buffer size,
+//*    free empty buffers from chain
+void buf_pack(buf_t *p) __cpp_decls;
 
 /*
  * Try to move the p->payload pointer header_size number of bytes

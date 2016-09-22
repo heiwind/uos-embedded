@@ -33,31 +33,87 @@ buf_alloc (mem_pool_t *m, unsigned short size, unsigned short reserved)
 void
 buf_truncate (buf_t *p, unsigned short size)
 {
-	buf_t *q, *r;
-	unsigned short rsize;
+    buf_t *q, *r;
+    unsigned short rsize;
 
-	if (p->tot_len <= size)
-		return;
+    if (p->tot_len <= size)
+        return;
 
-	/* First, step over the bufs that should still be in the chain. */
-	rsize = size;
-	q = p;
-	while (rsize > q->len) {
-		rsize -= q->len;
-		q = q->next;
+    /* First, step over the bufs that should still be in the chain. */
+    rsize = size;
+    q = p;
+    while (rsize > q->len) {
+        rsize -= q->len;
+        q = q->next;
+    }
+    if (q->len != rsize) {
+    /* Adjust the length of the buf that will be halved. */
+    mem_truncate (q, q->payload - (unsigned char*)q + rsize);
+    q->len = rsize;
+    }
+
+    /* And deallocate any left over bufs. */
+    r = q->next;
+    q->next = 0;
+    for (q = r; q; q = r) {
+        r = q->next;
+        buf_free (q);
+    }
+    p->tot_len = size;
+}
+
+void buf_pack(buf_t *p) {
+    buf_t *q, *r;
+
+    /* deallocate any left over bufs. */
+    r = p;
+    q = r->next;
+	for (; q; q = r->next) {
+	    if (q->len != 0) {
+	        r = q;
+	        continue;
+	    }
+        r->next = q->next;
+        q->next = 0;
+        mem_free(q);
 	}
-	/* Adjust the length of the buf that will be halved. */
-	mem_truncate (q, q->payload - (unsigned char*)q + rsize);
-	q->len = rsize;
 
-	/* And deallocate any left over bufs. */
-	r = q->next;
-	q->next = 0;
-	for (q = r; q; q = r) {
-		r = q->next;
-		buf_free (q);
+	//* truncates memory blocks if it too large
+	for (q = p; q; q = q->next) {
+	    unsigned act_size = q->payload - (unsigned char*)q + q->len;
+	    if ( mem_size(q) > (act_size + sizeof(buf_t)) )
+	        mem_truncate (q, act_size);
 	}
-	p->tot_len = size;
+}
+
+//* same as buf_truncate, but leave buffer memory allocation as is
+void buf_truncate_soft (buf_t *p, unsigned short size){
+    buf_t *q, *r;
+    unsigned short rsize;
+
+    if (p->tot_len <= size)
+        return;
+
+    /* First, step over the bufs that should still be in the chain. */
+    rsize = size;
+    q = p;
+    while (rsize > q->len) {
+        assert(q != 0);
+        rsize -= q->len;
+        q = q->next;
+    }
+    /* Adjust the length of the buf that will be halved. */
+    q->len = rsize;
+
+    /* And deallocate any left over bufs. */
+    r = q->next;
+    q->next = 0;
+    for (q = r; q; q = r) {
+        r = q->next;
+        q->len = 0;
+        q->tot_len = 0;
+    }
+    p->tot_len = size;
 }
 
 /*
