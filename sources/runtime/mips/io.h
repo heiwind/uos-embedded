@@ -432,7 +432,7 @@ mips_virtual_addr_to_physical (unsigned int virt)
 #if UOS_MIPS_NOHAVE_KSEG23 > 0
         if (1)
 #else
-        if ((UOS_MIPS_NOUSE_KSEG23 > 0) || (segment_desc <= 0xb))
+        if (segment_desc <= 0xb) // || (UOS_MIPS_NOUSE_KSEG23 > 0)
 #endif
 		{
 			// kseg0 или kseg1, cut bits A[31:29].
