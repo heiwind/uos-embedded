@@ -1,6 +1,7 @@
 #include <runtime/lib.h>
 #include <kernel/internal.h>
 #include <stdarg.h>
+#include <mem/mem.h>
 #include "rtlog_buf.h"
 
 
@@ -10,14 +11,33 @@
 #define RTLOG_printf(...)
 #endif
 
+#ifndef RTLOG_STRICT_ARGS
+#define RTLOG_STRICT_BOUNDS    1
+#define RTLOG_STRICT_MEM       2
+#define RTLOG_STRICT_ARGS      8
+#endif
+
+#ifndef RTLOG_STRICTNESS
+#define RTLOG_STRICTNESS (RTLOG_STRICT_ARGS)
+#endif
+
+#define STRICT( level, body ) if ((RTLOG_STRICTNESS & RTLOG_STRICT_##level) != 0) body
+
+void rtlog_validate(rtlog* u){
+    assert(uos_valid_memory_address(u->store));
+    mem_validate_block(u->store);
+    assert(mem_size(u->store) >= (u->idx.mask * sizeof(rtlog_node)) );
+}
+
 //*\arg size - размер store в байтах. буфера выделяется как массив rtlog_node
 //*            размером в степень2
 void rtlog_init    ( rtlog* u, void* store, size_t size)
 {
     assert(size > 0);
-    size_t count = size / sizeof(rtlog_node);
+    size_t limit = size / sizeof(rtlog_node);
     //rount to nearest power2
-    count = (1u<<31) >> __builtin_clz(count) ;
+    size_t count = (1u<<31) >> __builtin_clz(limit) ;
+    STRICT(BOUNDS, assert((count <= limit) && ((count*2) > limit) ) );
     ring_uindex_init(&u->idx, count);
     u->store = (rtlog_node*)store;
     u->stamp = 0;
@@ -42,11 +62,20 @@ int rtlog_printf  ( rtlog* u, unsigned nargs, ...){
 
 int rtlog_vprintf ( rtlog* u, unsigned nargs, const char *fmt, va_list args){
     unsigned slot;
+    STRICT(MEM, rtlog_validate(u));
+    STRICT(ARGS, )
+        assert2(nargs <= RTLOG_ARGS_LIMIT
+                , "rtlog_vprintf passed %d args but supports masx %d\n"
+                , nargs, RTLOG_ARGS_LIMIT
+                );
+    if (nargs > RTLOG_ARGS_LIMIT)
+        nargs = RTLOG_ARGS_LIMIT;
     arch_state_t x = arch_intr_off();
     if (ring_uindex_full(&u->idx))
         // drop first message if full
         ring_uindex_get(&u->idx);
     slot = u->idx.write;
+    STRICT(BOUNDS, assert(slot <= u->idx.mask));
     rtlog_node* n = u->store + slot;
     n->stamp = u->stamp;
     ++(u->stamp);
@@ -57,6 +86,7 @@ int rtlog_vprintf ( rtlog* u, unsigned nargs, const char *fmt, va_list args){
     for (i = nargs; i < RTLOG_ARGS_LIMIT; i++)
         n->args[i] = 0;
     ring_uindex_put(&u->idx);
+    STRICT(BOUNDS, assert(u->idx.write <= u->idx.mask) );
     arch_intr_restore (x);
     RTLOG_printf("rtlog: printf %s to %d[stamp%x] %d args : %x, %x, %x, %x, %x, %x\n"
                 , fmt

@@ -25,7 +25,10 @@
 extern "C" {
 #endif
 
+#ifndef RTLOG_ARGS_LIMIT
 #define RTLOG_ARGS_LIMIT 6
+#endif
+
 typedef struct _rtlog_node_t {
     unsigned stamp;
     const char* msg;
