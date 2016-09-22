@@ -77,7 +77,7 @@ void __attribute ((noreturn))_init_ (void)
 }
 
 bool_t __attribute__((weak))
-uos_valid_memory_address (void *ptr)
+uos_valid_memory_address (const void *ptr)
 {
 	unsigned address = (unsigned) ptr;
 

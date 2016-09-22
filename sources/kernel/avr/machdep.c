@@ -134,7 +134,7 @@ arch_build_stack_frame (task_t *t, void (*func) (void*), void *arg, unsigned sta
  * Check that the memory address is correct.
  */
 bool_t __attribute__((weak))
-uos_valid_memory_address (void *ptr)
+uos_valid_memory_address (const void *ptr)
 {
 	unsigned u = (unsigned) ptr;
 	extern char __stack;

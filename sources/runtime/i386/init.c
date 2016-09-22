@@ -327,7 +327,7 @@ void uos_call_global_destructors (void)
  * Return 1 when the address point to valid data region.
  */
 bool_t __attribute__((weak))
-uos_valid_memory_address (void *ptr)
+uos_valid_memory_address (const void *ptr)
 {
 	/* TODO */
 	return 1;
