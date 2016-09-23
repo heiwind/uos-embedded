@@ -175,6 +175,12 @@
 //* отключает контроль целостности списка событий. по умолчанию прерывание контролирует что начало списка исправно
 //*     и если это не так - громко падает
 //#define ETIMER_SAFE   0
+#define ETIMER_SAFE_ARGS    1
+#define ETIMER_SAFE_BASE    2
+#define ETIMER_SAFE_MEM     4
+
+//#define ETIMER_SAFE         (ETIMER_SAFE_ARGS | ETIMER_SAFE_BASE | ETIMER_SAFE_MEM)
+
 
 /**************************************************************************
  *                              time.h

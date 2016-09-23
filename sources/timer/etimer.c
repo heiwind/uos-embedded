@@ -25,6 +25,7 @@
  */
 
 #include <uos-conf.h>
+#include <runtime/lib.h>
 #include <runtime/arch.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
@@ -37,9 +38,17 @@
 etimer_device system_etimer = {NULL};
 
 //#define DEBUG_ETIMER 1
-#ifndef ETIMER_SAFE
-#define ETIMER_SAFE     1
+#ifndef ETIMER_SAFE_MEM
+#define ETIMER_SAFE_ARGS    1
+#define ETIMER_SAFE_BASE    2
+#define ETIMER_SAFE_MEM     4
 #endif
+
+#ifndef ETIMER_SAFE
+#define ETIMER_SAFE         0
+#endif
+
+#define ET_STRICT( level, body ) if ((ETIMER_SAFE & ETIMER_SAFE_##level) != 0) body
 
 
 
@@ -120,7 +129,9 @@ void ETimer_Handle (timeout_t *to, void *data){
     etimer_device* self = etimer_dev_of(event);
     if (self == 0)
         return;
-    assert(self->os_timer.timer == self->clock);
+    ET_STRICT(BASE, assert(self->os_timer.timer == self->clock));
+    if (self->os_timer.timer != self->clock)
+        return;
 
     list_t* pended_timers = &(self->timerlist);
     timeout_t *timer      = &(self->os_timer);
@@ -130,14 +141,17 @@ void ETimer_Handle (timeout_t *to, void *data){
         return;
 
     do { 
+        ET_STRICT(MEM, ) assert2(uos_valid_memory_address(event)
+                                , "etimer:ISR: bad event $%x\n", event
+                                );
         event->cur_time = -timeover;
-#if ETIMER_SAFE > 0
+        ET_STRICT(BASE,) {
         assert( event->item.prev == pended_timers);
         assert( pended_timers->next == &event->item);
         assert2( &event->item == event->item.next->prev,
                 "etimer($%x)->($%x.<-$%x):"
                 , event, event->item.next, event->item.next->prev);
-#endif
+        }
         list_unlink(&event->item);
         if (event->lock != NULL){
             ETIMER_printf("\n!et(%x){+%d}", (unsigned)(event), timeover );
@@ -159,6 +173,9 @@ void ETimer_Handle (timeout_t *to, void *data){
         }
         etimer* newtime = (etimer*)list_first(pended_timers);
         ETIMER_printf("\n>et(%x)\n", (unsigned)(newtime) );
+        ET_STRICT(MEM, ) assert2(uos_valid_memory_address(newtime)
+                                , "etimer:ISR: bad next event $%x\n", newtime
+                                );
     
         //assign next event time to etimer expiration
         etimer_time_t elapsed = newtime->cur_time;
@@ -176,9 +193,7 @@ void ETimer_Handle (timeout_t *to, void *data){
             ETIMER_putchar('/');
     } while (!list_is_empty(pended_timers));
 
-#if ETIMER_SAFE > 0
-    assert(self->os_timer.timer == self->clock);
-#endif
+    ET_STRICT(BASE, assert(self->os_timer.timer == self->clock));
 }
 
 void tasks_list(list_t* l){
@@ -211,10 +226,31 @@ add_timer(etimer *timer)
     etimer_device* self = &system_etimer;
     etimer *t;
 
-    assert(self->clock != NULL);
-#if ETIMER_SAFE > 0
-    assert(self->os_timer.timer == self->clock);
+    ET_STRICT(ARGS, assert(timer != 0));
+    ET_STRICT(ARGS, assert(timer->item.next != 0) );
+    ET_STRICT(BASE, assert(self->clock != NULL) );
+    ET_STRICT(BASE, assert(self->os_timer.timer == self->clock) );
+    ET_STRICT(MEM, ) assert2(uos_valid_memory_address(timer)
+                            , "etimer:start: bad timer $%x\n", timer
+                            );
+    //* not initialised timer
+    if (timer->item.next == 0)
+        return;
+
+#ifdef USEC_TIMER
+    if (timer->interval <= self->clock->usec_per_tick)
+#else
+    if (timer->interval <= self->clock->msec_per_tick)
 #endif
+    {
+        // wakeup timer imidiately
+        timer->cur_time = 0;
+        if (timer->lock != NULL){
+            ETIMER_printf("\n!et(%x){0} ", (unsigned)(timer) );
+            mutex_awake(timer->lock, timer->handle.lock_message);
+        }
+        return;
+    }
 
     etimer_seq_aqure(self);
     mutex_t* clock_lock = self->os_timer.mutex;
@@ -236,6 +272,9 @@ add_timer(etimer *timer)
         else {
             etimer_event_t* enow = &(self->os_timer);
             t = (etimer*)list_first(&self->timerlist);
+            ET_STRICT(MEM, ) assert2(uos_valid_memory_address(t)
+                                    , "etimer:start: bad 1st timer $%x\n", t
+                                    );
             etimer_time_t spent1 = enow->cur_time;
             assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time);
             if (spent1 > timeout){
@@ -266,12 +305,15 @@ add_timer(etimer *timer)
                 safe_timeout += self->clock->msec_per_tick*2;
 #endif
                 list_iterate_from(t, t->item.next, &self->timerlist){
-#if ETIMER_SAFE > 0
+                ET_STRICT(BASE,){
                     assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time);
                     assert2( (void*)t == t->item.prev->next
                                     , "(%x.->%x)<-et(%x)"
                                     , t->item.prev, t->item.prev->next, t);
-#endif
+                }
+                    ET_STRICT(MEM, ) assert2(uos_valid_memory_address(t)
+                                        , "etimer:start: bad timer $%x\n", t
+                                        );
                     if (list_is_empty(&t->item))    //this is impossible/unsync collision. try again on it
                         break;
                     etimer_time_t elapsed = t->cur_time;
@@ -312,9 +354,7 @@ add_timer(etimer *timer)
         }// else if (list_empty(self->timerlist))
         break;  //normal finish
     } // while (true) - cycle attempts on collision
-#if ETIMER_SAFE > 0
-    assert(self->os_timer.timer == self->clock);
-#endif
+    ET_STRICT(BASE, assert(self->os_timer.timer == self->clock) );
     etimer_seq_release(self);
 }
 
@@ -323,6 +363,8 @@ void
 etimer_set(etimer *et, etimer_time_t interval)
 {
     etimer_stop(et);
+    if (et->item.next == 0)
+        etimer_init(et);
     et->interval = interval;
     et->cur_time = 0;
     add_timer(et);
@@ -331,6 +373,9 @@ etimer_set(etimer *et, etimer_time_t interval)
 void
 etimer_reset(etimer *et)
 {
+    ET_STRICT(ARGS, assert(et != 0));
+    if (et->item.next == 0)
+        etimer_init(et);
     if (etimer_not_active(et)){
         add_timer(et);
     }
@@ -347,6 +392,9 @@ etimer_reset(etimer *et)
  * \sa etimer_reset()
  */
 void etimer_reset_with_new_interval(etimer *et, etimer_time_t interval){
+    ET_STRICT(ARGS, assert(et != 0));
+    if (et->item.next == 0)
+        etimer_init(et);
     if (etimer_not_active(et)){
         et->interval = interval;
         add_timer(et);
@@ -365,6 +413,8 @@ void etimer_reset_with_new_interval(etimer *et, etimer_time_t interval){
 void
 etimer_restart(etimer *et)
 {
+    ET_STRICT(ARGS, assert(et != 0));
+    ET_STRICT(ARGS, assert(et->item.next != 0) ); //* not initialised timer
     etimer_stop(et);
     et->cur_time = 0;
     add_timer(et);
@@ -379,6 +429,8 @@ inline bool_t etime_is_over(etimer_time_t t){
 etimer_time_t
 etimer_expiration_time(etimer *et)
 {
+    ET_STRICT(ARGS, assert(et != 0));
+    ET_STRICT(ARGS, assert(et->item.next != 0) ); //* not initialised timer
     etimer_device* self = etimer_dev_of(et);
     etimer *t = NULL;
     etimer_time_t elapse = 0;
@@ -426,6 +478,9 @@ etimer_start_time(etimer *et)
 void
 etimer_stop(etimer *et)
 {
+    ET_STRICT(ARGS, assert(et != 0));
+    if (et->item.next == 0)
+        return;
     if (etimer_not_active(et))
         return;
 
@@ -434,14 +489,16 @@ etimer_stop(etimer *et)
     mutex_t* clock_lock = self->os_timer.mutex;
 
     assert(self->clock != NULL);
-#if ETIMER_SAFE > 0
-    assert(self->os_timer.timer == self->clock);
-#endif
+    ET_STRICT(BASE, assert(self->os_timer.timer == self->clock));
 
     etimer_seq_aqure(self);
     mutex_lock(clock_lock);
     if (!etimer_not_active(et)){
         t = (etimer*)list_first(&self->timerlist);
+        ET_STRICT(BASE, assert(t != 0) );
+        ET_STRICT(MEM, ) assert2(uos_valid_memory_address(t)
+                                , "etimer:stop: bad timeout $%x\n", t
+                                );
         if (et == t){
             ETIMER_printf("#et(%x:%s)\n", (unsigned)(et), task_name(task_current) );
             //надо удалить текущий таймер
@@ -470,9 +527,7 @@ etimer_stop(etimer *et)
         }// else if (list_empty(self->timerlist))
     }//if (!etimer_not_active(et))
     mutex_unlock(clock_lock);
-#if ETIMER_SAFE > 0
-    assert(self->os_timer.timer == self->clock);
-#endif
+    ET_STRICT(BASE, assert(self->os_timer.timer == self->clock));
     etimer_seq_release(self);
 }
 /*---------------------------------------------------------------------------*/
