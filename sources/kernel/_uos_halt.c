@@ -91,7 +91,7 @@ uos_halt (int dump_flag)
 	    uos_debug_dump();
 
 	/* Halt CPU. */
-	debug_printf ("\n*** System halted.\n");
+	debug_puts ("\n*** System halted.\n");
 	for (;;)
 		continue;
 #endif

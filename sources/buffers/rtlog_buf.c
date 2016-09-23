@@ -80,7 +80,7 @@ int rtlog_vprintf ( rtlog* u, unsigned nargs, const char *fmt, va_list args){
     n->stamp = u->stamp;
     ++(u->stamp);
     n->msg = fmt;
-    int i;
+    unsigned i;
     for (i = 0; i < nargs; i++)
         n->args[i] = va_arg(args, unsigned long);
     for (i = nargs; i < RTLOG_ARGS_LIMIT; i++)
