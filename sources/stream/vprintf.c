@@ -102,7 +102,11 @@ int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap);
 int
 stream_vprintf (stream_t *stream, char const *fmt, va_list ap){
 #if ((UOS_STRICTS & UOS_STRICT_STACK) != 0) && (NDEBUG <= 0)
-    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
+#ifdef UOS_EXCEPTION_STACK
+    if ( (uos_exception_stack == 0) || ((void*)uos_exception_stack < arch_get_stack_pointer()) )
+#endif
+    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) )
+    {
         debug_puts("printf asserted stack task ");
         debug_puts(task_current->name);
         debug_putchar(0, '\n');
@@ -146,7 +150,11 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 		fmt = "(null)\n";
 
 #if ((UOS_STRICTS & UOS_STRICT_STACK) != 0) && (NDEBUG <= 0)
-    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) ){
+#ifdef UOS_EXCEPTION_STACK
+    if ( (uos_exception_stack == 0) || ((void*)uos_exception_stack < arch_get_stack_pointer()) )
+#endif
+    if(__builtin_expect (!(task_stack_enough( VPRINTF_FRAME )), 0) )
+    {
         debug_puts("printf asserted stack task ");
         debug_puts(task_name(task_current));
         debug_putchar(0, '\n');
