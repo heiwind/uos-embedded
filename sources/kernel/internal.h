@@ -356,7 +356,9 @@ extern task_t *task_yelds;
 INLINE
 bool_t  task_stack_enough(unsigned preserve){
     unsigned sp = (unsigned)arch_get_stack_pointer ();
+    if ( sp <= (unsigned long)task_current->stack_limit)
     return ( (sp-preserve-(ARCH_CONTEXT_SIZE+ARCH_ISR_FSPACE)) >= (unsigned)(task_current->stack) ) ;
+    return 0;
 }
 
 
