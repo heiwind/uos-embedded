@@ -60,7 +60,7 @@
 #endif
 
 #define MASK_ALIGN      (SIZEOF_ALIGN-1)
-#define MEM_ALIGN(x)		(((x) + MASK_ALIGN) & ~MASK_ALIGN)
+#define MEM_ALIGN(x)		((((size_t)x) + MASK_ALIGN) & ~MASK_ALIGN)
 
 /*
  * Every memory block has a header.
@@ -106,6 +106,11 @@ mheader_t* H_OF(void* block){
 }
 //#define H_OF(block) ((mheader_t*)((size_t)block - MEM_HSIZE))
 
+#if MEM_DEBUG > 0
+void mem_validate_hole(mem_pool_t *m, mheader_t *h);
+#else
+#define mem_validate_hole(...)
+#endif
 
 /**
  * Allocate a block of memory.
@@ -145,18 +150,7 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
 	h = (mheader_t*) m->free_list;
 	hprev = (mheader_t**) (void*) &m->free_list;
 	while (h) {
-#if MEM_DEBUG
-		if (h->magic != MEMORY_HOLE_MAGIC) {
-			debug_printf ("mem: bad hole magic at 0x%x\n", h);
-			debug_printf ("     size=%d, pool=%p\n", h->size, h->pool);
-			uos_halt(1);
-		}
-		if (h->pool != m) {
-			debug_printf ("mem: incorect pool pointer=%p, must be %p\n",
-				h->pool, m);
-			uos_halt(1);
-		}
-#endif
+	    mem_validate_hole(m, h);
         	if (h->size >= required)
         		break;
 
@@ -178,11 +172,11 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
 		newh = (mheader_t*) ((size_t)h + required);
 		newh->pool = h->pool;
 		newh->size = h->size - required;
-		h->size = required;
-		NEXT(newh) = NEXT(h);
 #if MEM_DEBUG
-		newh->magic = MEMORY_HOLE_MAGIC;
+        newh->magic = MEMORY_HOLE_MAGIC;
 #endif
+        NEXT(newh) = NEXT(h);
+		h->size = required;
 	} else {
 	    newh = NEXT(h);
 	}
@@ -206,10 +200,10 @@ static void make_hole_locked (mheader_t *newh)
 	mem_pool_t *m;
 
 	m = newh->pool;
-	m->free_size += newh->size;
 #if MEM_DEBUG
 	newh->magic = MEMORY_HOLE_MAGIC;
 #endif
+    m->free_size += newh->size;
 	/*
 	 * Walk through the hole list and see if this newly freed block can
 	 * be merged with anything else to form a larger space.  Whatever
@@ -219,6 +213,7 @@ static void make_hole_locked (mheader_t *newh)
         h = (mheader_t*) m->free_list;
         hprev = (mheader_t**) (void*) &m->free_list;
 	for (;;) {
+        mem_validate_hole(m, h);
 		if (! h) {
 			/* At the end of free list */
         		*hprev = newh;
@@ -355,6 +350,9 @@ void mem_truncate (void *block, size_t required)
 		newh = (mheader_t*) ((size_t)h + required);
 		newh->pool = h->pool;
 		newh->size = h->size - required;
+#if MEM_DEBUG
+		newh->magic = MEMORY_HOLE_MAGIC;
+#endif
 
 		mutex_lock (&newh->pool->lock);
 		h->size = required;
@@ -499,14 +497,30 @@ void mem_validate_block(void *p){
 
     /* Make the header pointer. */
     h = H_OF( p );
+    assert((size_t)h == MEM_ALIGN(h));
     mem_pool_t *m = h->pool;
     assert(uos_valid_memory_address(m));
-#if MEM_DEBUG
     assert( (size_t)h >= (size_t)m->store );
-    assert( ((size_t)h + h->size) < ((size_t)m->store)+m->size );
+    assert( ((size_t)h + h->size) <= ((size_t)m->store)+m->size );
     assert(h->magic == MEMORY_BLOCK_MAGIC);
            //, "mem block $%x have bad magic\n", p);
-#endif
+}
+
+void mem_validate_hole(mem_pool_t *m, mheader_t *h){
+    assert( (size_t)h >= (size_t)m->store );
+    assert( ((size_t)h + h->size) <= (((size_t)m->store)+m->size) );
+    assert((size_t)h == MEM_ALIGN(h));
+
+    if (h->magic != MEMORY_HOLE_MAGIC) {
+        debug_printf ("mem: bad hole magic at 0x%x\n", h);
+        debug_printf ("     size=%d, pool=%p\n", h->size, h->pool);
+        uos_halt(1);
+    }
+    if (h->pool != m) {
+        debug_printf ("mem: incorect pool pointer=%p, must be %p\n",
+            h->pool, m);
+        uos_halt(1);
+    }
 }
 
 #endif
