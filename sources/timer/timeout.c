@@ -27,7 +27,7 @@ void timeout_add (timer_t *t,       timeout_t *ut)
     }
     assert(ut->timer != 0);
     mutex_lock (&t->lock);
-    list_append (&ut->timer->timeouts, &ut->item);
+    list_append (&(ut->timer->timeouts), &ut->item);
     mutex_unlock (&t->lock);
 }
 

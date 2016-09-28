@@ -518,6 +518,10 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
         t->usec_per_tick_msprec = ~0;
     t->khz = khz;
 
+#ifdef TIMER_TIMEOUTS
+    list_init (&t->timeouts);
+#endif
+
 #ifndef SW_TIMER
     /* Attach fast handler to timer interrupt. */
     mutex_attach_irq (&t->lock, TIMER_IRQ, (handler_t) timer_handler, t);
@@ -560,10 +564,6 @@ timer_init_us (timer_t *t, unsigned long khz, unsigned long usec_per_tick)
 
 
 #endif // SW_TIMER
-
-#ifdef TIMER_TIMEOUTS
-    list_init (&t->timeouts);
-#endif
 }
 
 #else //USEC_TIMER
