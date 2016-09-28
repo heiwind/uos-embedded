@@ -78,6 +78,9 @@ void ETimer_Handle (timeout_t *to, void *arg);
 void etimer_system_init(timer_t* source_clock){
     etimer_device* self = &system_etimer;
     self->clock = source_clock;
+    ET_STRICT(BASE, ) assert2( (source_clock->lock.item.next != 0)
+                        , "etimer: init from uninitialised clock are danger on timerlist operations!\n"
+                        , 0);
 
     list_init(&self->timerlist);
     /*etimer *t;
@@ -305,17 +308,20 @@ add_timer(etimer *timer)
                 safe_timeout += self->clock->msec_per_tick*2;
 #endif
                 list_iterate_from(t, t->item.next, &self->timerlist){
-                ET_STRICT(BASE,){
-                    assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time);
-                    assert2( (void*)t == t->item.prev->next
-                                    , "(%x.->%x)<-et(%x)"
-                                    , t->item.prev, t->item.prev->next, t);
-                }
                     ET_STRICT(MEM, ) assert2(uos_valid_memory_address(t)
                                         , "etimer:start: bad timer $%x\n", t
                                         );
+                    ET_STRICT(BASE, assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time));
                     if (list_is_empty(&t->item))    //this is impossible/unsync collision. try again on it
                         break;
+                    ET_STRICT(BASE,) assert2( (void*)t == t->item.prev->next
+                                    , "(%x.->%x)<-et(%x)"
+                                    , t->item.prev, t->item.prev->next, t);
+                    if ((void*)t != t->item.prev->next){
+                        //this is impossible/unsync collision. try again on it
+                        t = 0;
+                        break;
+                    }
                     etimer_time_t elapsed = t->cur_time;
                     if (timeout < elapsed)
                         break;
@@ -331,6 +337,8 @@ add_timer(etimer *timer)
                         }
                     }
                 }
+                if (t == 0)
+                    continue;
                 if (list_is_empty(&t->item))    //this is impossible/unsync collision. try again on it
                     continue;
                 timer->cur_time = timeout;
