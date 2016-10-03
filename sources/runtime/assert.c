@@ -46,8 +46,15 @@ __assert_fail (const char *cond, const char *file, unsigned int line,
     //* if have another stack, and current stack is broken or small,
     //      just go to exception as inevitable
     UOS_STRICT(STACK,)
-        if(!(task_stack_enough( VPRINTF_FRAME )) )
+        if(!(task_stack_enough( VPRINTF_FRAME )) ){
+            debug_puts("\nAssertion failed in function `");
+            debug_puts(func);
+            debug_puts("':");
+            debug_puts(cond);
+            debug_puts("\n");
+            debug_puts(file);
             ARCH_BREAK();
+        }
 #endif//UOS_EXCEPTION_STACK
     if (0 ==
 	debug_printf ("\nAssertion failed in function `%S':\n%S, %u: %S\n\n",
@@ -65,8 +72,11 @@ void __assert_msg(const char *msg, ...)
     //* if have another stack, and current stack is broken or small,
     //      just go to exception as inevitable
     UOS_STRICT(STACK,)
-        if(!(task_stack_enough( VPRINTF_FRAME )) )
-            ARCH_BREAK();
+        if(!(task_stack_enough( VPRINTF_FRAME )) ){
+            debug_puts(msg);
+            debug_puts("\nbreak on exception stack\n");
+            return;
+        }
 #endif//UOS_EXCEPTION_STACK
 
     va_list args;
