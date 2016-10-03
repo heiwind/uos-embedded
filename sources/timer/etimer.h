@@ -299,6 +299,11 @@ etimer_time_t etimer_next_expiration_time(void)
 
 
 
+//* prints debug dump of etimer que
+#include <stream/stream.h>
+void etimer_dump(stream_t* io);
+bool_t etimer_dump_event(stream_t* io, const etimer *et);
+
 #ifdef __cplusplus
 }
 

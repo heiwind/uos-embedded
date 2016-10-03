@@ -541,5 +541,70 @@ etimer_stop(etimer *et)
 /*---------------------------------------------------------------------------*/
 /** @} */
 
+//* prints debug dump of etimer que
+void etimer_dump(stream_t* io){
+    etimer_device* self = etimer_dev_of(0);
+    if (io == 0)
+        io = &debug;
+    printf(io, "etimer device($%x):clock $%x\n", self, self->clock);
+    if (!list_contains(&self->clock->timeouts, &self->os_timer.item)){
+        fputs("      etimer is not clocked!\n", io);
+    }
+    if (self->os_timer_isr.lock != &self->os_timer_signal){
+        printf(io, "      etimer not signals: $%x expect $%x!\n"
+                , self->os_timer_isr.lock, &self->os_timer_signal);
+    }
+    if (self->os_timer_isr.handler != ETimer_ISR){
+        printf(io, "      etimer strange ISR: $%x expect $%x!\n"
+                , self->os_timer_isr.handler, ETimer_ISR);
+    }
+    if (self->os_timer.mutex != &self->os_timer_signal){
+        printf(io, "      etimer strange signaling mutex: $%x expect $%x!\n"
+                , self->os_timer.mutex, &self->os_timer_signal);
+    }
+    mutex_print(io, &self->os_timer_signal);
+
+    const etimer *et;
+    list_iterate(et, &self->timerlist){
+        if (!etimer_dump_event(io, et)){
+            break;
+        }
+        list_t* prev = et->item.prev;
+        if (uos_valid_memory_address(prev)){
+            if (prev->next != &et->item){
+                printf(io, "    broken list chain: prev->$%x\n", prev->next);
+            }
+        }
+        else {
+            printf(io, "    broken list chain: damaged prev = $%x\n", prev);
+        }
+    }
+}
+
+bool_t etimer_dump_event(stream_t* io, const etimer *et){
+    if (!uos_valid_memory_address(et)){
+        printf(io, "event($%x): invalid!\n", et);
+        return 0;
+    }
+    if (et->lock != NULL){
+        printf(io, "event($%x): now %lu interval %lu:  mutex($%x) msg=$%x\n"
+                , et
+                , et->cur_time, et->interval
+                , et->lock, et->handle.lock_message
+                );
+        mutex_print(io, et->lock);
+    }
+    else{
+        printf(io, "event($%x): now %lu interval %lu:  task($%x)\n"
+                , et
+                , et->cur_time, et->interval
+                , et->handle.activate_task
+                );
+        task_print(io, 0);
+        task_print(io, et->handle.activate_task);
+    }
+    return 1;
+}
+
 #endif// USER_TIMERS
 
