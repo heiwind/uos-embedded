@@ -35,14 +35,14 @@ bool_t etimer_is_timeout(void* arg){
 INLINE bool_t etimer_mutex_lock(mutex_t* m, etimer* t){
     return mutex_lock_until(m, (etimer_is_timeout), (void*)t);
 };
-bool_t etimer_mutex_timedlock(mutex_t* m, etimer* t, etimer_time_t timeout);
-bool_t mutex_etimedlock(mutex_t* m, etimer_time_t timeout);
+bool_t etimer_mutex_timedlock(mutex_t* m, etimer* t, etimer_time_t timeout) __cpp_decls;
+bool_t mutex_etimedlock(mutex_t* m, etimer_time_t timeout) __cpp_decls;
 
 INLINE bool_t etimer_mutex_wait(mutex_t* m, etimer* t){
     return mutex_wait_until(m, (etimer_is_timeout), (void*)t);
 };
-bool_t etimer_mutex_timedwait(mutex_t* m, etimer* t, etimer_time_t timeout);
-bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout);
+bool_t etimer_mutex_timedwait(mutex_t* m, etimer* t, etimer_time_t timeout) __cpp_decls;
+bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout) __cpp_decls;
 
 
 
