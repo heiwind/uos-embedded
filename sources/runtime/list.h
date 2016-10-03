@@ -151,4 +151,14 @@ INLINE list_t *list_first (const list_t *l)
 					     i != (typeof(i)) (head); \
 					     i = (typeof(i)) ((list_t*) i)->prev)
 
+INLINE
+bool_t list_contains (const list_t *l, const list_t *x)
+{
+    const list_t *i;
+    list_iterate(i, l)
+        if (i == x)
+            return 1;
+    return 0;
+}
+
 #endif /* __LIST_H_ */
