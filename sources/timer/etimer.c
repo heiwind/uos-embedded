@@ -308,12 +308,19 @@ add_timer(etimer *timer)
                 safe_timeout += self->clock->msec_per_tick*2;
 #endif
                 list_iterate_from(t, t->item.next, &self->timerlist){
+                    ET_STRICT(BASE,)
+                        assert2( (t != timer)
+                                , "etimer: try insert alredy active etimer et(%x)\n", timer);
                     ET_STRICT(MEM, ) assert2(uos_valid_memory_address(t)
                                         , "etimer:start: bad timer $%x\n", t
                                         );
-                    ET_STRICT(BASE, assert2(!list_is_empty(&t->item), "et(%x).%d", t, t->cur_time));
-                    if (list_is_empty(&t->item))    //this is impossible/unsync collision. try again on it
-                        break;
+                    ET_STRICT(BASE,)
+                        assert2(!list_is_empty(&t->item)
+                                    , "etimer: broken chain at et(%x).%d\n", t, t->cur_time);
+                    if (list_is_empty(&t->item)){
+                        //this is impossible - chain is broken.
+                        halt(1);
+                    }
                     ET_STRICT(BASE,) assert2( (void*)t == t->item.prev->next
                                     , "(%x.->%x)<-et(%x)"
                                     , t->item.prev, t->item.prev->next, t);
@@ -577,6 +584,10 @@ void etimer_dump(stream_t* io){
         }
         else {
             printf(io, "    broken list chain: damaged prev = $%x\n", prev);
+        }
+        if (list_is_empty(et)){
+            printf(io, "    broken list chain: event is empty\n");
+            break;
         }
     }
 }
