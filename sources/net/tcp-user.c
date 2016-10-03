@@ -604,6 +604,22 @@ tcp_abort (tcp_socket_t *s)
 	mutex_unlock (&ip->lock);
 }
 
+int tcp_shutdown(ip_t *ip, unsigned mode){
+    tcp_socket_t *s;
+    //* TODO better RST all sockets once, and wait it output after
+
+    tcp_debug ("tcp_shutdown: mode $%x\n", mode);
+    for (s=ip->tcp_sockets; s; s=s->next) {
+        if ((mode & tsdm_Close) != 0){
+            tcp_close (s);
+        }
+        else {
+            tcp_abort (s);
+        }
+    }//for (s
+    return 0;
+}
+
 /*
  * Return the period of socket inactivity, in seconds.
  */

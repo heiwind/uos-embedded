@@ -504,6 +504,12 @@ bool_t tcp_socket_is_avail(tcp_socket_t *s){
 }
 
 
+typedef enum {
+      tsdm_Abort  =0
+    , tsdm_Close  =1
+} tcp_shutdown_modes;
+//closes or aborts all connections
+int tcp_shutdown(ip_t *ip, unsigned mode) __cpp_decls;
 
 /*********************************************************************
  *      TCP stream :
