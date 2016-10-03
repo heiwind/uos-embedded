@@ -101,6 +101,9 @@ int stream_vprintf_nomt(stream_t *stream, char const *fmt, va_list ap);
 
 int
 stream_vprintf (stream_t *stream, char const *fmt, va_list ap){
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_memory_address(stream));
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_memory_address(stream->interface));
+
 #if ((UOS_STRICTS & UOS_STRICT_STACK) != 0) && (NDEBUG <= 0)
 #ifdef UOS_EXCEPTION_STACK
     if ( (uos_exception_stack == 0) || ((void*)uos_exception_stack < arch_get_stack_pointer()) )
@@ -148,6 +151,10 @@ stream_vprintf (stream_t *stream, char const *fmt, va_list ap)
 		return 0;
 	if (! fmt)
 		fmt = "(null)\n";
+
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_memory_address(stream));
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_memory_address(stream->interface));
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_code_address(stream->interface->putc));
 
 #if ((UOS_STRICTS & UOS_STRICT_STACK) != 0) && (NDEBUG <= 0)
 #ifdef UOS_EXCEPTION_STACK

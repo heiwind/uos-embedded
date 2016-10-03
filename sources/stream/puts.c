@@ -5,7 +5,10 @@ int stream_puts (stream_t *stream, const char *str)
 {
 	int length;
 	unsigned char c;
+	UOS_STRICT(STREAM_MEM, ) assert(uos_valid_memory_address(stream));
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_memory_address(stream->interface));
 	void (*putc) (stream_t *u, short c) = stream->interface->putc;
+    UOS_STRICT(STREAM_MEM, ) assert(uos_valid_code_address(putc));
 
 #if STREAM_HAVE_ACCEESS > 0
 	if (stream->interface->access_tx != 0)
