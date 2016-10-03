@@ -403,11 +403,11 @@ _restore_regs_: .globl _restore_regs_
         .set    at
 
         mfc0    $k0, $C0_STATUS         # Get STATUS
-        li      $k1, -1 - ST_IE         # Prepare bitmask
+        li      $k1, -1 - (ST_IE|ST_UM) # Prepare bitmask
         and     $k0, $k1                # Clear IE bit
         ori     $k0, ST_EXL             # Prevent interrupts until eret
         lw      $k1, (CONTEXT_STATUS * 4) ($sp) # K0 = saved status, only IE bit
-        andi    $k1, ST_IE              # Restore only IE bit
+        andi    $k1, ST_IE|ST_UM        # Restore only IE and UM bit
         or      $k0, $k1                # Add saved IE bit
         mtc0    $k0, $C0_STATUS         # put SR back
         nop
