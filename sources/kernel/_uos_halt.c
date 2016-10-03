@@ -24,6 +24,7 @@ void tasks_print(struct _stream_t *stream){
     bool_t have_current = 0;
 
     task_print (stream, 0);
+    task_print (stream, task_idle);
     n = 0;
     list_iterate (t, &task_active) {
         if (t == task_current)

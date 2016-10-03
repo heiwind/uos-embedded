@@ -19,7 +19,7 @@ void task_print (stream_t *stream, task_t *t)
 
 	if (! t) {
 		puts (stream, "Task\t  Address\t Prio\t    Stack\tSpace    Msg\tTicks\n");
-		t = task_idle;
+		return;
 	}
 	if (! uos_valid_memory_address (t)) {
 		printf (stream, "%p (junk)\n", t);
@@ -114,4 +114,5 @@ void mutex_print (stream_t *stream, mutex_t *m)
             puts (stream, "\n\tListens:");
             task_print_list(stream, &m->waiters);
     }
+    puts (stream, "\n");
 }
