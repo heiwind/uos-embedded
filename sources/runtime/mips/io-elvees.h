@@ -1808,6 +1808,7 @@ enum _MC_IRQ_MFBSP_Flag {
 #define MC_IRQ_EVT_COMPARE          30
 #define MC_IRQ_EVT_UART1            5
 #define MC_IRQ_EVT_UART0            4
+#define MC_IRQ_EVT_I2C              23
 
 
 
