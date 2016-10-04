@@ -319,7 +319,7 @@ add_timer(etimer *timer)
                                     , "etimer: broken chain at et(%x).%d\n", t, t->cur_time);
                     if (list_is_empty(&t->item)){
                         //this is impossible - chain is broken.
-                        halt(1);
+                        uos_halt(1);
                     }
                     ET_STRICT(BASE,) assert2( (void*)t == t->item.prev->next
                                     , "(%x.->%x)<-et(%x)"
@@ -585,7 +585,7 @@ void etimer_dump(stream_t* io){
         else {
             printf(io, "    broken list chain: damaged prev = $%x\n", prev);
         }
-        if (list_is_empty(et)){
+        if (list_is_empty(&et->item)){
             printf(io, "    broken list chain: event is empty\n");
             break;
         }
