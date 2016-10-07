@@ -477,6 +477,34 @@ mips_virtual_addr_to_physical (unsigned int virt)
 	}
 }
 
+
+
+INLINE
+void MC_SYSCLK_enable(uint32_t clocks){
+    MC_CLKEN |= clocks;
+    asm volatile("nop");
+    asm volatile("nop");
+}
+
+//не выключает ядро!
+INLINE
+void MC_SYSCLK_disable(uint32_t clocks){
+    MC_CLKEN &= (~clocks) | MC_CLKEN_CORE | MC_CLKEN_CORE2| MC_CLKEN_CPU;
+    asm volatile("nop");
+    asm volatile("nop");
+}
+
+INLINE
+void MC_SYSCLK_disable_core(uint32_t clocks){
+    clocks &= MC_CLKEN_CORE | MC_CLKEN_CORE2| MC_CLKEN_CPU;
+    //!!!TODO - надо убедиться что все ДМА имеют RUN==0
+    MC_CLKEN &= 0xff;//(core || MC_CLKEN_DSP)
+    asm volatile("nop");
+    asm volatile("nop");
+    MC_CLKEN &= ~clocks;
+}
+
+
 #ifdef __cplusplus
 }
 #endif
