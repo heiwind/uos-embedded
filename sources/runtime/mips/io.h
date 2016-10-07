@@ -420,6 +420,21 @@ mips_count_leading_zeroes (unsigned x)
 	return n;
 }
 
+
+enum MC_kernel_segments{
+      MC_KUSEG      = 0
+    , MC_KUSEG0     = MC_KUSEG
+    , MC_KUSEG1     = 1
+    , MC_KUSEG2     = 2
+    , MC_KUSEG3     = 3
+    , MC_KSEG0 = 4
+    , MC_KSEG1 = 5, MC_KSYNC= MC_KSEG1
+    , MC_KSEG2 = 6
+    , MC_KSEG3 = 7
+};
+#define MC_KSEG_ORG(seg) ((seg*1L)<<29)
+#define MC_KSEG_ORG_MASK 0xE0000000ul
+
 /*
  * Translate virtual address to physical one.
  * Only for fixed mapping.
@@ -428,10 +443,10 @@ static unsigned int inline
 mips_virtual_addr_to_physical (unsigned int virt)
 {
 #if (UOS_MIPS_NOUSE_KSEG23 > 0) && (UOS_MIPS_NOUSE_ERL > 0)
-    return (virt & 0x1fffffff);
+    return (virt & ~MC_KSEG_ORG_MASK);
 #endif
-	unsigned segment_desc = virt >> 28;
-	if (segment_desc <= 0x7) {
+	unsigned segment_desc = virt >> 29;
+	if (segment_desc < MC_KSEG0) {
 		// kuseg
 #if UOS_MIPS_NOUSE_ERL <= 0
 		if (mips_read_c0_register(C0_STATUS) & ST_ERL )
@@ -450,11 +465,11 @@ mips_virtual_addr_to_physical (unsigned int virt)
 #if UOS_MIPS_NOHAVE_KSEG23 > 0
         if (1)
 #else
-        if (segment_desc <= 0xb) // || (UOS_MIPS_NOUSE_KSEG23 > 0)
+        if (segment_desc <= MC_KSEG1) // || (UOS_MIPS_NOUSE_KSEG23 > 0)
 #endif
 		{
 			// kseg0 или kseg1, cut bits A[31:29].
-			return (virt & 0x1fffffff);
+			return (virt & ~MC_KSEG_ORG_MASK);
 		} else {
 			// Fixed-mapped - no mapping
 			return virt;
