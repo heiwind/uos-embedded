@@ -52,6 +52,38 @@ bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout){
     return 0;
 }
 
+typedef struct {
+    etimer  et;
+    task_t* t;
+} task_wait_timeout;
+
+bool_t taskwait_is_timeout(void* arg){
+    task_wait_timeout* self = (task_wait_timeout*)arg;
+    return (self->t->base_prio <= 0) || etimer_is_timeout(&self->et);
+}
+
+void* task_etimedwait (task_t *t, etimer_time_t timeout){
+    void *message = t;
+    if (t->base_prio) {
+        task_wait_timeout to;
+        //etimer_init(&to.et);
+        list_init(&to.et.item);
+        etimer_assign_task(&to.et, task_current);
+        etimer_set(&to.et, timeout);
+        to.t    = t;
+
+        mutex_lock (&t->finish);
+        bool_t res = mutex_wait_until(&t->finish, (taskwait_is_timeout), (void*)&to);
+        etimer_stop(&to.et);
+        if (res)
+            message = t->message;
+        //else
+        if (mutex_is_my(&t->finish))
+            mutex_unlock (&t->finish);
+    }
+    return message;
+}
+
 
 /**
  *  \brief      sleep current thread for activation by etimer

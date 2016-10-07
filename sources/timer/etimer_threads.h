@@ -44,6 +44,9 @@ INLINE bool_t etimer_mutex_wait(mutex_t* m, etimer* t){
 bool_t etimer_mutex_timedwait(mutex_t* m, etimer* t, etimer_time_t timeout) __cpp_decls;
 bool_t mutex_etimedwait(mutex_t* m, etimer_time_t timeout) __cpp_decls;
 
+//* \return task - on timeout
+void* task_etimedwait (task_t *task, etimer_time_t timeout) __cpp_decls;
+
 
 
 typedef enum{
