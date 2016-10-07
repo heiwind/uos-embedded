@@ -235,6 +235,7 @@
 #define UOS_STRICT_TASKS_MEM    8
 #define UOS_STRICT_PRINT_MEM    0x10
 #define UOS_STRICT_STREAM_MEM   0x20
+#define UOS_STRICT_DMA_MEM      0x40
 
 /* UOS_STRICT_xxx - задают перечень включаемых тестов aasert в модулях ядра
  * */

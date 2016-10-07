@@ -1809,6 +1809,11 @@ enum _MC_IRQ_MFBSP_Flag {
 #define MC_IRQ_EVT_UART1            5
 #define MC_IRQ_EVT_UART0            4
 #define MC_IRQ_EVT_I2C              23
+#define MC_IRQ_EVT_DMAMEM_CHn(n)    (32+n)
+#define MC_IRQ_EVT_DMAMEM_CH0       MC_IRQ_EVT_DMAMEM_CHn(0)
+#define MC_IRQ_EVT_DMAMEM_CH1       MC_IRQ_EVT_DMAMEM_CHn(1)
+#define MC_IRQ_EVT_DMAMEM_CH2       MC_IRQ_EVT_DMAMEM_CHn(2)
+#define MC_IRQ_EVT_DMAMEM_CH3       MC_IRQ_EVT_DMAMEM_CHn(3)
 
 
 
