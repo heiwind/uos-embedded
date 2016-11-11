@@ -252,6 +252,10 @@ void timer_update (timer_t *t)
                         list_unlink (&to->item);
                         to = prev_to;
                     }
+                } else {
+                    if (to->autoreload) {
+                        to->cur_time += to->interval;
+                    }
                 }
             }
         }
