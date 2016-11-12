@@ -203,6 +203,8 @@ void fat32_fw_format(fat32_fw_t *fat, unsigned nb_sectors, const char * volume_i
         return;
     }
 
+    fat->nb_entries = 0; // Обнуляем кол. файлов
+
     fat->last_error = FS_ERR_OK;
 }
 
