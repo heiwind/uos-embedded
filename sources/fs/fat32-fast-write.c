@@ -283,12 +283,12 @@ unsigned fat32_fw_nb_entries(fat32_fw_t *fat)
             if (fat->last_error != FS_ERR_OK) return 0;
 
             e = (fat_dir_ent_t *) fat->sector;
-            while ((e->name[0] != 0) && ((uint8_t *)e - (uint8_t *)fat->sector < FAT_SECTOR_SIZE)) {
+            while (((uint8_t *)e - (uint8_t *)fat->sector < FAT_SECTOR_SIZE) && (e->name[0] != 0)) {
                 e++;
                 fat->nb_entries++;
             }
 
-            if (e->name[0] == 0) break;
+            if ((e->name[0] == 0) && ((uint8_t *)e - (uint8_t *)fat->sector < FAT_SECTOR_SIZE)) break;
             nb_sec++;
             sec_in_clus++;
         }
