@@ -244,18 +244,13 @@ void timer_update (timer_t *t)
                 if (! list_is_empty (&to->mutex->waiters) ||
                         ! list_is_empty (&to->mutex->groups)) {
                     mutex_activate (to->mutex, to->signal);
-                    
-                    if (to->autoreload) {
-                        to->cur_time += to->interval;
-                    } else {
-                        timeout_t *prev_to = (timeout_t *) to->item.prev;
-                        list_unlink (&to->item);
-                        to = prev_to;
-                    }
+                }
+                if (to->autoreload) {
+                    to->cur_time += to->interval;
                 } else {
-                    if (to->autoreload) {
-                        to->cur_time += to->interval;
-                    }
+                    timeout_t *prev_to = (timeout_t *) to->item.prev;
+                    list_unlink (&to->item);
+                    to = prev_to;
                 }
             }
         }
