@@ -314,6 +314,11 @@ void fat32_fw_create(fat32_fw_t *fat, fs_entry_t *entry)
     fat32_fw_nb_entries(fat);
     if (fat->last_error != FS_ERR_OK) return;
 
+    if (fat->nb_entries >= FAT_SEC_PER_CLUSTER*FAT_SECTOR_SIZE/sizeof(fat_dir_ent_t)) { // Размер корневой директории ограничен размером кластера
+        fat->last_error = FS_ERR_EOF;
+        return;
+    }
+
 	nb_sec = fat->rsvd_sec_cnt + 2 * fat->fat_sz32 + (fat->nb_entries >> (FAT_SECTOR_SIZE_POW - 5));
 	fat->last_error = fat_read_sector(fat, nb_sec);
 	if (fat->last_error != FS_ERR_OK) return;
@@ -591,7 +596,7 @@ fs_entry_t *get_first_entry(fat32_fw_t *fat)
 
 fs_entry_t *get_next_entry(fat32_fw_t *fat)
 {
-    if (fat->cur_parent_pos == FAT_SECTOR_SIZE * FAT_SEC_PER_CLUSTER) {
+    if (fat->cur_parent_pos == FAT_SECTOR_SIZE * FAT_SEC_PER_CLUSTER - sizeof(fat_dir_ent_t)) {
         fat->last_error = FS_ERR_EOF;
         return 0;
     }
