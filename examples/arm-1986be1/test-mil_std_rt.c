@@ -2,30 +2,34 @@
 #include <kernel/uos.h>
 #include <stream/stream.h>
 #include <kernel/internal.h>
+#include <milandr/mil1553-interface.h>
+#include <milandr/mil-std-1553_setup.h>
 #include <milandr/mil-std-1553_rt.h>
 
-// Номер контроллера MIL-STD (0 или 1)
+// Номер контроллера MIL-STD (всегда 0)
 #define MY_MIL_STD_PORT 0
 
 // Собственный адрес ОУ
 #define MIL_STD_SELF 2
 
+// Длина приемной очереди
+#define MIL_RXQ_LEN	100
+
 ARRAY (test_milstd_rt_stack, 1000);
+mem_pool_t pool;
 
-// Буфер для приёма данных (по 32 слова для 32-х подадресов) из канала MIL-STD.
-static unsigned short mil_std_rx_buffer[MIL_STD_DATA_WORDS_COUNT];
-
-// Буфер для выдачи данных (по 32 слова для 32-х подадресов) в канал MIL-STD.
-static unsigned short mil_std_tx_buffer[MIL_STD_DATA_WORDS_COUNT];
-
+static milandr_mil1553_t mil;
+static uint16_t slot_data_tx[32];
+static uint16_t slot_data_rx[32];
 static void test_milstd_rt_main();
 
-static mil_std_rt_t mil_rt;
 
 void uos_init (void)
 {
-    mil_std_1553_init_pins(MY_MIL_STD_PORT);
-    mil_std_1553_rt_init(&mil_rt, MY_MIL_STD_PORT, MIL_STD_SELF, mil_std_rx_buffer, mil_std_tx_buffer, -1, (void*)0);
+    debug_printf("rt_init\n");
+
+    milandr_mil1553_init(&mil, 0, &pool, MIL_RXQ_LEN, ARM_TIMER1);
+    milandr_mil1553_init_pins(0);
 
     task_create(test_milstd_rt_main, 0, "test_milstd_rt_main", 1, test_milstd_rt_stack, sizeof(test_milstd_rt_stack));
 }
@@ -33,41 +37,30 @@ void uos_init (void)
 // example
 static void test_milstd_rt_main()
 {
+
+	mil1553_set_mode(&mil.milif, MIL_MODE_RT);
+	mil.addr_self = MIL_STD_SELF;
+    mil1553_start(&mil.milif);
+
     // Подадрес для получения данных от КШ (КШ-ОУ)
     const unsigned char bc_subaddr_from = 8;
     // Подадрес для передачи данных в КШ (ОУ-КШ)
     const unsigned char bc_subaddr_to = 7;
 
-    const int txIndex = MIL_STD_SUBADDR_WORD_INDEX(bc_subaddr_to);
-    const int rxIndex = MIL_STD_SUBADDR_WORD_INDEX(bc_subaddr_from);
-
-    mutex_lock(&mil_rt.lock);
-    mil_std_tx_buffer[txIndex+0] = 0x30;
-    mil_std_tx_buffer[txIndex+1] = 0x31;
-    mil_std_tx_buffer[txIndex+2] = 0x32;
-    mutex_unlock(&mil_rt.lock);
-
-    int i=0;
+    int i;
+    int counter = 0;
 
     for (;;)
     {
-        mutex_lock(&mil_rt.lock);
-        for (i=0; i<3; ++i)
-            ++mil_std_tx_buffer[txIndex + i];
-        mutex_unlock(&mil_rt.lock);
+    	slot_data_tx[0] = counter++;
+    	mil_rt_send_16(&mil.milif, bc_subaddr_to, slot_data_tx, 1);
 
-        debug_printf("\n");
-
-        debug_printf("rt(%d): dataToBeSent  =", mil_rt.port);
-        for (i=0; i<3; ++i)
-            debug_printf(" %x", mil_std_tx_buffer[txIndex + i]);
-        debug_printf("\n");
-
-        debug_printf("rt(%d): dataToBeRecvd =", mil_rt.port);
-        for (i=0; i<3; ++i)
-            debug_printf(" %x", mil_std_rx_buffer[rxIndex + i]);
-        debug_printf("\n");
-
-        mdelay(5000);
+    	int wc = MIL_SUBADDR_WORDS_COUNT/2;
+    	mil_rt_receive_16(&mil.milif, bc_subaddr_from, slot_data_rx, &wc);
+    	debug_printf("wc = %d data=", wc);
+        for (i=0;i<wc;i++) {
+        	debug_printf(" %04x", slot_data_rx[i]);
+        }
+        mdelay(500);
     }
 }
