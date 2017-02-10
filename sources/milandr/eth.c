@@ -27,6 +27,10 @@
 #define ETH_FIFO
 #define ETH_INTERRUPT
 
+#define ETH_ERROR_OK			 0
+#define ETH_ERROR_CLOCK_INIT	-1
+#define ETH_ERROR_PHY_RESET		-2
+
 //*** Функция для очистки буферов приемника и передатчика MAC модуля ***
 //Буфер приемника 4096 байт
 //Буфер передатчика 4096 байт
@@ -41,21 +45,51 @@ static void ClearEthFIFO() {
 /*
  * Set default values to Ethernet controller registers.
  */
-static void chip_init(eth_t *u) {
-	/* Setup Clok */
-	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOD | ARM_PER_CLOCK_GPIOB;
-	ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON;
-	while ((ARM_RSTCLK->CLOCK_STATUS & 0xC) != 0xC)
-		;
+static int chip_init(eth_t *u) {
+	int i, j;
+	volatile int counter;
+	int flag = 0;
+	uint32_t value;
+	/* Leds */
 
-	ARM_RSTCLK->ETH_CLOCK = ARM_ETH_CLOCK_ETH_EN | ARM_ETH_CLOCK_PHY_EN
-			| ARM_ETH_CLOCK_PHY_SEL(ARM_ETH_CLOCK_PHY_SEL_HSE2);
+	/* Setup Cloсk */
+	ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON;
+
+	for (j=0;j<KHZ*20/6;j++) {
+		counter++; // ~20ms
+	}
+
+	i = 0;
+	value = ARM_RSTCLK->CLOCK_STATUS;
+	while ((value & 0xC) != 0xC) {
+		debug_printf("%03d. ARM_RSTCLK->CLOCK_STATUS = %x\n", i, value);
+		counter = 0;
+		for (j=0;j<KHZ*100/6;j++) {
+			counter++; // ~100ms
+		}
+
+		if (100 < i++) {
+			return ETH_ERROR_CLOCK_INIT;
+		}
+		flag = 1;
+		value = ARM_RSTCLK->CLOCK_STATUS;
+	}
+
+	if (flag) {
+		debug_printf("%03d. ARM_RSTCLK->CLOCK_STATUS = %x\n", i, value);
+		flag = 0;
+	}
+
+
+	ARM_RSTCLK->ETH_CLOCK = ARM_ETH_CLOCK_ETH_EN | ARM_ETH_CLOCK_PHY_EN	| ARM_ETH_CLOCK_PHY_SEL(ARM_ETH_CLOCK_PHY_SEL_HSE2);
 
 	/* Светодиоды */
 	/* Green led PB15
 	 * Yellow led PB14
 	 */
-	/*ARM_GPIOB->FUNC = (ARM_GPIOB->FUNC
+	/*
+	 ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOD | ARM_PER_CLOCK_GPIOB;
+	 ARM_GPIOB->FUNC = (ARM_GPIOB->FUNC
 			& ~( ARM_FUNC_MASK(14) | ARM_FUNC_MASK(15)))
 			| (ARM_FUNC_PORT(14) | ARM_FUNC_PORT(15));
 	ARM_GPIOB->ANALOG |= ARM_DIGITAL(14) | ARM_DIGITAL(15);
@@ -65,11 +99,35 @@ static void chip_init(eth_t *u) {
 			| (ARM_PWR_FASTEST(14) | ARM_PWR_FASTEST(15));
         */
 	/* Phy init */
-	ARM_ETH->PHY_CTRL =
-	ARM_ETH_PHY_ADDR(
-			0x0) | ARM_ETH_PHY_MODE(ARM_ETH_PHY_FULL_AUTO) | ARM_ETH_PHY_NRST;
-	while ((ARM_ETH->PHY_STAT & 0x10) == 0)
+	ARM_ETH->PHY_CTRL = 0;
+#ifdef SET_ARM_ETH_PHY_MODE
+	ARM_ETH->PHY_CTRL =	ARM_ETH_PHY_ADDR(0x0) | ARM_ETH_PHY_MODE(SET_ARM_ETH_PHY_MODE) | ARM_ETH_PHY_NRST;
+#else
+	ARM_ETH->PHY_CTRL =	ARM_ETH_PHY_ADDR(0x0) | ARM_ETH_PHY_MODE(ARM_ETH_PHY_FULL_AUTO) | ARM_ETH_PHY_NRST;
+#endif
+
+	for (j=0;j<KHZ*20/6;j++) {
+		counter++; // ~20ms по даташиту выход на рабочий режим через 16ms
+	}
+	i = 0;
+	value = ARM_ETH->PHY_STAT;
+	while ((value & 0x10) == 0) {
+		debug_printf("%03d. ARM_ETH->PHY_STAT = %x\n", i, value);
 		;	//ждем пока модуль в состоянии сброса
+		counter = 0;
+		for (j=0;j<KHZ*1000/6;j++) {
+			counter++; // ~1000ms
+		}
+
+		if (1000 < i++) {
+			return ETH_ERROR_PHY_RESET;
+		}
+		flag = 1;
+		value = ARM_ETH->PHY_STAT;
+	}
+	if (flag) {
+		debug_printf("%03d. ARM_ETH->PHY_STAT = %x\n", i, value);
+	}
 
 	//* MAC */
 	ARM_ETH->MAC_ADDR[0] = u->netif.ethaddr[0];
@@ -125,6 +183,8 @@ static void chip_init(eth_t *u) {
 
 	ARM_ETH->R_CFG |= ARM_ETH_EN;
 	ARM_ETH->X_CFG |= ARM_ETH_EN;
+
+	return ETH_ERROR_OK;
 }
 
 void eth_debug(eth_t *u, struct _stream_t *stream) {
@@ -750,7 +810,22 @@ void eth_init(eth_t *u, const char *name, int prio, mem_pool_t *pool,
 	 debug_printf("*dst = 0x%08X (0x%08X)\n", *dst, dst);
 	 */
 	/* Initialize hardware. */
-	chip_init(u);
+	int ret;
+	ret = chip_init(u);
+	if (ret != ETH_ERROR_OK) {
+		switch(ret) {
+		case ETH_ERROR_CLOCK_INIT:
+			debug_printf("\nETH_ERROR_CLOCK_INIT\n");
+			break;
+		case ETH_ERROR_PHY_RESET:
+			debug_printf("\nETH_ERROR_PHY_RESET\n");
+			break;
+		default:
+			debug_printf("\nETH_ERROR UNDEFINED\n");
+			break;
+		}
+		uos_halt (0);
+	}
 
 	/* Create interrupt task. */
 	u->task_eth_handler = task_create(interrupt_task, u, "eth", prio, u->stack,

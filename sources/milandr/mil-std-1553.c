@@ -12,7 +12,9 @@
 #define RT_DEBUG               0
 #define BC_DEBUG               0
 
-#define MIL_STD_CLOCK_DIV      4
+// 96MHz делим на 4 получаем 24MHz
+// 144MHz делим на 2 получаем 72MHz
+#define MIL_STD_CLOCK_DIV      2
 
 #define LEFT_LED	4
 #define RIGHT_LED	2
