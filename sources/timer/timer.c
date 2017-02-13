@@ -13,7 +13,9 @@
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 #include <timer/timer.h>
+#ifdef TIMER_TIMEOUTS
 #include <timer/timeout.h>
+#endif
 
 #if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 extern volatile uint32_t __timer_ticks_uos;
