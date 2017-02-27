@@ -454,16 +454,16 @@ static bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio) {
 	}
 
 	/* Занято, ставим в очередь. */
-	/*if (buf_queue_is_full(&u->outq)) {
+	if (buf_queue_is_full(&u->outq)) {
 	 // Нет места в очереди: теряем пакет.
 	 ++u->netif.out_discards;
 	 ++u->out_full_buf;
 	 mutex_unlock(&u->netif.lock);
 	 buf_free(p);
 	 return 0;
-	 }*/
-	while (buf_queue_is_full(&u->outq))
-		asm volatile ("nop;");
+	 }
+	//while (buf_queue_is_full(&u->outq)) // можем навечно тут зависнуть Pavel
+	//	asm volatile ("nop;");
 	buf_queue_put(&u->outq, p);
 	mutex_unlock(&u->netif.lock);
 	return 1;
