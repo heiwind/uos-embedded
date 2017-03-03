@@ -2,29 +2,31 @@
 #include <kernel/uos.h>
 #include <stream/stream.h>
 #include <kernel/internal.h>
+#include <milandr/mil1553-interface.h>
+#include <milandr/mil-std-1553_setup.h>
 #include <milandr/mil-std-1553_bc.h>
 
-// Номер контроллера MIL-STD (0 или 1)
+
+// Номер контроллера MIL-STD (всегда 0)
 #define MY_MIL_STD_PORT 0
 // Канал основной или резервный (0 или 1)
 #define MY_MIL_STD_CHANNEL 0
 // Минимальный период в циклограмме или продолжительность одного слота (в миллисекундах)
 #define CYCLOGRAM_SLOT_TIME 200
 // Количество слотов в циклограмме
-#define CYCLOGRAM_SLOTS_COUNT 5
+#define CYCLOGRAM_SLOTS_COUNT 2
+// Длина приемной очереди
+#define MIL_RXQ_LEN	100
 
 ARRAY (test_milstd_bc_stack, 1000);
-
-// Буфер для приёма данных (по 32 слова для 32-х подадресов) из канала MIL-STD.
-static unsigned short mil_std_rx_buffer[MIL_STD_DATA_WORDS_COUNT];
-
-// Буфер для выдачи данных (по 32 слова для 32-х подадресов) в канал MIL-STD.
-static unsigned short mil_std_tx_buffer[MIL_STD_DATA_WORDS_COUNT];
+mem_pool_t pool;
 
 static void test_milstd_bc_main();
 
-static cyclogram_slot_t cyclogram_data[CYCLOGRAM_SLOTS_COUNT];
-static mil_std_bc_t mil_bc;
+static milandr_mil1553_t mil;
+static mil_slot_t *cyclogram;
+static unsigned cyclogram_nb_slots = 0;
+static uint16_t slot_data[32];
 
 // debug
 // Адрес ОУ
@@ -38,87 +40,139 @@ void uos_init (void)
 {
     debug_printf("bc_init\n");
 
-    cyclogram_data[0].addr_dest = rt_addr;
-    cyclogram_data[0].subaddr_dest = rt_subaddr_to;
-    cyclogram_data[0].addr_source = -1;
-    cyclogram_data[0].subaddr_source = -1;
-    cyclogram_data[0].words_count = 3;
-    cyclogram_data[1].words_count = 0;
-    cyclogram_data[2].addr_dest = -1;
-    cyclogram_data[2].subaddr_dest = -1;
-    cyclogram_data[2].addr_source = rt_addr;
-    cyclogram_data[2].subaddr_source = rt_subaddr_from;
-    cyclogram_data[2].words_count = 3;
-    cyclogram_data[3].words_count = 0;
-    cyclogram_data[4].words_count = 0;
-
-    mil_std_1553_init_pins(MY_MIL_STD_PORT);
-    mil_std_1553_bc_init(&mil_bc,
-                         MY_MIL_STD_PORT,
-                         MY_MIL_STD_CHANNEL,
-                         cyclogram_data,
-                         CYCLOGRAM_SLOT_TIME,
-                         CYCLOGRAM_SLOTS_COUNT,
-                         KHZ,
-                         mil_std_rx_buffer,
-                         mil_std_tx_buffer);
+    milandr_mil1553_init(&mil, 0, &pool, MIL_RXQ_LEN, ARM_TIMER1);
+    milandr_mil1553_init_pins(0);
 
     task_create(test_milstd_bc_main, 0, "test_milstd_bc_main", 1, test_milstd_bc_stack, sizeof(test_milstd_bc_stack));
 }
 
-// example
+static int add_slot(mil_slot_desc_t cyclogram_data)
+{
+	mil_slot_t *slot = mem_alloc_dirty(mil.pool, sizeof(mil_slot_t));
+	slot->desc.raw = cyclogram_data.raw;
+	int wc = (slot->desc.words_count==0?32:slot->desc.words_count);
+	slot->data = mem_alloc(mil.pool, wc * 2);
+	if (!slot->data) {
+		mem_free(slot);
+	    debug_printf("No memory\n");
+		return -1;
+	}
+
+	if (cyclogram == 0) {
+		cyclogram = slot;
+	} else {
+		mil_slot_t *sl = cyclogram;
+		while (sl->next)
+			sl = sl->next;
+		sl->next = slot;
+	}
+	slot->next = 0;
+
+	if (mil1553_bc_set_cyclogram(&mil.milif, cyclogram, ++cyclogram_nb_slots) != MIL_ERR_OK) {
+		debug_printf("Error setting cyclogram\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int fill_buffer(mem_queue_t *queue)
+{
+	int i;
+    for(;;) {
+        if (mem_queue_is_empty(queue)) {
+            break;
+        }
+        uint32_t *que_elem = mem_queue_current(queue);
+        mil_slot_desc_t desc;
+        desc.raw = *(que_elem + 1);
+        int wc = (desc.words_count == 0 ? 32 : desc.words_count);
+
+        uint16_t *ptr = (uint16_t *)(que_elem + 2);
+        debug_printf("wc=%02d\n", wc);
+        for (i=0;i<wc;i++) {
+        	debug_printf(" %04x", *ptr++);
+        }
+        debug_printf("\n");
+
+        mem_queue_get(queue, (void*)&que_elem);
+        mem_free(que_elem);
+
+    }
+    return 1;
+}
+
+
 static void test_milstd_bc_main()
 {
-/*
-    debug_printf("send command\n");
-    mil_bc.reg->CommandWord1 |=
-            // Количество слов выдаваемых данных
-            MIL_STD_COMWORD_WORDSCNT_CODE(CMD_UnlockSender) |
-            // Подадрес приёмника
-            MIL_STD_COMWORD_SUBADDR_MODE(0x1f) |
-            // Адрес приёмника
-            MIL_STD_COMWORD_ADDR(rt_addr);
-    mil_bc.reg->CONTROL |= MIL_STD_CONTROL_BCSTART;
-*/
+#if MY_MIL_STD_CHANNEL==0
+	mil1553_set_mode(&mil.milif, MIL_MODE_BC_MAIN);
+#else
+	mil1553_set_mode(&mil.milif, MIL_MODE_BC_RSRV);
+#endif
 
-    const int txIndex = MIL_STD_SUBADDR_WORD_INDEX(rt_subaddr_to);
-    const int rxIndex = MIL_STD_SUBADDR_WORD_INDEX(rt_subaddr_from);
+	mil_slot_desc_t cyclogram_data;
 
-    mutex_lock(&mil_bc.lock);
-    mil_std_tx_buffer[txIndex + 0] = 0x71;
-    mil_std_tx_buffer[txIndex + 1] = 0x72;
-    mil_std_tx_buffer[txIndex + 2] = 0x73;
-    mutex_unlock(&mil_bc.lock);
+	memset(&cyclogram_data, 0, sizeof(cyclogram_data));
 
-    int i = 0;
+	cyclogram_data.transmit_mode = MIL_SLOT_BC_RT;
+    cyclogram_data.addr = rt_addr;
+    cyclogram_data.subaddr = rt_subaddr_to;
+    cyclogram_data.words_count = 3;
 
-    for (;;)
-    {
-        debug_printf("bc iter\n");
-        int a;
-        for (a=0; a<2; ++a)
-        {
-            mutex_lock(&mil_bc.lock);
-            for (i=0; i<3; ++i)
-                ++mil_std_tx_buffer[txIndex + i];
-            mutex_unlock(&mil_bc.lock);
+    if (add_slot(cyclogram_data)<0) {
+    	for(;;);
+    }
 
-            debug_printf("\n");
+    cyclogram_data.transmit_mode = MIL_SLOT_RT_BC;
+    cyclogram_data.addr = rt_addr;
+    cyclogram_data.subaddr = rt_subaddr_from;
+    cyclogram_data.words_count = 3;
 
-            debug_printf("bc(%d%s): dataToBeSent  =", mil_bc.port, mil_bc.channel == 1 ? "B" : "A");
-            for (i=0; i<3; ++i)
-                debug_printf(" %x", mil_std_tx_buffer[txIndex + i]);
-            debug_printf("\n");
+    if (add_slot(cyclogram_data)<0) {
+    	for(;;);
+    }
 
-            debug_printf("bc(%d%s): dataToBeRecvd =", mil_bc.port, mil_bc.channel == 1 ? "B" : "A");
-            for (i=0; i<3; ++i)
-                debug_printf(" %x", mil_std_rx_buffer[rxIndex + i]);
-            debug_printf("\n");
+    mil1553_bc_set_period(&mil.milif, CYCLOGRAM_SLOT_TIME);
+    mil1553_start(&mil.milif);
 
-            mdelay(5000);
+    int counter = 0;
+    for (;;) {
+		if (status_array[read_idx].done) {
+			uint32_t status = status_array[read_idx].status;
+			switch(mil.mode) {
+				case MIL_MODE_BC_MAIN:
+				case MIL_MODE_BC_RSRV:
+					mil_std_1553_bc_handler(&mil, status, status_array[read_idx].command_word_1, status_array[read_idx].msg);
+					//debug_printf("status_word_1 %08x\n", status_array[read_idx].status_word_1);
+					break;
+				case MIL_MODE_RT:
+					break;
+				default:
+					break;
+			}
+			status_array[read_idx].done = 0;
+			read_idx = (read_idx+1>=STATUS_ITEMS_SIZE?0:read_idx+1);
+		}
+
+		if (!mem_queue_is_empty(&mil.urgent_rxq)) {
+			if (!fill_buffer(&mil.urgent_rxq)) {
+				debug_printf("Error gettinng urgent rx data\n");
+		    	for(;;);
+			}
+		}
+
+		if (!mem_queue_is_empty(&mil.cyclogram_rxq)) {
+			if (!fill_buffer(&mil.cyclogram_rxq)) {
+				debug_printf("Error gettinng rx data\n");
+				for(;;);
+			}
         }
 
-        int ch = (~mil_bc.channel) & 1;
-        mil_std_1553_set_bc_channel(&mil_bc, ch);
+		counter++;
+		slot_data[0] = counter;
+		if (mil1553_bc_ordinary_send(&mil.milif, 0, (void*)slot_data) != MIL_ERR_OK) {
+			debug_printf("Error sending data\n");
+			for(;;);
+		}
     }
 }

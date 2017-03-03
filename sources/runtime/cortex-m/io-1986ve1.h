@@ -1776,13 +1776,13 @@ typedef struct
     arm_reg_t CONTROL1;  /* Регистр управления 1 приёмников */
     arm_reg_t CONTROL2;  /* Регистр управления 2 приёмников */
     arm_reg_t CONTROL3;  /* Регистр управления 3 приёмников */
-    arm_reg_t STATUS1;  /* Регистр состояния 1 приёмников */
-    arm_reg_t STATUS2;  /* Регистр состояния 2 приёмников */
-    arm_reg_t reserved1;
-    arm_reg_t reserved2;
-    arm_reg_t CHANNEL;  /* Регистр номера канала приёмников */
-    arm_reg_t LABEL;  /* FIFO меток */
-    arm_reg_t DATA_R;  /* FIFO принимаемых данных */
+    arm_reg_t STATUS1;   /* Регистр состояния 1 приёмников */
+    arm_reg_t STATUS2;   /* Регистр состояния 2 приёмников */
+    arm_reg_t CONTROL4;  /* Регистр управления 4 приёмников с ревизии 2*/
+    arm_reg_t CONTROL5;  /* Регистр управления 5 приёмников с ревизии 2*/
+    arm_reg_t CHANNEL;   /* Регистр номера канала приёмников */
+    arm_reg_t LABEL;     /* FIFO меток */
+    arm_reg_t DATA_R;    /* FIFO принимаемых данных */
 } ARINC429R_t;
 
 #define ARM_ARINC429R ((ARINC429R_t *) ARM_ARINC429R_BASE)
@@ -1792,8 +1792,10 @@ typedef struct
 {
     arm_reg_t CONTROL1;  /* Регистр управления 1 передатчиков */
     arm_reg_t CONTROL2;  /* Регистр управления 2 передатчиков */
-    arm_reg_t STATUS;  /* Регистр состояния передатчиков */
+    arm_reg_t STATUS;    /* Регистр состояния передатчиков */
     arm_reg_t DATA_T[4]; /* Регистры передаваемых данных */
+    arm_reg_t CONTROL3;  /* Регистр управления 3 передатчиков с ревизии 2*/
+    arm_reg_t CONTROL4;  /* Регистр управления 4 передатчиков с ревизии 4*/
 } ARINC429T_t;
 
 #define ARM_ARINC429T ((ARINC429T_t *) ARM_ARINC429T_BASE)
@@ -1813,6 +1815,8 @@ typedef struct
         };
     };
 } ARINC_msg_t;
+
+#define SIZE_OF_ARINC_MSG	(4)
 
 /*
  * CONTROL1: регистр управления №1 приёмников
@@ -1896,6 +1900,12 @@ typedef struct
 #define ARM_ARINC429T_STATUS_TX_R(n) (((n) < 2) ? (1 << (3 * (n))): (1 << (3 * (n) + 2)))  /* Бит наличия данных в FIFO */
 #define ARM_ARINC429T_STATUS_FFT(n)  (((n) < 2) ? (1 << (3 * (n) + 1)): (1 << (3 * (n) + 3)))  /* Бит полноты FIFO */
 #define ARM_ARINC429T_STATUS_HFT(n)  (((n) < 2) ? (1 << (3 * (n) + 2)): (1 << (3 * (n) + 4)))  /* Бит наполненности FIFO */
+
+
+#define ARM_ARINC429T_CONTROL3_DIV(div, ch) (((div) & 0xff) << (8*(ch)))  /* Делитель частоты ядра до 1 МГц TX (8 бит).*/
+#define ARM_ARINC429R_CONTROL4_DIV(div, ch) (((div) & 0xff) << (8*(ch)))  /* Делитель частоты ядра до 1 МГц RX (8 бит).*/
+#define ARM_ARINC429R_CONTROL5_DIV(div, ch) (((div) & 0xff) << (8*(ch-4)))  /* Делитель частоты ядра до 1 МГц RX (8 бит).*/
+
 
 /*---------------------------------------
  * Описание регистров сторожевого таймера

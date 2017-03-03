@@ -13,7 +13,9 @@
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 #include <timer/timer.h>
+#ifdef TIMER_TIMEOUTS
 #include <timer/timeout.h>
+#endif
 
 #if defined (ARM_CORTEX_M1) || defined (ARM_CORTEX_M3) || defined (ARM_CORTEX_M4)
 extern volatile uint32_t __timer_ticks_uos;
@@ -262,9 +264,9 @@ void timer_update (timer_t *t)
 #ifndef TIMER_NO_DECISEC
     /* Send signal every 100 msec. */ /* Потенциально не работает, если t->msec_per_tick > 100 */
 #ifdef USEC_TIMER
-    if ((interval >= (TIMER_DECISEC_MS*1000ul)) ||
+    if ((interval >= (TIMER_DECISEC_MS*1000ul)) &&
 #else
-    if ((interval >= TIMER_DECISEC_MS) ||
+    if ((interval >= TIMER_DECISEC_MS) &&
 #endif
         (msec >= nextdec)) 
     {
