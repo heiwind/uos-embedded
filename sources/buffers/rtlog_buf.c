@@ -116,12 +116,12 @@ void rtlog_dump_last( rtlog* u, stream_t *dst, unsigned records_count)
         if (records_count > avail)
             records_count = avail;
 
-        if (records_count <= 0)
-            return;
-
         slot = u->idx.write;
         slot = (slot - records_count) & u->idx.mask;
         arch_intr_restore (x);
+
+        if (records_count <= 0)
+            return;
     }
 
     while (slot != u->idx.write){
