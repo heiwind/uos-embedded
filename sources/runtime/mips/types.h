@@ -20,18 +20,12 @@
 #ifndef __MACHINE_TYPES_H_
 #define __MACHINE_TYPES_H_ 1
 
-typedef	signed char int8_t;
-typedef	unsigned char uint8_t;
+#include <stdint.h>
+//! TODO have to deside use standart GCC headers or not? should we allow use local std-types?
+//#include <stddef.h>
 
-typedef	short int16_t;
-typedef	unsigned short uint16_t;
 
 #define INT_SIZE 4
-typedef	long int32_t;
-typedef	unsigned long uint32_t;
-
-typedef long long int64_t;
-typedef unsigned long long uint64_t;
 
 typedef int small_int_t;
 typedef unsigned int small_uint_t;
@@ -42,11 +36,16 @@ typedef int bool_t;
  * An integer type, large enough to keep a memory address.
  * On ARM, data pointers have 4-byte size.
  */
+#ifndef _SIZE_T_DEFINED_ 
 typedef unsigned long size_t;
+typedef signed long     ssize_t;
+typedef signed long     __off_t;
+#define _SIZE_T_DEFINED_
+#endif
 
 typedef long jmp_buf [10];
 
-#if ARCH_HAVE_FPU
+#ifdef ARCH_HAVE_FPU
 #include <float.h>
 #endif
 

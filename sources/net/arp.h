@@ -1,29 +1,36 @@
 #ifndef __ARP_H_
 #define	__ARP_H_ 1
 
+#include <net/ip.h>
+#include <net/ethernet.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
+//*****************************************************************************
+//                               ARP entry
+//*****************************************************************************
 typedef struct _arp_entry_t {
 	struct _netif_t	*netif;
-	unsigned char	ipaddr [4];
-	unsigned char	ethaddr [6];
+	ip_addr         ipaddr;
+	mac_addr        ethaddr;
 	unsigned char	age;
 } arp_entry_t;
 
 typedef struct _arp_t {
 	struct _ip_t	*ip;
+	//changes on every table change
+	unsigned        stamp;
 	unsigned char	size;
 	unsigned char	timer;
 	arp_entry_t	table [1];
 } arp_t;
 
-/* MUST be compiled with "pack structs" or equivalent! */
-struct eth_hdr {
-	unsigned char	dest [6];	/* destination MAC address */
-	unsigned char	src [6];	/* source MAC address */
-
-	unsigned short	proto;		/* protocol type */
-#define PROTO_ARP	HTONS (0x0806)
-#define PROTO_IP	HTONS (0x0800)
-} __attribute__ ((packed));
+//*********************    ARP headers       **********************************
 
 struct arp_hdr {
 	struct eth_hdr	eth;		/* ethernet header */
@@ -46,25 +53,22 @@ struct arp_hdr {
 	unsigned char	dst_ipaddr [4];	/* dest. IP address */
 } __attribute__ ((packed));
 
-struct ethip_hdr {
-	/* Ethernet header */
-	struct eth_hdr	eth;
 
-	/* IP header */
-	unsigned char	ip_hdr0 [4];
-	unsigned char	ip_hdr1 [4];
-	unsigned char	ip_hdr2 [4];
-	unsigned char	ip_src [4];
-	unsigned char	ip_dst [4];
-} __attribute__ ((packed));
 
 arp_t *arp_init (array_t *buf, unsigned bytes, struct _ip_t *ip);
 struct _buf_t *arp_input (struct _netif_t *netif, struct _buf_t *p);
 bool_t arp_request (struct _netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ipsrc);
+        ip_addr_const ipdest, ip_addr_const ipsrc);
 bool_t arp_add_header (struct _netif_t *netif, struct _buf_t *p,
-	unsigned char *ipdest, unsigned char *ethdest);
-unsigned char *arp_lookup (struct _netif_t *netif, unsigned char *ipaddr);
+        ip_addr_const ipdest
+	, const unsigned char *ethdest);
+unsigned char *arp_lookup (struct _netif_t *netif, ip_addr_const ipaddr);
 void arp_timer (arp_t *arp);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !__ARP_H_ */

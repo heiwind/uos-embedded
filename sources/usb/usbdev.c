@@ -187,7 +187,7 @@ static void process_std_req (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup)
 
 static void process_setup (usbdev_t *u, unsigned ep, usb_setup_pkt_t *setup, void *data)
 {
-    uint8_t *res_data = data;
+    uint8_t *res_data = (uint8_t*)data;
     int res_size = setup->wLength;
     unsigned num;
     int req_state = USBDEV_NACK;
@@ -392,7 +392,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
             u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
             break;
         }
-        psetup = data;
+        psetup = (usb_setup_pkt_t*)data;
 //print_setup_pkt(psetup);
         if ((psetup->bmRequestType & EP_ATTR_IN) || (psetup->wLength == 0)) {
             process_setup (u, ep, psetup, 0);
@@ -424,7 +424,7 @@ void usbdevhal_out_done (usbdev_t *u, unsigned ep, int trans_type, void *data, i
             u->hal->ep_stall (ep, USBDEV_DIR_OUT, u->hal_arg);
             break;
         }
-        memcpy (setup_data + setup_data_cnt, data, size);
+        memcpy ((char*)setup_data + setup_data_cnt, data, size);
         setup_data_cnt += size;
         if (setup_data_cnt >= setup.wLength) {
             process_setup (u, ep, &setup, setup_data);

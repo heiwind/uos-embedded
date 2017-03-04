@@ -12,11 +12,25 @@
 static void
 stream_flush (tcp_stream_t *u)
 {
-	int len = u->outptr - u->outdata;
-
 /*debug_printf ("tstream output"); buf_print_data (u->outdata, len);*/
-	while (! tcp_enqueue (u->socket, (void*) u->outdata, len, 0, 0, 0))
-		mutex_wait (&u->socket->lock);
+    tcp_socket_t*  s = u->socket;
+    unsigned char* src = u->outdata;
+	while (u->outptr != src){
+	    int len = u->outptr - src;
+	    int sent = tcp_enqueue (u->socket, (void*) u->outdata, len, 0);
+	    tcp_debug("tcp-stream: sent %d bytes\n", sent);
+	    src   += sent;
+	    if (sent != len) {
+#         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+	        mutex_unlock (&s->lock);
+#         endif
+	        tcp_output (s);
+#         if TCP_LOCK_STYLE < TCP_LOCK_RELAXED
+	        mutex_lock (&s->lock);
+#         endif
+	        mutex_wait (&s->lock);
+	    }
+	}
 	u->outptr = u->outdata;
 }
 
@@ -24,77 +38,77 @@ static void
 socket_flush (tcp_socket_t *s)
 {
 	/* Force IP level to send a packet. */
-        mutex_lock (&s->ip->lock);
 	tcp_output (s);
-	mutex_unlock (&s->ip->lock);
 }
 
 static void
 tcp_stream_putchar (tcp_stream_t *u, short c)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return;
-	mutex_lock (&u->socket->lock);
-	if (u->socket->state != SYN_SENT && u->socket->state != SYN_RCVD &&
-	    u->socket->state != ESTABLISHED && u->socket->state != CLOSE_WAIT) {
+	mutex_lock (&s->lock);
+	if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER | tcpfCLOSE_WAIT)) {
 		/* Connection was closed. */
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 		return;
 	}
 	/* Put byte into output buffer. */
 	*u->outptr++ = c;
-	if (u->outptr < u->outdata + sizeof(u->outdata)) {
-		mutex_unlock (&u->socket->lock);
+	if (u->outptr < (u->outdata + u->outdata_size) ) {
+		mutex_unlock (&s->lock);
 		return;
 	}
 	stream_flush (u);
-	mutex_unlock (&u->socket->lock);
+	mutex_unlock (&s->lock);
 
 	/* Force IP level to send a packet. */
-	socket_flush (u->socket);
+	socket_flush (s);
 }
 
+/* TODO stream is very inefficient of transmiting when receive -
+ *      receiver forces transmiter to accasionaly flush out-buffer
+ * */
 static unsigned short
 tcp_stream_getchar (tcp_stream_t *u)
 {
 	unsigned short c;
+	tcp_socket_t*  s = u->socket;
 
-	if (! u->socket)
+	if (!s)
 		return -1;
-	mutex_lock (&u->socket->lock);
+	mutex_lock (&s->lock);
 
 	/* Flush output buffer. */
 	if (u->outptr > u->outdata) {
 		stream_flush (u);
-		mutex_unlock (&u->socket->lock);
-		socket_flush (u->socket);
-		mutex_lock (&u->socket->lock);
+		mutex_unlock (&s->lock);
+		socket_flush (s);
+		mutex_lock (&s->lock);
 	}
 
-	/* Wait for data. */
 	if (u->inbuf)
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 	else {
-		while (tcp_queue_is_empty (u->socket)) {
-			if (u->socket->state != SYN_SENT &&
-			    u->socket->state != SYN_RCVD &&
-			    u->socket->state != ESTABLISHED) {
-				mutex_unlock (&u->socket->lock);
+	    /* Wait for data. */
+		while (tcp_queue_is_empty (s)) {
+			if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
+				mutex_unlock (&s->lock);
 				return -1;
 			}
-			mutex_wait (&u->socket->lock);
+			mutex_wait (&s->lock);
 		}
-		u->inbuf = tcp_queue_get (u->socket);
+		u->inbuf = tcp_queue_get (s);
 		u->inptr = u->inbuf->payload;
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 /*debug_printf ("tstream input"); buf_print (u->inbuf);*/
 
-		mutex_lock (&u->socket->ip->lock);
-		if (! (u->socket->flags & TF_ACK_DELAY) &&
-		    ! (u->socket->flags & TF_ACK_NOW)) {
-			tcp_ack (u->socket);
+		mutex_lock (&s->ip->lock);
+		if (! (s->flags & TF_ACK_DELAY) &&
+		    ! (s->flags & TF_ACK_NOW)) {
+			tcp_ack (s);
 		}
-		mutex_unlock (&u->socket->ip->lock);
+		mutex_unlock (&s->ip->lock);
 	}
 
 	/* Get byte from buffer. */
@@ -115,36 +129,37 @@ tcp_stream_getchar (tcp_stream_t *u)
 static int
 tcp_stream_peekchar (tcp_stream_t *u)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return -1;
-	mutex_lock (&u->socket->lock);
+	mutex_lock (&s->lock);
 
 	/* Flush output buffer. */
 	if (u->outptr > u->outdata) {
 		stream_flush (u);
-		mutex_unlock (&u->socket->lock);
-		socket_flush (u->socket);
-		mutex_lock (&u->socket->lock);
+		mutex_unlock (&s->lock);
+		socket_flush (s);
+		mutex_lock (&s->lock);
 	}
 
 	/* Any data available? */
 	if (u->inbuf)
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 	else {
-		if (tcp_queue_is_empty (u->socket)) {
-			mutex_unlock (&u->socket->lock);
+		if (tcp_queue_is_empty (s)) {
+			mutex_unlock (&s->lock);
 			return -1;
 		}
-		u->inbuf = tcp_queue_get (u->socket);
+		u->inbuf = tcp_queue_get (s);
 		u->inptr = u->inbuf->payload;
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 
-		mutex_lock (&u->socket->ip->lock);
-		if (! (u->socket->flags & TF_ACK_DELAY) &&
-		    ! (u->socket->flags & TF_ACK_NOW)) {
-			tcp_ack (u->socket);
+		mutex_lock (&s->ip->lock);
+		if (! (s->flags & TF_ACK_DELAY) &&
+		    ! (s->flags & TF_ACK_NOW)) {
+			tcp_ack (s);
 		}
-		mutex_unlock (&u->socket->ip->lock);
+		mutex_unlock (&s->ip->lock);
 	}
 	return *u->inptr;
 }
@@ -152,48 +167,53 @@ tcp_stream_peekchar (tcp_stream_t *u)
 static void
 tcp_stream_flush (tcp_stream_t *u)
 {
-	if (! u->socket)
+    tcp_socket_t*  s = u->socket;
+	if (! s)
 		return;
-	mutex_lock (&u->socket->lock);
+	mutex_lock (&s->lock);
 
 	/* Flush output buffer. */
 	if (u->outptr <= u->outdata) {
-		mutex_unlock (&u->socket->lock);
+		mutex_unlock (&s->lock);
 		return;
 	}
 	stream_flush (u);
-	mutex_unlock (&u->socket->lock);
+	mutex_unlock (&s->lock);
 
 	/* Force IP level to send a packet. */
-	socket_flush (u->socket);
+	socket_flush (s);
 }
 
 static bool_t
 tcp_stream_eof (tcp_stream_t *u)
 {
 	bool_t ret;
+    tcp_socket_t*  s = u->socket;
 
-	if (! u->socket)
+	if (! s)
 		return 1;
-	mutex_lock (&u->socket->lock);
-	ret = (u->socket->state != SYN_SENT && u->socket->state != SYN_RCVD &&
-		u->socket->state != ESTABLISHED);
-	mutex_unlock (&u->socket->lock);
+	mutex_lock (&s->lock);
+	ret = (!tcp_socket_is_state(s, TCP_STATES_TRANSFER));
+	mutex_unlock (&s->lock);
 	return ret;
 }
 
 static void
 tcp_stream_close (tcp_stream_t *u)
 {
-	if (! u->socket)
-		return;
-	mutex_lock (&u->socket->lock);
-	mutex_signal (&u->socket->lock, 0);
-	mutex_unlock (&u->socket->lock);
+    tcp_socket_t*  s = u->socket;
+	if (s) {
+	mutex_lock (&s->lock);
+	mutex_signal (&s->lock, 0);
+	mutex_unlock (&s->lock);
 
-	tcp_close (u->socket);
-	mem_free (u->socket);
+	tcp_close (s);
+	mem_free (s);
 	u->socket = 0;
+	}
+
+	mem_free(u->outdata);
+	u->outdata = 0;
 }
 
 /*
@@ -207,6 +227,14 @@ tcp_stream_receiver (tcp_stream_t *u)
 	return &u->socket->lock;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] =
+#define item(i) .i =
+#endif
+
 static stream_interface_t tcp_interface = {
 	.putc = (void (*) (stream_t*, short))	tcp_stream_putchar,
 	.getc = (unsigned short (*) (stream_t*))tcp_stream_getchar,
@@ -215,6 +243,11 @@ static stream_interface_t tcp_interface = {
 	.eof = (bool_t (*) (stream_t*))		tcp_stream_eof,
 	.close = (void (*) (stream_t*))		tcp_stream_close,
 	.receiver = (mutex_t *(*) (stream_t*))	tcp_stream_receiver,
+#if STREAM_HAVE_ACCEESS > 0
+    //* позволяют потребовать монопольного захвата потока
+    item(access_rx)                             0
+    , item(access_tx)                           0
+#endif
 };
 
 /*
@@ -222,8 +255,25 @@ static stream_interface_t tcp_interface = {
  */
 stream_t *tcp_stream_init (tcp_stream_t *u, tcp_socket_t *sock)
 {
-	u->stream.interface = &tcp_interface;
-	u->socket = sock;
-	u->outptr = u->outdata;
-	return &u->stream;
+    return tcp_stream_init4buf(u, sock, 0, 0);
+}
+
+stream_t *tcp_stream_init4buf (tcp_stream_t *u, tcp_socket_t *sock
+                             , void* outdata_buf, unsigned size)
+{
+    u->outdata = (unsigned char*)outdata_buf;
+    if (u->outdata == 0){
+        if (size == 0)
+            size = TCP_STREAM_DEFAULT_BUFSIZE;
+        u->outdata =(unsigned char*) mem_alloc(sock->ip->pool, size);
+    }
+    u->outdata_size = size;
+    assert(u->outdata != 0);
+    assert(u->outdata_size > 0);
+    //if (u->outdata == 0)
+    //    return 0;
+    u->stream.interface = &tcp_interface;
+    u->socket = sock;
+    u->outptr = u->outdata;
+    return &u->stream;
 }

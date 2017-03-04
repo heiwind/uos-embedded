@@ -2,19 +2,19 @@
 #include <kernel/uos.h>
 #include <uart/uart.h>
 
-#if __AVR__
+#if defined(__AVR__)
 #   include "avr.h"
 #endif
 
-#if ARM_S3C4530
+#if defined(ARM_S3C4530)
 #   include "samsung.h"
 #endif
 
-#if ARM_AT91SAM
+#if defined(ARM_AT91SAM)
 #   include "at91sam.h"
 #endif
 
-#if PIC32MX
+#if defined(PIC32MX)
 #   include "pic32.h"
 #endif
 
@@ -22,13 +22,19 @@
 #   include "elvees.h"
 #endif
 
-#if MSP430
+#if defined(MSP430)
 #   include "msp430.h"
 #endif
 
-#if LINUX386
+#if defined(LINUX386)
 #   include "linux.h"
 #endif
+
+#ifndef uart_io_base
+#define uart_io_base(port) (port)
+#else
+#endif
+
 
 /*
  * Start transmitting a byte.
@@ -55,11 +61,21 @@ uart_transmit_start (uart_t *u)
 	}
 
 	/* Send byte. */
+#if	UART_PORT_FIFO_SIZE > 1
+	unsigned least = UART_PORT_FIFO_SIZE;
+    for (;(u->out_first != u->out_last) && (least > 0); --least ) {
+        transmit_byte (u->port, *u->out_first);
+        ++u->out_first;
+        if (u->out_first >= u->out_buf + UART_OUTBUFSZ)
+            u->out_first = u->out_buf;
+    }
+#else
 	transmit_byte (u->port, *u->out_first);
 
 	++u->out_first;
-	if (u->out_first >= u->out_buf + UART_OUTBUFSZ)
-		u->out_first = u->out_buf;
+    if (u->out_first >= u->out_buf + UART_OUTBUFSZ)
+        u->out_first = u->out_buf;
+#endif
 
 	/* Enable `transmitter empty' interrupt. */
 	enable_transmit_interrupt (u->port);
@@ -72,9 +88,13 @@ uart_transmit_start (uart_t *u)
 static void
 uart_fflush (uart_t *u)
 {
-	mutex_lock (&u->transmitter);
+    if (u->out_first == u->out_last)
+        return;
+
+    mutex_lock (&u->transmitter);
 
 	/* Check that transmitter is enabled. */
+	if (u->out_first != u->out_last)
 	if (test_transmitter_enabled (u->port))
 		while (u->out_first != u->out_last)
 			mutex_wait (&u->transmitter);
@@ -175,8 +195,8 @@ uart_peekchar (uart_t *u)
 static void
 uart_receiver (void *arg)
 {
-	uart_t *u = arg;
-	unsigned char c = 0, *newlast;
+	uart_t *u = (uart_t *)arg;
+	unsigned char* newlast;
 
 	/*
 	 * Enable transmitter.
@@ -218,25 +238,39 @@ uart_receiver (void *arg)
 		}
 #endif
 #ifndef TRANSMIT_IRQ
-		if (test_transmitter_enabled (u->port))
-			uart_transmit_start (u);
+		if (test_transmitter_enabled (u->port)){
+		        mutex_lock(&u->transmitter);
+                uart_transmit_start (u);
+                mutex_unlock (&u->transmitter);
+		}
 #endif
-		/* Check that receive data is available,
-		 * and get the received byte. */
-		if (! test_get_receive_data (u->port, &c))
-			continue;
+		/* Check that receive data is available, and get the received bytes. */
+#ifdef test_receiver_avail
+        while ( test_receiver_avail(u->port) )
+#else
+        unsigned char c = 0;
+        while (test_get_receive_data (u->port, &c))
+#endif
+		{
 /*debug_printf ("%02x", c);*/
 
 		newlast = u->in_last + 1;
 		if (newlast >= u->in_buf + UART_INBUFSZ)
 			newlast = u->in_buf;
 
-		/* Ignore input on buffer overflow. */
-		if (u->in_first == newlast)
-			continue;
-
-		*u->in_last = c;
+#ifdef test_receiver_avail
+        /* Ignore input on buffer overflow. */
+        if (u->in_first == newlast)
+            break;
+		*u->in_last = get_received_byte(u->port);
+#else
+        /* Ignore input on buffer overflow. */
+        if (u->in_first == newlast)
+            continue;
+        *u->in_last = c;
+#endif
 		u->in_last = newlast;
+		} //while (test_get_receive_data (u->port, &c))
 	}
 }
 
@@ -246,12 +280,27 @@ uart_receive_lock (uart_t *u)
 	return &u->receiver;
 }
 
+#ifdef __cplusplus
+#define idx(i)
+#define item(i)
+#else
+#define idx(i) [i] = 
+#define item(i) .i =
+#endif
+
 static stream_interface_t uart_interface = {
-	.putc = (void (*) (stream_t*, short))		uart_putchar,
-	.getc = (unsigned short (*) (stream_t*))	uart_getchar,
-	.peekc = (int (*) (stream_t*))			uart_peekchar,
-	.flush = (void (*) (stream_t*))			uart_fflush,
-	.receiver = (mutex_t *(*) (stream_t*))		uart_receive_lock,
+	item(putc) (void (*) (stream_t*, short))		uart_putchar,
+	item(getc) (unsigned short (*) (stream_t*))	uart_getchar,
+	item(peekc) (int (*) (stream_t*))			uart_peekchar,
+	item(flush) (void (*) (stream_t*))			uart_fflush,
+	item(eof)   (bool_t (*) (stream_t*))        0,
+	item(close) (void (*) (stream_t*))          0,
+	item(receiver) (mutex_t *(*) (stream_t*))		uart_receive_lock,
+#if STREAM_HAVE_ACCEESS > 0
+    //* позволяют потребовать монопольного захвата потока
+    item(access_rx)                             0
+    , item(access_tx)                           0
+#endif
 };
 
 void
@@ -263,11 +312,14 @@ uart_init (uart_t *u, small_uint_t port, int prio, unsigned int khz,
 	u->out_first = u->out_last = u->out_buf;
 	u->khz = khz;
 	u->onlcr = 1;
-#if (ARM_1986BE9 || ARM_1986BE1)
+#if (defined(ARM_1986BE9) || defined(ARM_1986BE1))
 	u->port = (port == 0) ? ARM_UART1_BASE : ARM_UART2_BASE;
 #else
-	u->port = port;
+	u->port = uart_io_base(port);
 #endif
+
+	mutex_init(&u->transmitter);
+    mutex_init(&u->receiver);
 
 	/* Setup baud rate generator. */
 	setup_baud_rate (u->port, u->khz, baud);

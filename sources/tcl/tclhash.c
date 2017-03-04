@@ -121,8 +121,9 @@ Tcl_InitHashTable(Tcl_HashTable *tablePtr, /* Pointer to table record, which
  */
 
 void
-Tcl_DeleteHashEntry(entryPtr)
-    Tcl_HashEntry *entryPtr;
+Tcl_DeleteHashEntry(
+    Tcl_HashEntry *entryPtr
+    )
 {
     register Tcl_HashEntry *prevPtr;
 
@@ -140,7 +141,7 @@ Tcl_DeleteHashEntry(entryPtr)
     entryPtr->tablePtr->numEntries--;
     mem_free (entryPtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -159,8 +160,9 @@ Tcl_DeleteHashEntry(entryPtr)
  */
 
 void
-Tcl_DeleteHashTable(tablePtr)
-    register Tcl_HashTable *tablePtr;		/* Table to delete. */
+Tcl_DeleteHashTable(
+    register Tcl_HashTable *tablePtr		/* Table to delete. */
+    )
 {
     register Tcl_HashEntry *hPtr, *nextPtr;
     int i;
@@ -191,7 +193,7 @@ Tcl_DeleteHashTable(tablePtr)
     tablePtr->findProc = BogusFind;
     tablePtr->createProc = BogusCreate;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -215,17 +217,18 @@ Tcl_DeleteHashTable(tablePtr)
  */
 
 Tcl_HashEntry *
-Tcl_FirstHashEntry(tablePtr, searchPtr)
-    Tcl_HashTable *tablePtr;		/* Table to search. */
-    Tcl_HashSearch *searchPtr;		/* Place to store information about
+Tcl_FirstHashEntry(
+    Tcl_HashTable *tablePtr		/* Table to search. */
+    , Tcl_HashSearch *searchPtr		/* Place to store information about
 					 * progress through the table. */
+    )
 {
     searchPtr->tablePtr = tablePtr;
     searchPtr->nextIndex = 0;
     searchPtr->nextEntryPtr = 0;
     return Tcl_NextHashEntry(searchPtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -246,11 +249,12 @@ Tcl_FirstHashEntry(tablePtr, searchPtr)
  */
 
 Tcl_HashEntry *
-Tcl_NextHashEntry(searchPtr)
-    register Tcl_HashSearch *searchPtr;	/* Place to store information about
+Tcl_NextHashEntry(
+    register Tcl_HashSearch *searchPtr	/* Place to store information about
 					 * progress through the table.  Must
 					 * have been initialized by calling
 					 * Tcl_FirstHashEntry. */
+    )
 {
     Tcl_HashEntry *hPtr;
 
@@ -266,7 +270,7 @@ Tcl_NextHashEntry(searchPtr)
     searchPtr->nextEntryPtr = hPtr->nextPtr;
     return hPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -320,7 +324,7 @@ Tcl_HashStats (Tcl_HashTable *tablePtr)	/* Table for which to produce stats. */
      * Print out the histogram and a few other pieces of information.
      */
     size = NUM_COUNTERS*60 + 300;
-    result = mem_alloc (tablePtr->pool, size);
+    result = (unsigned char *)mem_alloc (tablePtr->pool, size);
     snprintf(result, size, "%d entries in table, %d buckets\n",
 	    tablePtr->numEntries, tablePtr->numBuckets);
     p = result + strlen(result);
@@ -336,7 +340,7 @@ Tcl_HashStats (Tcl_HashTable *tablePtr)	/* Table for which to produce stats. */
 /*    snprintf(p, size - strlen (p), "\naverage search distance for entry: %.1f", average);*/
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -356,8 +360,9 @@ Tcl_HashStats (Tcl_HashTable *tablePtr)	/* Table for which to produce stats. */
  */
 
 static unsigned int
-HashString(string)
-    register unsigned char *string;	/* String from which to compute hash value. */
+HashString(
+    register unsigned char *string	/* String from which to compute hash value. */
+    )
 {
     register unsigned int result;
     register int c;
@@ -389,7 +394,7 @@ HashString(string)
     }
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -409,9 +414,10 @@ HashString(string)
  */
 
 static Tcl_HashEntry *
-StringFind(tablePtr, key)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    unsigned char *key;		/* Key to use to find matching entry. */
+StringFind(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , unsigned char *key		/* Key to use to find matching entry. */
+    )
 {
     register Tcl_HashEntry *hPtr;
     register unsigned char *p1, *p2;
@@ -436,7 +442,7 @@ StringFind(tablePtr, key)
     }
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -459,12 +465,13 @@ StringFind(tablePtr, key)
  */
 
 static Tcl_HashEntry *
-StringCreate(tablePtr, key, newPtr)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    unsigned char *key;		/* Key to use to find or create matching
+StringCreate(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , unsigned char *key		/* Key to use to find or create matching
 				 * entry. */
-    int *newPtr;		/* Store info here telling whether a new
+    , int *newPtr		/* Store info here telling whether a new
 				 * entry was created. */
+    )
 {
     register Tcl_HashEntry *hPtr;
     register unsigned char *p1, *p2;
@@ -514,7 +521,7 @@ StringCreate(tablePtr, key, newPtr)
     }
     return hPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -534,9 +541,10 @@ StringCreate(tablePtr, key, newPtr)
  */
 
 static Tcl_HashEntry *
-OneWordFind(tablePtr, key)
-    Tcl_HashTable *tablePtr;		/* Table in which to lookup entry. */
-    register unsigned char *key;	/* Key to use to find matching entry. */
+OneWordFind(
+    Tcl_HashTable *tablePtr		/* Table in which to lookup entry. */
+    , register unsigned char *key	/* Key to use to find matching entry. */
+    )
 {
     register Tcl_HashEntry *hPtr;
     int index;
@@ -555,7 +563,7 @@ OneWordFind(tablePtr, key)
     }
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -578,12 +586,12 @@ OneWordFind(tablePtr, key)
  */
 
 static Tcl_HashEntry *
-OneWordCreate(tablePtr, key, newPtr)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    register unsigned char *key; /* Key to use to find or create matching
-				 * entry. */
-    int *newPtr;		/* Store info here telling whether a new
+OneWordCreate(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , register unsigned char *key /* Key to use to find or create matching entry. */
+    , int *newPtr		/* Store info here telling whether a new
 				 * entry was created. */
+    )
 {
     register Tcl_HashEntry *hPtr;
     int index;
@@ -626,7 +634,7 @@ OneWordCreate(tablePtr, key, newPtr)
     }
     return hPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -646,9 +654,10 @@ OneWordCreate(tablePtr, key, newPtr)
  */
 
 static Tcl_HashEntry *
-ArrayFind(tablePtr, key)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    unsigned char *key;		/* Key to use to find matching entry. */
+ArrayFind(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , unsigned char *key		/* Key to use to find matching entry. */
+    )
 {
     register Tcl_HashEntry *hPtr;
     int *arrayPtr = (int *) key;
@@ -679,7 +688,7 @@ ArrayFind(tablePtr, key)
     }
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -702,12 +711,13 @@ ArrayFind(tablePtr, key)
  */
 
 static Tcl_HashEntry *
-ArrayCreate(tablePtr, key, newPtr)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    register unsigned char *key; /* Key to use to find or create matching
+ArrayCreate(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , register unsigned char *key /* Key to use to find or create matching
 				 * entry. */
-    int *newPtr;		/* Store info here telling whether a new
+    , int *newPtr		/* Store info here telling whether a new
 				 * entry was created. */
+    )
 {
     register Tcl_HashEntry *hPtr;
     int *arrayPtr = (int *) key;
@@ -766,7 +776,7 @@ ArrayCreate(tablePtr, key, newPtr)
     }
     return hPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -787,9 +797,10 @@ ArrayCreate(tablePtr, key, newPtr)
 
 	/* ARGSUSED */
 static Tcl_HashEntry *
-BogusFind(tablePtr, key)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    unsigned char *key;		/* Key to use to find matching entry. */
+BogusFind(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , unsigned char *key		/* Key to use to find matching entry. */
+    )
 {
     assert (0);
     return 0;
@@ -815,17 +826,16 @@ BogusFind(tablePtr, key)
 
 	/* ARGSUSED */
 static Tcl_HashEntry *
-BogusCreate(tablePtr, key, newPtr)
-    Tcl_HashTable *tablePtr;	/* Table in which to lookup entry. */
-    unsigned char *key;		/* Key to use to find or create matching
-				 * entry. */
-    int *newPtr;		/* Store info here telling whether a new
-				 * entry was created. */
+BogusCreate(
+    Tcl_HashTable *tablePtr	/* Table in which to lookup entry. */
+    , unsigned char *key		/* Key to use to find or create matching entry. */
+    , int *newPtr		/* Store info here telling whether a new entry was created. */
+    )
 {
     assert (0);
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -847,8 +857,9 @@ BogusCreate(tablePtr, key, newPtr)
  */
 
 static void
-RebuildTable(tablePtr)
-    register Tcl_HashTable *tablePtr;	/* Table to enlarge. */
+RebuildTable(
+    register Tcl_HashTable *tablePtr	/* Table to enlarge. */
+    )
 {
     int oldSize, count, index;
     Tcl_HashEntry **oldBuckets;

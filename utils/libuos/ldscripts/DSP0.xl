@@ -1,0 +1,22 @@
+SECTIONS {
+
+   . =0xb8440000;
+   .DSP0_text :
+   {
+   }
+
+   . =0x0;
+   .DSP0_data :
+   {
+   }
+   .DSP0_bss :
+   {
+   }
+
+   .DSP0_tmp :
+   {
+      ../ldscripts/__DSPX__.xx(.text)
+      ../ldscripts/__DSPX__.xx(.data)
+      ../ldscripts/__DSPX__.xx(COMMON)
+   }
+}

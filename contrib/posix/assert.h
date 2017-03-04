@@ -1,1 +1,1 @@
-#include <runtime/lib.h>
+#include <runtime/assert.h>

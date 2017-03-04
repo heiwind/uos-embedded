@@ -4,13 +4,19 @@
 #include <net/netif.h>
 #include <net/ip.h>
 
+#ifdef DEBUG_NET_ROUTE
+#define ROUTE_printf(...) debug_printf(__VA_ARGS__)
+#else
+#define ROUTE_printf(...)
+#endif
 /*
  * Compare the IP address with the route address/netmask.
  * Return 1 on match, 0 on failure.
  */
 static bool_t
-route_match (route_t *r, unsigned char *a)
+route_match (const route_t *r, ip_addr_const a)
 {
+#ifdef __AVR__
 	switch (r->masklen) {
 	case 0:	 return 1;
 	case 1:	 return (a[0] & 0x80) == r->netaddr[0];
@@ -58,6 +64,11 @@ route_match (route_t *r, unsigned char *a)
 	case 31: return (a[3] & 0xFE) == r->netaddr[3];
 	}
 	return a[3] == r->ipaddr[3];
+#else
+	unsigned mask = 32 - r->masklen;
+	unsigned tmp = r->netaddr.val ^ a;
+	return ((tmp << mask) == 0)? 1: 0;
+#endif
 }
 
 /*
@@ -67,13 +78,15 @@ route_match (route_t *r, unsigned char *a)
  * Records of type 1 have gateway[0] = 0.
  * Records of type 2 have real gateway addresses.
  */
-void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
-	unsigned char masklen, unsigned char *gateway)
+void route_setup (ip_t *ip, route_t *r
+        , const unsigned char *ipaddr,
+	unsigned char masklen
+	    , const unsigned char *gateway)
 {
 	unsigned long net, bcast;	/* host byte order */
 	route_t *s, *best;
 
-	memcpy (r->ipaddr, ipaddr, 4);
+	r->ipaddr = ipadr_4ucs(ipaddr);
 	r->masklen = masklen;
 
 	net = 0xfffffffful >> masklen;
@@ -82,21 +95,21 @@ void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
 		(unsigned short) ipaddr[2] << 8 | ipaddr[3];
 	net ^= bcast;
 
-	memset (r->gateway, 0, 4);
-	memset (r->gwifaddr, 0, 4);
+	r->gateway.val =  0;
+	r->gwifaddr.val = 0;
 	if (gateway) {
-		memcpy (r->gateway, gateway, 4);
-		memset (r->broadcast, 0, 4);
+	    r->gateway = ipadr_4ucs(gateway);
+		r->broadcast.val = 0;
 
 		/* Find the ip address of the target interface. */
 		best = 0;
 		for (s=ip->route; s; s=s->next) {
 			/* Search through all interface records. */
-			if (! s->netif || s->gateway[0])
+			if (! s->netif || s->gateway.ucs[0])
 				continue;
 
 			/* Compare adresses using mask. */
-			if (! route_match (s, gateway))
+			if (! route_match (s, r->gateway.var))
 				continue;
 
 			/* Select the longest mask. */
@@ -110,27 +123,28 @@ void route_setup (ip_t *ip, route_t *r, unsigned char *ipaddr,
 				s->masklen); */
 		}
 		if (best)
-			memcpy (r->gwifaddr, best->ipaddr, 4);
+		    r->gwifaddr = best->ipaddr;
 	}
 	bcast = HTONL (bcast);
-	memcpy (r->broadcast, &bcast, 4);
+	r->broadcast = ipadr_4l(bcast);
 	net = HTONL (net);
-	memcpy (r->netaddr, &net, 4);
-	/* debug_printf ("route: setup net %d.%d.%d.%d bcast %d.%d.%d.%d\n",
-		r->netaddr[0], r->netaddr[1], r->netaddr[2], r->netaddr[3],
-		r->broadcast[0], r->broadcast[1], r->broadcast[2], r->broadcast[3]); */
+	r->netaddr = ipadr_4l(net);
+	ROUTE_printf("route: setup net %@.4D bcast %@.4D\n"
+	             , r->netaddr.ucs, r->broadcast.ucs);
 }
 
 /*
  * Add interface record to the list.
  */
-void route_add_netif (ip_t *ip, route_t *r, unsigned char *ipaddr,
+void route_add_netif (ip_t *ip, route_t *r, const unsigned char *ipaddr,
 	unsigned char masklen, netif_t *netif)
 {
 	route_setup (ip, r, ipaddr, masklen, 0);
 	r->netif = netif;
 	r->next = ip->route;
 	ip->route = r;
+    ++(ip->route_stamp);
+    ROUTE_printf ("route: add netif on %@.4D for %s\n", r->ipaddr.ucs, r->netif->name);
 }
 
 /*
@@ -144,12 +158,13 @@ bool_t route_add_gateway (ip_t *ip, route_t *r,
 
 	/* Network interface is unknown yet.
 	 * Find it now. */
-	r->netif = route_lookup (ip, gateway, 0, 0);
+	r->netif = route_lookup (ip, ipref_4ucs(gateway), 0, 0);
 	if (! r->netif)
 		return 0;
 
 	r->next = ip->route;
 	ip->route = r;
+	++(ip->route_stamp);
 	return 1;
 }
 
@@ -157,8 +172,8 @@ bool_t route_add_gateway (ip_t *ip, route_t *r,
  * Search the network interface and gateway address to forward the packet.
  * Return also the IP adress of the interface,
  */
-netif_t *route_lookup (ip_t *ip, unsigned char *ipaddr,
-	unsigned char **gateway, unsigned char **netif_ipaddr)
+netif_t *route_lookup (ip_t *ip, ip_addr_const ipaddr,
+        ip_addr_const* gateway, ip_addr_const* netif_ipaddr)
 {
 	route_t *r, *best;
 
@@ -189,11 +204,11 @@ netif_t *route_lookup (ip_t *ip, unsigned char *ipaddr,
 		return 0;
 
 	if (gateway)
-		*gateway = best->gateway[0] ? best->gateway : ipaddr;
+	    *gateway = best->gateway.ucs[0] ? best->gateway.var : ipaddr;
 
 	if (netif_ipaddr)
-		*netif_ipaddr = best->gateway[0] ? best->gwifaddr :
-			best->ipaddr;
+	    *netif_ipaddr = best->gateway.ucs[0] ? best->gwifaddr.var :
+                                                 best->ipaddr.var;
 
 	return best->netif;
 }
@@ -203,24 +218,24 @@ netif_t *route_lookup (ip_t *ip, unsigned char *ipaddr,
  * for which it is targeted.  In case of broadcast packet,
  * return also the broadcast flag.
  */
-netif_t *route_lookup_self (ip_t *ip, unsigned char *ipaddr,
+netif_t *route_lookup_self (ip_t *ip, ip_addr_const ipaddr,
 	unsigned char *broadcast)
 {
 	route_t *r;
 
 	for (r=ip->route; r; r=r->next) {
 		/* Search through all interface records. */
-		if (! r->netif || r->gateway[0])
+		if (! r->netif || r->gateway.ucs[0])
 			continue;
 
 		/* Compare adresses using mask. */
-		if (memcmp (r->ipaddr, ipaddr, 4) == 0) {
+		if (ipadr_is_same(r->ipaddr.var, ipaddr)) {
 			/* Unicast address found. */
 			if (broadcast)
 				*broadcast = 0;
 			return r->netif;
 		}
-		if (memcmp (r->broadcast, ipaddr, 4) == 0) {
+		if (ipadr_is_same(r->broadcast.var, ipaddr)) {
 			/* Broadcast address found. */
 			if (broadcast)
 				*broadcast = 1;
@@ -234,17 +249,19 @@ netif_t *route_lookup_self (ip_t *ip, unsigned char *ipaddr,
  * Find the "closest" IP address of the given network interface.
  * The interface can have several IP addresses (aliases).
  */
-unsigned char *route_lookup_ipaddr (ip_t *ip, unsigned char *ipaddr,
+const unsigned char *route_lookup_ipaddr (ip_t *ip, ip_addr_const ipaddr,
         struct _netif_t *netif)
 {
-	route_t *r, *best;
+	const route_t *r, *best;
 
 	best = 0;
-	/* debug_printf ("route: lookup ipaddr %d.%d.%d.%d for %s\n",
-		ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3], netif->name); */
+	ROUTE_printf ("route: lookup ipaddr %@.4D for %s\n", ipref_as_ucs(ipaddr), netif->name);
 	for (r=ip->route; r; r=r->next) {
+	    assert( r != r->next );
+	    ROUTE_printf ("route: lookup gateaway %@.4D for %s\n",
+	                        r->gateway.ucs , r->netif->name);
 		/* Search through all interface records. */
-		if (r->netif != netif || r->gateway[0])
+		if (r->netif != netif || r->gateway.ucs[0])
 			continue;
 
 		/* Compare adresses using mask. */
@@ -256,15 +273,13 @@ unsigned char *route_lookup_ipaddr (ip_t *ip, unsigned char *ipaddr,
 			continue;
 
 		best = r;
-		/* debug_printf ("route match: %d.%d.%d.%d with %d.%d.%d.%d / %d\n",
-			ipaddr[0], ipaddr[1], ipaddr[2], ipaddr[3],
-			r->ipaddr[0], r->ipaddr[1], r->ipaddr[2], r->ipaddr[3],
-			r->masklen); */
+		ROUTE_printf ("route match: %@.4D with %@.4D / %d\n",
+		        ipref_as_ucs(ipaddr), r->ipaddr.ucs, r->masklen);
 	}
 	if (! best)
 		return 0;
 
 	/* debug_printf ("route_lookup returned %d.%d.%d.%d\n",
 		best->ipaddr[0], best->ipaddr[1], best->ipaddr[2], best->ipaddr[3]); */
-	return best->ipaddr;
+	return best->ipaddr.ucs;
 }

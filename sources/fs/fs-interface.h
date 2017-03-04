@@ -67,7 +67,7 @@ struct _fsif_t
     void         (*free_fs_entry)(fs_entry_t *entry);
 
     void         (*create)(fs_entry_t *parent, fs_entry_t *new_entry);
-    void         (*delete)(fs_entry_t *entry);
+    void         (*delete_entry)(fs_entry_t *entry);
     void         (*change)(fs_entry_t *entry);
     void         (*move)(fs_entry_t *entry, fs_entry_t *new_parent);
 

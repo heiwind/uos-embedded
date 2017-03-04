@@ -77,12 +77,13 @@ static void		VarErrMsg (Tcl_Interp *interp,
  */
 
 unsigned char *
-Tcl_GetVar(interp, varName, flags)
-    Tcl_Interp *interp;		/* Command interpreter in which varName is
+Tcl_GetVar(
+    Tcl_Interp *interp		/* Command interpreter in which varName is
 				 * to be looked up. */
-    unsigned char *varName;	/* Name of a variable in interp. */
-    int flags;			/* OR-ed combination of TCL_GLOBAL_ONLY
+    , unsigned char *varName	/* Name of a variable in interp. */
+    , int flags			/* OR-ed combination of TCL_GLOBAL_ONLY
 				 * or TCL_LEAVE_ERR_MSG bits. */
+    )
 {
     register unsigned char *p;
 
@@ -115,7 +116,7 @@ Tcl_GetVar(interp, varName, flags)
     scalar:
     return Tcl_GetVar2(interp, varName, 0, flags);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -141,15 +142,15 @@ Tcl_GetVar(interp, varName, flags)
  */
 
 unsigned char *
-Tcl_GetVar2(interp, part1, part2, flags)
-    Tcl_Interp *interp;		/* Command interpreter in which variable is
+Tcl_GetVar2(
+    Tcl_Interp *interp		/* Command interpreter in which variable is
 				 * to be looked up. */
-    unsigned char *part1;	/* Name of array (if part2 is NULL) or
+    , unsigned char *part1	/* Name of array (if part2 is NULL) or
 				 * name of variable. */
-    unsigned char *part2;	/* If non-null, gives name of element in
-				 * array. */
-    int flags;			/* OR-ed combination of TCL_GLOBAL_ONLY
+    , unsigned char *part2	/* If non-null, gives name of element in array. */
+    , int flags			/* OR-ed combination of TCL_GLOBAL_ONLY
 				 * or TCL_LEAVE_ERR_MSG bits. */
+    )
 {
     Tcl_HashEntry *hPtr;
     Var *varPtr;
@@ -235,7 +236,7 @@ Tcl_GetVar2(interp, part1, part2, flags)
     }
     return varPtr->value.string;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -259,15 +260,16 @@ Tcl_GetVar2(interp, part1, part2, flags)
  */
 
 unsigned char *
-Tcl_SetVar(interp, varName, newValue, flags)
-    Tcl_Interp *interp;		/* Command interpreter in which varName is
+Tcl_SetVar(
+    Tcl_Interp *interp		/* Command interpreter in which varName is
 				 * to be looked up. */
-    unsigned char *varName;	/* Name of a variable in interp. */
-    unsigned char *newValue;	/* New value for varName. */
-    int flags;			/* Various flags that tell how to set value:
+    , unsigned char *varName	/* Name of a variable in interp. */
+    , unsigned char *newValue	/* New value for varName. */
+    , int flags			/* Various flags that tell how to set value:
 				 * any of TCL_GLOBAL_ONLY, TCL_APPEND_VALUE,
 				 * TCL_LIST_ELEMENT, TCL_NO_SPACE, or
 				 * TCL_LEAVE_ERR_MSG. */
+    )
 {
     register unsigned char *p;
 
@@ -300,7 +302,7 @@ Tcl_SetVar(interp, varName, newValue, flags)
     scalar:
     return Tcl_SetVar2(interp, varName, 0, newValue, flags);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -327,24 +329,25 @@ Tcl_SetVar(interp, varName, newValue, flags)
  */
 
 unsigned char *
-Tcl_SetVar2(interp, part1, part2, newValue, flags)
-    Tcl_Interp *interp;		/* Command interpreter in which variable is
+Tcl_SetVar2(
+    Tcl_Interp *interp		/* Command interpreter in which variable is
 				 * to be looked up. */
-    unsigned char *part1;	/* If part2 is NULL, this is name of scalar
+    , unsigned char *part1	/* If part2 is NULL, this is name of scalar
 				 * variable.  Otherwise it is name of array. */
-    unsigned char *part2;	/* Name of an element within array, or NULL. */
-    unsigned char *newValue;	/* New value for variable. */
-    int flags;			/* Various flags that tell how to set value:
+    , unsigned char *part2	/* Name of an element within array, or NULL. */
+    , unsigned char *newValue	/* New value for variable. */
+    , int flags			/* Various flags that tell how to set value:
 				 * any of TCL_GLOBAL_ONLY, TCL_APPEND_VALUE,
 				 * TCL_LIST_ELEMENT, and TCL_NO_SPACE, or
 				 * TCL_LEAVE_ERR_MSG . */
+    )
 {
     Tcl_HashEntry *hPtr;
     register Var *varPtr = 0;
 				/* Initial value only used to stop compiler
 				 * from complaining; not really needed. */
     register Interp *iPtr = (Interp *) interp;
-    int length, new, listFlags;
+    int length, isnew, listFlags;
     Var *arrayPtr = 0;
 
     /*
@@ -352,12 +355,12 @@ Tcl_SetVar2(interp, part1, part2, newValue, flags)
      */
 
     if ((flags & TCL_GLOBAL_ONLY) || (iPtr->varFramePtr == 0)) {
-	hPtr = Tcl_CreateHashEntry(&iPtr->globalTable, part1, &new);
+	hPtr = Tcl_CreateHashEntry(&iPtr->globalTable, part1, &isnew);
     } else {
 	hPtr = Tcl_CreateHashEntry(&iPtr->varFramePtr->varTable,
-		part1, &new);
+		part1, &isnew);
     }
-    if (!new) {
+    if (!isnew) {
 	varPtr = (Var *) Tcl_GetHashValue(hPtr);
 	if (varPtr->flags & VAR_UPVAR) {
 	    hPtr = varPtr->value.upvarPtr;
@@ -372,7 +375,7 @@ Tcl_SetVar2(interp, part1, part2, newValue, flags)
      */
 
     if (part2 != 0) {
-	if (new) {
+	if (isnew) {
 	    varPtr = NewVar (interp->pool, 0);
 	    Tcl_SetHashValue(hPtr, varPtr);
 	    varPtr->flags = VAR_ARRAY;
@@ -395,7 +398,7 @@ Tcl_SetVar2(interp, part1, part2, newValue, flags)
 	    }
 	    arrayPtr = varPtr;
 	}
-	hPtr = Tcl_CreateHashEntry(varPtr->value.tablePtr, part2, &new);
+	hPtr = Tcl_CreateHashEntry(varPtr->value.tablePtr, part2, &isnew);
     }
 
     /*
@@ -415,7 +418,7 @@ Tcl_SetVar2(interp, part1, part2, newValue, flags)
      * append operation.
      */
 
-    if (new) {
+    if (isnew) {
 	varPtr = NewVar (interp->pool, length);
 	Tcl_SetHashValue(hPtr, varPtr);
 	if ((arrayPtr != 0) && (arrayPtr->searchPtr != 0)) {
@@ -503,7 +506,7 @@ Tcl_SetVar2(interp, part1, part2, newValue, flags)
     }
     return varPtr->value.string;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -525,14 +528,15 @@ Tcl_SetVar2(interp, part1, part2, newValue, flags)
  */
 
 int
-Tcl_UnsetVar(interp, varName, flags)
-    Tcl_Interp *interp;		/* Command interpreter in which varName is
+Tcl_UnsetVar(
+    Tcl_Interp *interp		/* Command interpreter in which varName is
 				 * to be looked up. */
-    unsigned char *varName;	/* Name of a variable in interp.  May be
+    , unsigned char *varName	/* Name of a variable in interp.  May be
 				 * either a scalar name or an array name
 				 * or an element in an array. */
-    int flags;			/* OR-ed combination of any of
+    , int flags			/* OR-ed combination of any of
 				 * TCL_GLOBAL_ONLY or TCL_LEAVE_ERR_MSG. */
+    )
 {
     register unsigned char *p;
     int result;
@@ -565,7 +569,7 @@ Tcl_UnsetVar(interp, varName, flags)
     scalar:
     return Tcl_UnsetVar2(interp, varName, 0, flags);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -588,13 +592,14 @@ Tcl_UnsetVar(interp, varName, flags)
  */
 
 int
-Tcl_UnsetVar2(interp, part1, part2, flags)
-    Tcl_Interp *interp;		/* Command interpreter in which varName is
+Tcl_UnsetVar2(
+    Tcl_Interp *interp		/* Command interpreter in which varName is
 				 * to be looked up. */
-    unsigned char *part1;	/* Name of variable or array. */
-    unsigned char *part2;	/* Name of element within array or NULL. */
-    int flags;			/* OR-ed combination of any of
+    , unsigned char *part1	/* Name of variable or array. */
+    , unsigned char *part2	/* Name of element within array or NULL. */
+    , int flags			/* OR-ed combination of any of
 				 * TCL_GLOBAL_ONLY or TCL_LEAVE_ERR_MSG. */
+    )
 {
     Tcl_HashEntry *hPtr, dummyEntry;
     Var *varPtr, dummyVar;
@@ -725,7 +730,7 @@ Tcl_UnsetVar2(interp, part1, part2, flags)
     }
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -748,17 +753,17 @@ Tcl_UnsetVar2(interp, part1, part2, flags)
  */
 
 int
-Tcl_TraceVar(interp, varName, flags, proc, clientData)
-    Tcl_Interp *interp;		/* Interpreter in which variable is
-				 * to be traced. */
-    unsigned char *varName;	/* Name of variable;  may end with "(index)"
+Tcl_TraceVar(
+    Tcl_Interp *interp		/* Interpreter in which variable is to be traced. */
+    , unsigned char *varName	/* Name of variable;  may end with "(index)"
 				 * to signify an array reference. */
-    int flags;			/* OR-ed collection of bits, including any
+    , int flags			/* OR-ed collection of bits, including any
 				 * of TCL_TRACE_READS, TCL_TRACE_WRITES,
 				 * TCL_TRACE_UNSETS, and TCL_GLOBAL_ONLY. */
-    Tcl_VarTraceProc *proc;	/* Procedure to call when specified ops are
+    , Tcl_VarTraceProc *proc	/* Procedure to call when specified ops are
 				 * invoked upon varName. */
-    void *clientData;		/* Arbitrary argument to pass to proc. */
+    , void *clientData		/* Arbitrary argument to pass to proc. */
+    )
 {
     register unsigned char *p;
 
@@ -792,7 +797,7 @@ Tcl_TraceVar(interp, varName, flags, proc, clientData)
     scalar:
     return Tcl_TraceVar2(interp, varName, 0, flags, proc, clientData);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -815,37 +820,36 @@ Tcl_TraceVar(interp, varName, flags, proc, clientData)
  */
 
 int
-Tcl_TraceVar2(interp, part1, part2, flags, proc, clientData)
-    Tcl_Interp *interp;		/* Interpreter in which variable is
-				 * to be traced. */
-    unsigned char *part1;	/* Name of scalar variable or array. */
-    unsigned char *part2;	/* Name of element within array;  NULL means
-				 * trace applies to scalar variable or array
-				 * as-a-whole. */
-    int flags;			/* OR-ed collection of bits, including any
+Tcl_TraceVar2(
+    Tcl_Interp *interp		/* Interpreter in which variable is to be traced. */
+    , unsigned char *part1	/* Name of scalar variable or array. */
+    , unsigned char *part2	/* Name of element within array;  NULL means
+				 * trace applies to scalar variable or array as-a-whole. */
+    , int flags			/* OR-ed collection of bits, including any
 				 * of TCL_TRACE_READS, TCL_TRACE_WRITES,
 				 * TCL_TRACE_UNSETS, and TCL_GLOBAL_ONLY. */
-    Tcl_VarTraceProc *proc;	/* Procedure to call when specified ops are
+    , Tcl_VarTraceProc *proc	/* Procedure to call when specified ops are
 				 * invoked upon varName. */
-    void *clientData;		/* Arbitrary argument to pass to proc. */
+    , void *clientData		/* Arbitrary argument to pass to proc. */
+    )
 {
     Tcl_HashEntry *hPtr;
     Var *varPtr = 0;		/* Initial value only used to stop compiler
 				 * from complaining; not really needed. */
     Interp *iPtr = (Interp *) interp;
     register VarTrace *tracePtr;
-    int new;
+    int isnew;
 
     /*
      * Locate the variable, making a new (undefined) one if necessary.
      */
 
     if ((flags & TCL_GLOBAL_ONLY) || (iPtr->varFramePtr == 0)) {
-	hPtr = Tcl_CreateHashEntry(&iPtr->globalTable, part1, &new);
+	hPtr = Tcl_CreateHashEntry(&iPtr->globalTable, part1, &isnew);
     } else {
-	hPtr = Tcl_CreateHashEntry(&iPtr->varFramePtr->varTable, part1, &new);
+	hPtr = Tcl_CreateHashEntry(&iPtr->varFramePtr->varTable, part1, &isnew);
     }
-    if (!new) {
+    if (!isnew) {
 	varPtr = (Var *) Tcl_GetHashValue(hPtr);
 	if (varPtr->flags & VAR_UPVAR) {
 	    hPtr = varPtr->value.upvarPtr;
@@ -861,7 +865,7 @@ Tcl_TraceVar2(interp, part1, part2, flags, proc, clientData)
      */
 
     if (part2 != 0) {
-	if (new) {
+	if (isnew) {
 	    varPtr = NewVar (interp->pool, 0);
 	    Tcl_SetHashValue(hPtr, varPtr);
 	    varPtr->flags = VAR_ARRAY;
@@ -881,10 +885,10 @@ Tcl_TraceVar2(interp, part1, part2, flags, proc, clientData)
 		return TCL_ERROR;
 	    }
 	}
-	hPtr = Tcl_CreateHashEntry(varPtr->value.tablePtr, part2, &new);
+	hPtr = Tcl_CreateHashEntry(varPtr->value.tablePtr, part2, &isnew);
     }
 
-    if (new) {
+    if (isnew) {
 	if ((part2 != 0) && (varPtr->searchPtr != 0)) {
 	    DeleteSearches(varPtr);
 	}
@@ -908,7 +912,7 @@ Tcl_TraceVar2(interp, part1, part2, flags, proc, clientData)
     varPtr->tracePtr = tracePtr;
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -928,16 +932,17 @@ Tcl_TraceVar2(interp, part1, part2, flags, proc, clientData)
  */
 
 void
-Tcl_UntraceVar(interp, varName, flags, proc, clientData)
-    Tcl_Interp *interp;		/* Interpreter containing traced variable. */
-    unsigned char *varName;	/* Name of variable;  may end with "(index)"
+Tcl_UntraceVar(
+    Tcl_Interp *interp		/* Interpreter containing traced variable. */
+    , unsigned char *varName	/* Name of variable;  may end with "(index)"
 				 * to signify an array reference. */
-    int flags;			/* OR-ed collection of bits describing
+    , int flags			/* OR-ed collection of bits describing
 				 * current trace, including any of
 				 * TCL_TRACE_READS, TCL_TRACE_WRITES,
 				 * TCL_TRACE_UNSETS, and TCL_GLOBAL_ONLY. */
-    Tcl_VarTraceProc *proc;	/* Procedure assocated with trace. */
-    void *clientData;		/* Arbitrary argument to pass to proc. */
+    , Tcl_VarTraceProc *proc	/* Procedure assocated with trace. */
+    , void *clientData		/* Arbitrary argument to pass to proc. */
+    )
 {
     register unsigned char *p;
 
@@ -969,7 +974,7 @@ Tcl_UntraceVar(interp, varName, flags, proc, clientData)
     scalar:
     Tcl_UntraceVar2(interp, varName, 0, flags, proc, clientData);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -989,18 +994,18 @@ Tcl_UntraceVar(interp, varName, flags, proc, clientData)
  */
 
 void
-Tcl_UntraceVar2(interp, part1, part2, flags, proc, clientData)
-    Tcl_Interp *interp;		/* Interpreter containing traced variable. */
-    unsigned char *part1;	/* Name of variable or array. */
-    unsigned char *part2;	/* Name of element within array;  NULL means
-				 * trace applies to scalar variable or array
-				 * as-a-whole. */
-    int flags;			/* OR-ed collection of bits describing
+Tcl_UntraceVar2(
+    Tcl_Interp *interp		/* Interpreter containing traced variable. */
+    , unsigned char *part1	/* Name of variable or array. */
+    , unsigned char *part2	/* Name of element within array;  NULL means
+				 * trace applies to scalar variable or array as-a-whole. */
+    , int flags			/* OR-ed collection of bits describing
 				 * current trace, including any of
 				 * TCL_TRACE_READS, TCL_TRACE_WRITES,
 				 * TCL_TRACE_UNSETS, and TCL_GLOBAL_ONLY. */
-    Tcl_VarTraceProc *proc;	/* Procedure assocated with trace. */
-    void *clientData;		/* Arbitrary argument to pass to proc. */
+    , Tcl_VarTraceProc *proc	/* Procedure assocated with trace. */
+    , void *clientData		/* Arbitrary argument to pass to proc. */
+    )
 {
     register VarTrace *tracePtr;
     VarTrace *prevPtr;
@@ -1068,7 +1073,7 @@ Tcl_UntraceVar2(interp, part1, part2, flags, proc, clientData)
     }
     mem_free (tracePtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1096,17 +1101,17 @@ Tcl_UntraceVar2(interp, part1, part2, flags, proc, clientData)
  */
 
 void *
-Tcl_VarTraceInfo(interp, varName, flags, proc, prevClientData)
-    Tcl_Interp *interp;		/* Interpreter containing variable. */
-    unsigned char *varName;	/* Name of variable;  may end with "(index)"
+Tcl_VarTraceInfo(
+    Tcl_Interp *interp		/* Interpreter containing variable. */
+    , unsigned char *varName	/* Name of variable;  may end with "(index)"
 				 * to signify an array reference. */
-    int flags;			/* 0 or TCL_GLOBAL_ONLY. */
-    Tcl_VarTraceProc *proc;	/* Procedure assocated with trace. */
-    void *prevClientData;	/* If non-NULL, gives last value returned
+    , int flags			/* 0 or TCL_GLOBAL_ONLY. */
+    , Tcl_VarTraceProc *proc	/* Procedure assocated with trace. */
+    , void *prevClientData	/* If non-NULL, gives last value returned
 				 * by this procedure, so this call will
 				 * return the next trace after that one.
-				 * If NULL, this call will return the
-				 * first trace. */
+				 * If NULL, this call will return the first trace. */
+    )
 {
     register unsigned char *p;
 
@@ -1140,7 +1145,7 @@ Tcl_VarTraceInfo(interp, varName, flags, proc, prevClientData)
     scalar:
     return Tcl_VarTraceInfo2(interp, varName, 0, flags, proc, prevClientData);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1159,19 +1164,18 @@ Tcl_VarTraceInfo(interp, varName, flags, proc, prevClientData)
  */
 
 void *
-Tcl_VarTraceInfo2(interp, part1, part2, flags, proc, prevClientData)
-    Tcl_Interp *interp;		/* Interpreter containing variable. */
-    unsigned char *part1;	/* Name of variable or array. */
-    unsigned char *part2;	/* Name of element within array;  NULL means
-				 * trace applies to scalar variable or array
-				 * as-a-whole. */
-    int flags;			/* 0 or TCL_GLOBAL_ONLY. */
-    Tcl_VarTraceProc *proc;	/* Procedure assocated with trace. */
-    void *prevClientData;	/* If non-NULL, gives last value returned
+Tcl_VarTraceInfo2(
+    Tcl_Interp *interp		/* Interpreter containing variable. */
+    , unsigned char *part1	/* Name of variable or array. */
+    , unsigned char *part2	/* Name of element within array;  NULL means
+				 * trace applies to scalar variable or array as-a-whole. */
+    , int flags			/* 0 or TCL_GLOBAL_ONLY. */
+    , Tcl_VarTraceProc *proc	/* Procedure assocated with trace. */
+    , void *prevClientData	/* If non-NULL, gives last value returned
 				 * by this procedure, so this call will
 				 * return the next trace after that one.
-				 * If NULL, this call will return the
-				 * first trace. */
+				 * If NULL, this call will return the first trace. */
+    )
 {
     register VarTrace *tracePtr;
     Var *varPtr;
@@ -1226,7 +1230,7 @@ Tcl_VarTraceInfo2(interp, part1, part2, flags, proc, prevClientData)
     }
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1246,11 +1250,12 @@ Tcl_VarTraceInfo2(interp, part1, part2, flags, proc, prevClientData)
 
 	/* ARGSUSED */
 int
-Tcl_SetCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    register Tcl_Interp *interp;	/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_SetCmd(
+    void *dummy			/* Not used. */
+    , register Tcl_Interp *interp	/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     if (argc == 2) {
 	unsigned char *value;
@@ -1276,7 +1281,7 @@ Tcl_SetCmd(dummy, interp, argc, argv)
 	return TCL_ERROR;
     }
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1296,11 +1301,12 @@ Tcl_SetCmd(dummy, interp, argc, argv)
 
 	/* ARGSUSED */
 int
-Tcl_UnsetCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    register Tcl_Interp *interp;	/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_UnsetCmd(
+    void *dummy			/* Not used. */
+    , register Tcl_Interp *interp	/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     int i;
 
@@ -1316,7 +1322,7 @@ Tcl_UnsetCmd(dummy, interp, argc, argv)
     }
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1336,11 +1342,12 @@ Tcl_UnsetCmd(dummy, interp, argc, argv)
 
 	/* ARGSUSED */
 int
-Tcl_AppendCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    register Tcl_Interp *interp;	/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_AppendCmd(
+    void *dummy			/* Not used. */
+    , register Tcl_Interp *interp	/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     int i;
     unsigned char *result = 0;		/* (Initialization only needed to keep
@@ -1362,7 +1369,7 @@ Tcl_AppendCmd(dummy, interp, argc, argv)
     interp->result = result;
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1382,11 +1389,12 @@ Tcl_AppendCmd(dummy, interp, argc, argv)
 
 	/* ARGSUSED */
 int
-Tcl_LappendCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    register Tcl_Interp *interp;	/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_LappendCmd(
+    void *dummy			/* Not used. */
+    , register Tcl_Interp *interp	/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     int i;
     unsigned char *result = 0;		/* (Initialization only needed to keep
@@ -1408,7 +1416,7 @@ Tcl_LappendCmd(dummy, interp, argc, argv)
     interp->result = result;
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1428,11 +1436,12 @@ Tcl_LappendCmd(dummy, interp, argc, argv)
 
 	/* ARGSUSED */
 int
-Tcl_ArrayCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    register Tcl_Interp *interp;	/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_ArrayCmd(
+    void *dummy			/* Not used. */
+    , register Tcl_Interp *interp	/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     int length;
     char c;
@@ -1631,7 +1640,7 @@ Tcl_ArrayCmd(dummy, interp, argc, argv)
     }
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1651,16 +1660,17 @@ Tcl_ArrayCmd(dummy, interp, argc, argv)
 
 	/* ARGSUSED */
 int
-Tcl_GlobalCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    Tcl_Interp *interp;			/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_GlobalCmd(
+    void *dummy			/* Not used. */
+    , Tcl_Interp *interp			/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     Var *varPtr, *gVarPtr;
     register Interp *iPtr = (Interp *) interp;
     Tcl_HashEntry *hPtr, *hPtr2;
-    int new;
+    int isnew;
 
     if (argc < 2) {
 	Tcl_AppendResult((Tcl_Interp *) iPtr, "wrong # args: should be \"",
@@ -1672,16 +1682,16 @@ Tcl_GlobalCmd(dummy, interp, argc, argv)
     }
 
     for (argc--, argv++; argc > 0; argc--, argv++) {
-	hPtr = Tcl_CreateHashEntry(&iPtr->globalTable, *argv, &new);
-	if (new) {
+	hPtr = Tcl_CreateHashEntry(&iPtr->globalTable, *argv, &isnew);
+	if (isnew) {
 	    gVarPtr = NewVar (interp->pool, 0);
 	    gVarPtr->flags |= VAR_UNDEFINED;
 	    Tcl_SetHashValue(hPtr, gVarPtr);
 	} else {
 	    gVarPtr = (Var *) Tcl_GetHashValue(hPtr);
 	}
-	hPtr2 = Tcl_CreateHashEntry(&iPtr->varFramePtr->varTable, *argv, &new);
-	if (!new) {
+	hPtr2 = Tcl_CreateHashEntry(&iPtr->varFramePtr->varTable, *argv, &isnew);
+	if (!isnew) {
 	    Var *varPtr;
 	    varPtr = (Var *) Tcl_GetHashValue(hPtr2);
 	    if (varPtr->flags & VAR_UPVAR) {
@@ -1700,7 +1710,7 @@ Tcl_GlobalCmd(dummy, interp, argc, argv)
     }
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1720,11 +1730,12 @@ Tcl_GlobalCmd(dummy, interp, argc, argv)
 
 	/* ARGSUSED */
 int
-Tcl_UpvarCmd(dummy, interp, argc, argv)
-    void *dummy;			/* Not used. */
-    Tcl_Interp *interp;			/* Current interpreter. */
-    int argc;				/* Number of arguments. */
-    unsigned char **argv;		/* Argument strings. */
+Tcl_UpvarCmd(
+    void *dummy			/* Not used. */
+    , Tcl_Interp *interp			/* Current interpreter. */
+    , int argc				/* Number of arguments. */
+    , unsigned char **argv		/* Argument strings. */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
     int result;
@@ -1732,7 +1743,7 @@ Tcl_UpvarCmd(dummy, interp, argc, argv)
     Var *varPtr = 0;
     Tcl_HashTable *upVarTablePtr;
     Tcl_HashEntry *hPtr, *hPtr2;
-    int new;
+    int isnew;
     Var *upVarPtr;
 
     if (argc < 3) {
@@ -1770,8 +1781,8 @@ Tcl_UpvarCmd(dummy, interp, argc, argv)
      */
 
     while (argc > 0) {
-        hPtr = Tcl_CreateHashEntry(upVarTablePtr, argv[0], &new);
-        if (new) {
+        hPtr = Tcl_CreateHashEntry(upVarTablePtr, argv[0], &isnew);
+        if (isnew) {
             upVarPtr = NewVar (interp->pool, 0);
             upVarPtr->flags |= VAR_UNDEFINED;
             Tcl_SetHashValue(hPtr, upVarPtr);
@@ -1784,8 +1795,8 @@ Tcl_UpvarCmd(dummy, interp, argc, argv)
         }
 
         hPtr2 = Tcl_CreateHashEntry(&iPtr->varFramePtr->varTable,
-                    argv[1], &new);
-        if (!new) {
+                    argv[1], &isnew);
+        if (!isnew) {
             Tcl_AppendResult((Tcl_Interp *) iPtr, "variable \"", argv[1],
                 "\" already exists", 0);
             return TCL_ERROR;
@@ -1801,7 +1812,7 @@ Tcl_UpvarCmd(dummy, interp, argc, argv)
     }
     return TCL_OK;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1824,10 +1835,10 @@ Tcl_UpvarCmd(dummy, interp, argc, argv)
  */
 
 void
-TclDeleteVars(iPtr, tablePtr)
-    Interp *iPtr;		/* Interpreter to which variables belong. */
-    Tcl_HashTable *tablePtr;	/* Hash table containing variables to
-				 * delete. */
+TclDeleteVars(
+    Interp *iPtr		/* Interpreter to which variables belong. */
+    , Tcl_HashTable *tablePtr	/* Hash table containing variables to delete. */
+    )
 {
     Tcl_HashSearch search;
     Tcl_HashEntry *hPtr;
@@ -1892,7 +1903,7 @@ TclDeleteVars(iPtr, tablePtr)
     }
     Tcl_DeleteHashTable(tablePtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1919,21 +1930,22 @@ TclDeleteVars(iPtr, tablePtr)
  */
 
 static unsigned char *
-CallTraces (iPtr, arrayPtr, hPtr, part1, part2, flags)
-    Interp *iPtr;			/* Interpreter containing variable. */
-    register Var *arrayPtr;		/* Pointer to array variable that
+CallTraces (
+    Interp *iPtr			/* Interpreter containing variable. */
+    , register Var *arrayPtr		/* Pointer to array variable that
 					 * contains the variable, or 0 if
-					 * the variable isn't an element of an
-					 * array. */
-    Tcl_HashEntry *hPtr;		/* Hash table entry corresponding to
+					 * the variable isn't an element of an array. */
+    , Tcl_HashEntry *hPtr		/* Hash table entry corresponding to
 					 * variable whose traces are to be
 					 * invoked. */
-    unsigned char *part1, *part2;	/* Variable's two-part name. */
-    int flags;				/* Flags to pass to trace procedures:
+    , unsigned char *part1
+    , unsigned char *part2	/* Variable's two-part name. */
+    , int flags				/* Flags to pass to trace procedures:
 					 * indicates what's happening to
 					 * variable, plus other stuff like
 					 * TCL_GLOBAL_ONLY and
 					 * TCL_INTERP_DESTROYED. */
+    )
 {
     Var *varPtr;
     register VarTrace *tracePtr;
@@ -2021,7 +2033,7 @@ CallTraces (iPtr, arrayPtr, hPtr, part1, part2, flags)
     iPtr->activeTracePtr = active.nextPtr;
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2065,7 +2077,7 @@ NewVar (mem_pool_t *pool,
     varPtr->value.string[0] = 0;
     return varPtr;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2086,15 +2098,15 @@ NewVar (mem_pool_t *pool,
  */
 
 static ArraySearch *
-ParseSearchId(interp, varPtr, varName, string)
-    Tcl_Interp *interp;		/* Interpreter containing variable. */
-    Var *varPtr;		/* Array variable search is for. */
-    unsigned char *varName;	/* Name of array variable that search is
+ParseSearchId(
+    Tcl_Interp *interp		/* Interpreter containing variable. */
+    , Var *varPtr		/* Array variable search is for. */
+    , unsigned char *varName	/* Name of array variable that search is
 				 * supposed to be for. */
-    unsigned char *string;	/* String containing id of search.  Must have
+    , unsigned char *string	/* String containing id of search.  Must have
 				 * form "search-num-var" where "num" is a
-				 * decimal number and "var" is a variable
-				 * name. */
+				 * decimal number and "var" is a variable name. */
+    )
 {
     unsigned char *end;
     int id;
@@ -2134,7 +2146,7 @@ ParseSearchId(interp, varPtr, varName, string)
     Tcl_AppendResult(interp, "couldn't find search \"", string, "\"", 0);
     return 0;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2153,9 +2165,9 @@ ParseSearchId(interp, varPtr, varName, string)
  */
 
 static void
-DeleteSearches(arrayVarPtr)
-    register Var *arrayVarPtr;		/* Variable whose searches are
-					 * to be deleted. */
+DeleteSearches(
+    register Var *arrayVarPtr		/* Variable whose searches are to be deleted. */
+    )
 {
     ArraySearch *searchPtr;
 
@@ -2165,7 +2177,7 @@ DeleteSearches(arrayVarPtr)
 	mem_free (searchPtr);
     }
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2187,15 +2199,15 @@ DeleteSearches(arrayVarPtr)
  *----------------------------------------------------------------------
  */
 static void
-DeleteArray(iPtr, arrayName, varPtr, flags)
-    Interp *iPtr;			/* Interpreter containing array. */
-    unsigned char *arrayName;		/* Name of array (used for trace
-					 * callbacks). */
-    Var *varPtr;			/* Pointer to variable structure. */
-    int flags;				/* Flags to pass to CallTraces:
+DeleteArray(
+    Interp *iPtr			/* Interpreter containing array. */
+    , unsigned char *arrayName		/* Name of array (used for trace callbacks). */
+    , Var *varPtr			/* Pointer to variable structure. */
+    , int flags				/* Flags to pass to CallTraces:
 					 * TCL_TRACE_UNSETS and sometimes
 					 * TCL_INTERP_DESTROYED and/or
 					 * TCL_GLOBAL_ONLY. */
+    )
 {
     Tcl_HashSearch search;
     register Tcl_HashEntry *hPtr;
@@ -2221,7 +2233,7 @@ DeleteArray(iPtr, arrayName, varPtr, flags)
     Tcl_DeleteHashTable(varPtr->value.tablePtr);
     mem_free (varPtr->value.tablePtr);
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2242,12 +2254,14 @@ DeleteArray(iPtr, arrayName, varPtr, flags)
  */
 
 static void
-VarErrMsg(interp, part1, part2, operation, reason)
-    Tcl_Interp *interp;		/* Interpreter in which to record message. */
-    unsigned char *part1, *part2; /* Variable's two-part name. */
-    unsigned char *operation;	/* String describing operation that failed,
+VarErrMsg(
+    Tcl_Interp *interp		/* Interpreter in which to record message. */
+    , unsigned char *part1
+    , unsigned char *part2 /* Variable's two-part name. */
+    , unsigned char *operation	/* String describing operation that failed,
 				 * e.g. "read", "set", or "unset". */
-    unsigned char *reason;	/* String describing why operation failed. */
+    , unsigned char *reason	/* String describing why operation failed. */
+    )
 {
     Tcl_ResetResult(interp);
     Tcl_AppendResult(interp, "can't ", operation, " \"", part1, 0);

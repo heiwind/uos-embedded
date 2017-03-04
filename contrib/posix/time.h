@@ -1,7 +1,14 @@
 #ifndef __TIME_H__
 #define __TIME_H__
 
-#define time_t unsigned long
+#include <posix-port.h>
+#include <sys/time.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 
 struct tm {
 	int     tm_sec;         /* seconds */
@@ -29,5 +36,21 @@ static inline struct tm *localtime (const time_t *timep)
 
 static inline time_t mktime (struct tm *tm)
 	{ return 0; }
+
+#ifndef UOS_HAVE_UNIXTIME
+#define UOS_HAVE_UNIXTIME
+#include <timer/timer.h>
+INLINE time_t time(time_t* t) __THROW 
+{
+    time_t res = timer_seconds(POSIX_timer);
+    if (t != NULL)
+        *t = res;
+    return res;
+}
+#endif
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

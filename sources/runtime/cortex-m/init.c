@@ -527,7 +527,7 @@ generator will not work properly
  * Board-dependent function, should be replaced by user.
  */
 bool_t __attribute ((weak))
-uos_valid_memory_address (void *ptr)
+uos_valid_memory_address (const void *ptr)
 {
 	unsigned u = (unsigned) ptr;
 

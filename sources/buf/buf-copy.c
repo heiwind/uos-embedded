@@ -18,7 +18,7 @@ buf_copy (buf_t *p)
 
 	/* Make a single chunk, big enough. */
 	header_size = (p->payload - (unsigned char*) p);
-	x = mem_alloc_dirty (mem_pool (p), p->tot_len + header_size);
+	x = (buf_t *)mem_alloc_dirty (mem_pool (p), p->tot_len + header_size);
 	if (! x)
 		return 0;
 	memset (x, 0, header_size);

@@ -216,7 +216,7 @@ static void fs_entry_to_dir_ent(fat_dir_ent_t *de, fat32_fw_entry_t *fw_ent)
 
     int i, j;
     for (i = 0; i < 8; ++i) {
-        if (entry->name[i] == '.' || i >= strlen((uint8_t *)entry->name))
+        if (entry->name[i] == '.' || i >= (int)strlen((uint8_t *)entry->name))
             break;
         de->name[i] = entry->name[i];
     }
@@ -225,7 +225,7 @@ static void fs_entry_to_dir_ent(fat_dir_ent_t *de, fat32_fw_entry_t *fw_ent)
     }
     if (entry->name[i] == '.') i++;
     for (j = 0; j < 3; ++j) {
-        if ((i + j) >= strlen((uint8_t *)entry->name)) break;
+        if ((i + j) >= (int)strlen((uint8_t *)entry->name)) break;
         de->name[8+j] = entry->name[i+j];
     }
 

@@ -24,67 +24,32 @@
  * Associate IRQ with the lock, disable interrupts.
  * On interrupt, the signal message is sent to the lock.
  */
-void
+
+void 
 mutex_lock_irq (mutex_t *m, int irq, handler_t func, void *arg)
 {
 	arch_state_t x;
+    arch_intr_disable (&x);
 
-	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
-	if (! m->item.next)
-		mutex_init (m);
+	mutex_irq_t* swi = &mutex_irq [irq];
 
-	while (m->master && m->master != task_current) {
-		/* Monitor is locked, block the task. */
-		assert (task_current->lock == 0);
-#if RECURSIVE_LOCKS
-		assert (m->deep > 0);
-#endif
-		task_current->lock = m;
-
-		/* Put this task into the list of lock slaves. */
-		list_append (&m->slaves, &task_current->item);
-
-		/* Update the value of lock priority.
-		 * It must be the maximum of all slave task priorities. */
-		if (m->prio < task_current->prio) {
-			m->prio = task_current->prio;
-
-			/* Increase the priority of master task. */
-			if (m->master->prio < m->prio)
-				m->master->prio = m->prio;
-		}
-
-		task_schedule ();
-	}
-
-	if (! m->master) {
-		assert (list_is_empty (&m->slaves));
-#if RECURSIVE_LOCKS
-		assert (m->deep == 0);
-#endif
-		m->master = task_current;
-
-		/* Put this lock into the list of task slaves. */
-		list_append (&task_current->slaves, &m->item);
-
-		/* Update the value of task priority.
-		 * It must be the maximum of base priority,
-		 * and all slave lock priorities. */
-		if (task_current->prio < m->prio)
-			task_current->prio = m->prio;
-	}
-#if RECURSIVE_LOCKS
-	++m->deep;
-#endif
-
-	m->irq = &mutex_irq [irq];
+	if (m->irq)
 	if (! m->irq->lock)
 		arch_intr_bind (irq);
-	m->irq->lock = m;
-	m->irq->irq = irq;
-	m->irq->handler = func;
-	m->irq->arg = arg;
-	m->irq->pending = 0;
+	mutex_lock_swi(m, swi, func, arg);
+	swi->irq = irq;
+
 	arch_intr_restore (x);
+}
+
+void
+mutex_lock_swi (mutex_t* m, mutex_irq_t* swi, handler_t func, void *arg)
+{
+    mutex_lock(m);
+
+    m->irq = swi;
+    m->irq->lock = m;
+    m->irq->handler = func;
+    m->irq->arg = arg;
+    m->irq->pending = 0;
 }

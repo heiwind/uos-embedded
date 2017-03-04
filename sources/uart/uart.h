@@ -1,3 +1,6 @@
+#ifndef __UOS_UART_H_
+#define __UOS_UART_H_
+
 #include <stream/stream.h>
 
 /**\def TIMER_STACKSZ
@@ -8,21 +11,21 @@
  * Размер стека для задачи драйвера UART, в байтах.
  */
 #ifndef UART_STACKSZ
-#   if __AVR__
+#   if defined(__AVR__)
 #      define UART_STACKSZ	0x100		/* 100 enough for AVR */
 #   endif
-#   if ARM_CORTEX_M1 || ARM_CORTEX_M3
+#   if defined(ARM_CORTEX_M1) || defined(ARM_CORTEX_M3)
 #      define UART_STACKSZ	1		/* unused */
 #   elif defined (__arm__) || defined (__thumb__)
 #      define UART_STACKSZ	0x200
 #   endif
-#   if MIPS32
+#   if defined(MIPS32)
 #      define UART_STACKSZ	0x400
 #   endif
-#   if MSP430
+#   if defined(MSP430)
 #      define UART_STACKSZ	0x100
 #   endif
-#   if LINUX386
+#   if defined(LINUX386)
 #      define UART_STACKSZ	4000
 #   endif
 #endif
@@ -47,6 +50,10 @@
 #define UART_OUTBUFSZ	32
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**\~english
  * Data structure of UART driver.
  *
@@ -57,7 +64,8 @@ typedef struct _uart_t {
 	stream_interface_t *interface;
 	mutex_t transmitter;
 	mutex_t receiver;
-	small_uint_t port;
+	volatile unsigned* port;
+    //volatile unsigned* io;
 	bool_t onlcr;
 	unsigned int khz;
 	unsigned char out_buf [UART_OUTBUFSZ];
@@ -78,3 +86,9 @@ void uart_transmit_wait (uart_t *u);
 unsigned short uart_getchar (uart_t *u);
 int uart_peekchar (uart_t *u);
 void uart_putchar (uart_t *u, short c);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__UOS_UART_H_

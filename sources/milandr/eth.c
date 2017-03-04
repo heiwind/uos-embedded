@@ -440,7 +440,7 @@ static bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio) {
 		++u->netif.out_errors;
 		mutex_unlock(&u->netif.lock);
 		/*debug_printf ("output: transmit %d bytes, link failed\n", p->tot_len);*/
-		buf_free(p);
+		netif_free_buf (&u->netif, p);
 		return 0;
 	}
 	/*debug_printf ("output: transmit %d bytes\n", p->tot_len);*/
@@ -449,7 +449,7 @@ static bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio) {
 		/* Смело отсылаем. */
 		transmit_packet(u, p);
 		mutex_unlock(&u->netif.lock);
-		buf_free(p);
+		netif_free_buf (&u->netif, p);
 		return 1;
 	}
 
@@ -720,7 +720,7 @@ static unsigned handle_interrupt(eth_t *u) {
 		if (p) {
 			/* Передаём следующий пакет. */
 			transmit_packet(u, p);
-			buf_free(p);
+			netif_free_buf (&u->netif, p);
 		}
 		active++;
 	}

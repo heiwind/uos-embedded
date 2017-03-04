@@ -42,27 +42,54 @@ again:
 	return ip->tcp_port;
 }
 
+
+
 /*
- * Connect to another host. Wait until connection established.
- * Return 1 on success, 0 on error.
+ * Create socket and start connection to another host.
+ * ! not wait until connection established.
+ * \return socket in connection state
+ * \return      = NULL, or SExxx - some error
  */
-tcp_socket_t *
-tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
+tcp_socket_t *tcp_connect_start (ip_t *ip,  ip_addr ipaddr, unsigned short port)
 {
 	tcp_socket_t *s;
-	unsigned long optdata;
 
 	tcp_debug ("tcp_connect to port %u\n", port);
-	if (ipaddr == 0)
+	if (ipaddr.val == 0)
 		return 0;
 	mutex_lock (&ip->lock);
 
 	s = tcp_alloc (ip);
-	memcpy (s->remote_ip, ipaddr, 4);
+	if (s == 0){
+        mutex_unlock (&ip->lock);
+	    return 0;
+	}
+	
+	s->remote_ip.val = ipaddr.val;
 	s->remote_port = port;
 	if (s->local_port == 0) {
 		s->local_port = tcp_new_port (ip);
 	}
+    mutex_unlock (&ip->lock);
+    tcp_socket_t* res = tcp_connect_restart(s);
+    if (SEANYERROR(res)){
+        mem_free(s);
+    }
+    return res;
+}
+
+/* takes socket at state CLOSED, and start connect to s->remote
+ *      if s not CLOSED, return null
+ * \return socket in connection state
+ * \return      = SExxx - some error
+ *
+ * */
+tcp_socket_t *tcp_connect_restart (tcp_socket_t *s)
+{
+    unsigned long optdata;
+    ip_t *ip = s->ip;
+    tcp_debug ("tcp reconnect to port %u\n", s->remote_port);
+
 	s->lastack = s->snd_nxt - 1;
 	s->snd_lbb = s->snd_nxt - 1;
 	s->snd_wnd = TCP_WND;
@@ -75,18 +102,36 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 		(((unsigned long)s->mss / 256) << 8) |
 		(s->mss & 255));
 
-	if (! tcp_enqueue (s, 0, 0, TCP_SYN, (unsigned char*) &optdata, 4)) {
-		mem_free (s);
-		mutex_unlock (&ip->lock);
+	if (! tcp_enqueue_option4 (s, TCP_SYN, optdata)) {
 		return 0;
 	}
+    mutex_lock (&ip->lock);
+    s->tmr = ip->tcp_ticks;
 	tcp_list_add (&ip->tcp_sockets, s);
-	tcp_output (s);
-	mutex_unlock (&ip->lock);
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    tcp_output (s);
+    mutex_unlock (&ip->lock);
+#elif TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+    mutex_unlock (&ip->lock);
+    tcp_output (s);
+#endif
+    mutex_unlock (&s->lock);
+	return s;
+}
+
+/*
+ * Connect to another host. Wait until connection established.
+ * Return 1 on success, 0 on error.
+ */
+tcp_socket_t *
+tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
+{
+    tcp_socket_t* s = tcp_connect_start(ip, ipadr_4ucs(ipaddr), port);
+    if ((s == 0) || SEANYERROR(s))
+        return s;
 
 	mutex_lock (&s->lock);
 	for (;;) {
-		mutex_wait (&s->lock);
 		if (s->state == ESTABLISHED) {
 			mutex_unlock (&s->lock);
 			return s;
@@ -96,6 +141,7 @@ tcp_connect (ip_t *ip, unsigned char *ipaddr, unsigned short port)
 			mem_free (s);
 			return 0;
 		}
+        mutex_wait (&s->lock);
 	}
 }
 
@@ -108,52 +154,108 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 {
 	tcp_debug ("tcp_write(s=%p, arg=%p, len=%u)\n",
 		(void*) s, arg, len);
-	mutex_lock (&s->lock);
 
-	if (s->state != SYN_SENT && s->state != SYN_RCVD &&
-	    s->state != ESTABLISHED /*&& s->state != CLOSE_WAIT*/) {
-		mutex_unlock (&s->lock);
+	if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
 		tcp_debug ("tcp_write() called in invalid state\n");
 		return -1;
 	}
 	if (len == 0) {
-		mutex_unlock (&s->lock);
 		return -1;
 	}
 	mutex_group_t *g = 0;
 	ARRAY (group, sizeof(mutex_group_t) + 2 * sizeof(mutex_slot_t));
 
-	while (tcp_enqueue (s, (void*) arg, len, 0, 0, 0) == 0) {
-		/* Не удалось поставить пакет в очередь - мало памяти. */
-		if (! g) {
-			memset (group, 0, sizeof(group));
-			g = mutex_group_init (group, sizeof(group));
-			mutex_group_add (g, &s->lock);
-			mutex_group_add (g, &s->ip->timer->decisec);
-			mutex_group_listen (g);
-		}
-		/* Каждые 100 мсек делаем повторную попытку. */
-		mutex_unlock (&s->lock);
-		mutex_group_wait (g, 0, 0);
-		mutex_lock (&s->lock);
+	const char* ptr = (const char*)arg;
+	unsigned left = len;
+	while (left > 0){
 
-		/* Проверим, не закрылось ли соединение. */
-		if (s->state != SYN_SENT && s->state != SYN_RCVD &&
-		    s->state != ESTABLISHED /*&& s->state != CLOSE_WAIT*/) {
-			mutex_unlock (&s->lock);
-			if (g)
-				mutex_group_unlisten (g);
-			return -1;
-		}
+	    int sent = tcp_enqueue (s, ptr, len, 0);
+	    left    -= sent;
+        ptr     += sent;
+
+        if (left == 0)
+            break;
+
+#       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        if (mutex_is_my(&s->lock))
+        mutex_unlock (&s->lock);
+        tcp_output_poll (s);
+#       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
+        tcp_output_poll (s);
+        mutex_unlock (&s->lock);
+#       endif
+
+        /* Не удалось поставить пакет в очередь - мало памяти. */
+        if (! g) {
+            memset (group, 0, sizeof(group));
+            g = mutex_group_init (group, sizeof(group));
+            mutex_group_add (g, &s->lock);
+            mutex_group_add (g, &s->ip->timer->decisec);
+            mutex_group_listen (g);
+        }
+        /* Каждые 100 мсек делаем повторную попытку. */
+        mutex_group_wait (g, 0, 0);
+        /* Проверим, не закрылось ли соединение. */
+        if (!tcp_socket_is_state(s, TCP_STATES_TRANSFER)) {
+            if (g)
+                mutex_group_unlisten (g);
+            return -1;
+        }
 	}
-	mutex_unlock (&s->lock);
+
 	if (g)
 		mutex_group_unlisten (g);
 
-	mutex_lock (&s->ip->lock);
-	tcp_output (s);
-	mutex_unlock (&s->ip->lock);
+#       if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+        mutex_unlock (&s->lock);
+        tcp_output (s);
+#       elif TCP_LOCK_STYLE <= TCP_LOCK_RELAXED
+        tcp_output (s);
+        mutex_unlock (&s->lock);
+#       endif
 	return len;
+}
+
+/* \~russian ожидает появления данных в приемнике сокета
+ * \return = 0 - if socket have some dats in receiver
+ *         = -1 - if timedout with no data
+ *         = SEerror_code - on error
+ * */
+int tcp_lock_avail(tcp_socket_t *s, unsigned allow_states
+                    , scheduless_condition waitfor, void* waitarg)
+{
+    bool_t nonblock = (waitfor == (scheduless_condition)0) && (waitarg != (void*)0);
+    if (nonblock && tcp_queue_is_empty (s))
+        return 0;
+    mutex_lock (&s->lock);
+    while (tcp_queue_is_empty (s)) {
+        int res = -1;
+        if ( __glibc_unlikely(nonblock) )
+            ;
+        else if( __glibc_unlikely( ((1 << s->state) & allow_states) == 0) )
+            res = SENOTCONN;
+        else {
+            if (mutex_wait_until (&s->lock, waitfor, waitarg))
+                continue;
+            if (!mutex_is_my(&s->lock))
+                return res;
+        }
+        //else
+        //    res = -1; //SETIMEDOUT;
+
+        mutex_unlock (&s->lock);
+        return res;
+    }
+    return 0;
+}
+
+int tcp_wait_avail(tcp_socket_t *s
+                    , scheduless_condition waitfor, void* waitarg)
+{
+    int res = tcp_lock_avail(s, TCP_STATES_ONLINE, waitfor, waitarg);
+    if (res == 0)
+        mutex_unlock (&s->lock);
+    return res;
 }
 
 /*
@@ -164,54 +266,67 @@ tcp_write (tcp_socket_t *s, const void *arg, unsigned short len)
 int
 tcp_read_poll (tcp_socket_t *s, void *arg, unsigned short len, int nonblock)
 {
-	buf_t *p, *q;
-	char *buf;
-	int n;
+    if (len == 0) {
+        return -1;
+    }
+    int res = tcp_read_until (s, arg, len, 0, (void*)nonblock);
+    return res;
+}
 
-	tcp_debug ("tcp_read(s=%p, arg=%p, len=%u)\n",
-		(void*) s, arg, len);
-	if (len == 0) {
-		return -1;
-	}
-	mutex_lock (&s->lock);
-	while (tcp_queue_is_empty (s)) {
-		if (s->state != SYN_SENT && s->state != SYN_RCVD &&
-		    s->state != ESTABLISHED) {
-			mutex_unlock (&s->lock);
-			tcp_debug ("tcp_read() called in invalid state\n");
-			return -1;
-		}
-		if (nonblock) {
-			mutex_unlock (&s->lock);
-			return 0;
-		}
-		mutex_wait (&s->lock);
-	}
+/** alternative tcp_read_poll with condition test function waitfor
+ * \arg waitfor - simple test function that must not affects mutex_xxx and schedule functionality
+ * */
+buf_t* tcp_read_buf_until (tcp_socket_t *s
+                , scheduless_condition waitfor, void* waitarg)
+{
+	buf_t *p;
+	bool_t nonblock = (waitfor == (scheduless_condition)0) && (waitarg != (void*)0);
+	if (nonblock && tcp_queue_is_empty (s))
+	    return 0;
+	int ok = tcp_lock_avail(s, TCP_STATES_TRANSFER, waitfor, waitarg);
+	if (ok != 0)
+	    return (buf_t*)ok;
+	
 	p = tcp_queue_get (s);
 
 	tcp_debug ("tcp_read: received %u bytes, wnd %u (%u).\n",
 	       p->tot_len, s->rcv_wnd, TCP_WND - s->rcv_wnd);
 	mutex_unlock (&s->lock);
 
+    if (p == 0)
+        return 0;
+
 	mutex_lock (&s->ip->lock);
 	if (! (s->flags & TF_ACK_DELAY) && ! (s->flags & TF_ACK_NOW)) {
 		tcp_ack (s);
 	}
 	mutex_unlock (&s->ip->lock);
+	return p;
+}
+
+//* non blocking version of tcp_read_buf_until
+buf_t* tcp_take_buf(tcp_socket_t *s)
+{
+    return tcp_read_buf_until(s, 0, (void*)1);
+}
+
+int tcp_read_until (tcp_socket_t *s, void *arg, unsigned short len
+                , scheduless_condition waitfor, void* waitarg)
+{
+    buf_t *p;
+    int n;
+
+    tcp_debug ("tcp_read_until(s=%p, arg=%p, len=%u)\n",
+        (void*) s, arg, len);
+    p = tcp_read_buf_until(s, waitfor, waitarg);
+    if (p == 0)
+        return 0;
+    if ((unsigned)p > SESOCKANY)
+        return (int)p;
 
 	/* Copy all chunks. */
-	buf = arg;
-	n = 0;
-	for (q=p; q!=0 && n<len; q=q->next) {
-		int bytes;
-		if (q->len == 0)
-			continue;
-
-		bytes = (q->len < len-n) ? q->len : len-n;
-		memcpy (buf, q->payload, bytes);
-		n += bytes;
-		buf += bytes;
-	}
+	n = buf_copy_continous(arg, p, len);
+	//! TODO need fix - if reads less then buffer len - loose rest of buf
 	buf_free (p);
 	return n;
 }
@@ -224,7 +339,10 @@ tcp_read_poll (tcp_socket_t *s, void *arg, unsigned short len, int nonblock)
 int
 tcp_read (tcp_socket_t *s, void *arg, unsigned short len)
 {
-	return tcp_read_poll (s, arg, len, 0);
+    if (len == 0) {
+        return -1;
+    }
+	return tcp_read_until (s, arg, len, 0, 0);
 }
 
 /*
@@ -237,15 +355,19 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	unsigned short port)
 {
 	tcp_socket_t *s, *cs;
+	ip_addr targetip;
+	
 
-	if (! ipaddr) {
-		ipaddr = (unsigned char*) "\0\0\0\0";
+	if (ipaddr) {
+	    targetip = ipadr_4ucs(ipaddr);
 	}
-	s = mem_alloc (ip->pool, sizeof (tcp_socket_t));
+	else
+	    targetip.val = 0;
+
+	s = tcp_alloc (ip);
 	if (s == 0) {
 		return 0;
 	}
-	s->ip = ip;
 
 	/* Bind the connection to a local portnumber and IP address. */
 	mutex_lock (&ip->lock);
@@ -257,9 +379,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	/* Check if the address already is in use. */
 	for (cs = ip->tcp_listen_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if (memcmp (cs->local_ip, IP_ADDR(0), 4) == 0 ||
-			    memcmp (ipaddr, IP_ADDR(0), 4) == 0 ||
-			    memcmp (cs->local_ip, ipaddr, 4) == 0) {
+			if ( ipadr_is_same(targetip.var, cs->local_ip) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -268,9 +388,7 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 	}
 	for (cs = ip->tcp_sockets; cs != 0; cs = cs->next) {
 		if (cs->local_port == port) {
-			if (memcmp (cs->local_ip, IP_ADDR(0), 4) == 0 ||
-			    memcmp (ipaddr, IP_ADDR(0), 4) == 0 ||
-			    memcmp (cs->local_ip, ipaddr, 4) == 0) {
+			if (ipadr_is_same(targetip.var, cs->local_ip) ) {
 				mutex_unlock (&ip->lock);
 				mem_free (s);
 				return 0;
@@ -278,11 +396,12 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 		}
 	}
 
-	if (memcmp (ipaddr, IP_ADDR(0), 4) != 0) {
-		memcpy (s->local_ip, ipaddr, 4);
+	if ( ipadr_not0(targetip.var) ) {
+		s->local_ip = targetip.var;
 	}
 	s->local_port = port;
 	s->state = LISTEN;
+    buf_queueh_init(&s->inq, sizeof(s->queue));
 
 	tcp_list_add (&ip->tcp_listen_sockets, s);
 	mutex_unlock (&ip->lock);
@@ -292,26 +411,37 @@ tcp_socket_t *tcp_listen (ip_t *ip, unsigned char *ipaddr,
 tcp_socket_t *
 tcp_accept (tcp_socket_t *s)
 {
+    tcp_socket_t * res;
+    do {
+        res = tcp_accept_until(s, (scheduless_condition)0, (void*)0);
+        if ((unsigned)res == SENOMEM)
+            //для совместимости со старым поведением
+            continue;
+        if (SEANYERROR(res))
+            return res;
+    } while (res == 0);
+    return res;
+}
+
+tcp_socket_t *tcp_accept_until (tcp_socket_t *s
+                                , scheduless_condition waitfor, void* waitarg)
+{
 	tcp_socket_t *ns;
 	buf_t *p;
 	ip_hdr_t *iph;
 	tcp_hdr_t *h;
 	unsigned long optdata;
-again:
-	mutex_lock (&s->lock);
-	for (;;) {
-		if (s->state != LISTEN) {
-			mutex_unlock (&s->lock);
-			tcp_debug ("tcp_accept: called in invalid state\n");
-			return 0;
-		}
-		if (! tcp_queue_is_empty (s)) {
-			p = tcp_queue_get (s);
-			break;
-		}
-		mutex_wait (&s->lock);
-	}
-	mutex_unlock (&s->lock);
+    int ok = tcp_lock_avail(s, (1<<LISTEN)
+                              , waitfor, waitarg);
+    if (ok != 0){
+        if (s->state != LISTEN){
+            tcp_debug ("tcp_accept: called in invalid state\n");
+            return (tcp_socket_t *)SEINVAL;
+        }
+        if (ok == -1)
+            return 0;
+        return (tcp_socket_t *)ok;
+    }
 
 	/* Create a new PCB, and respond with a SYN|ACK.
 	 * If a new PCB could not be created (probably due to lack of memory),
@@ -320,19 +450,21 @@ again:
 	mutex_lock (&s->ip->lock);
 	ns = tcp_alloc (s->ip);
 	if (ns == 0) {
-		tcp_debug ("tcp_accept: could not allocate PCB\n");
-		++s->ip->tcp_in_discards;
+        mutex_unlock (&s->lock);
+		++(s->ip->tcp_in_discards);
 		mutex_unlock (&s->ip->lock);
-		buf_free (p);
-		goto again;
+        tcp_debug ("tcp_accept: could not allocate PCB\n");
+		return (tcp_socket_t *)SENOMEM;
 	}
+    p = tcp_queue_get (s);
+
 	h = (tcp_hdr_t*) p->payload;
 	iph = ((ip_hdr_t*) p->payload) - 1;
 
 	/* Set up the new PCB. */
-	memcpy (ns->local_ip, iph->dest, 4);
+	ns->local_ip = iph->dest.var;
 	ns->local_port = s->local_port;
-	memcpy (ns->remote_ip, iph->src, 4);
+	ns->remote_ip  = iph->src;
 	ns->remote_port = h->src;
 	ns->state = SYN_RCVD;
 	ns->rcv_nxt = s->ip->tcp_input_seqno + 1;
@@ -340,6 +472,7 @@ again:
 	ns->ssthresh = ns->snd_wnd;
 	ns->snd_wl1 = s->ip->tcp_input_seqno;
 	ns->ip = s->ip;
+    mutex_unlock (&s->lock);
 
 	/* Register the new PCB so that we can begin receiving
 	 * segments for it. */
@@ -353,10 +486,18 @@ again:
 		(((unsigned long)ns->mss / 256) << 8) | (ns->mss & 255));
 	buf_free (p);
 
-	/* Send a SYN|ACK together with the MSS option. */
-	tcp_enqueue (ns, 0, 0, TCP_SYN | TCP_ACK, (unsigned char*) &optdata, 4);
-	tcp_output (ns);
-	mutex_unlock (&s->ip->lock);
+	/* Send a SYN|ACK together with the MSS option.
+	 * there is impossible fail of tcp_enqueue_option4
+	 * */
+	tcp_enqueue_option4 (ns, TCP_SYN | TCP_ACK, optdata);
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    tcp_output (ns);
+    mutex_unlock (&ns->ip->lock);
+#elif TCP_LOCK_STYLE >= TCP_LOCK_RELAXED
+    mutex_unlock (&ns->ip->lock);
+    tcp_output (ns);
+#endif
+    mutex_unlock (&ns->lock);
 	return ns;
 }
 
@@ -369,8 +510,7 @@ tcp_close (tcp_socket_t *s)
 {
 	mutex_lock (&s->lock);
 
-	tcp_debug ("tcp_close: state=%S\n",
-		tcp_state_name (s->state));
+	tcp_debug ("tcp_close: sock $%x state=%S\n", s, tcp_state_name (s->state));
 
 	switch (s->state) {
 	default: /* Has already been closed. */
@@ -392,19 +532,22 @@ tcp_close (tcp_socket_t *s)
 		break;
 	}
 	for (;;) {
-		if (tcp_enqueue (s, 0, 0, TCP_FIN, 0, 0))
+		if (tcp_enqueue_option4 (s, TCP_FIN, 0))
 			break;
 		mutex_wait (&s->lock);
 	}
 	s->state = (s->state == CLOSE_WAIT) ? LAST_ACK : FIN_WAIT_1;
-	mutex_unlock (&s->lock);
 
-	mutex_lock (&s->ip->lock);
-	if (s->unsent || (s->flags & TF_ACK_NOW))
-		tcp_output (s);
-	mutex_unlock (&s->ip->lock);
+    if (s->unsent || (s->flags & TF_ACK_NOW)) {
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    mutex_unlock (&s->lock);
+#endif
+	tcp_output (s);
+#if TCP_LOCK_STYLE <= TCP_LOCK_SURE
+    mutex_lock (&s->lock);
+#endif
+    }//if (s->unsent || (s->flags & TF_ACK_NOW))
 
-	mutex_lock (&s->lock);
 	while (s->state != CLOSED) {
 		if (s->state == TIME_WAIT && ! s->unsent) {
 			tcp_queue_free (s);
@@ -431,7 +574,6 @@ tcp_abort (tcp_socket_t *s)
 	ip_t *ip = s->ip;
 	unsigned long seqno, ackno;
 	unsigned short remote_port, local_port;
-	unsigned char remote_ip[4], local_ip[4];
 
 	mutex_lock (&s->lock);
 
@@ -447,8 +589,6 @@ tcp_abort (tcp_socket_t *s)
 	}
 	seqno = s->snd_nxt;
 	ackno = s->rcv_nxt;
-	memcpy (local_ip, s->local_ip, 4);
-	memcpy (remote_ip, s->remote_ip, 4);
 	local_port = s->local_port;
 	remote_port = s->remote_port;
 	tcp_queue_free (s);
@@ -456,17 +596,28 @@ tcp_abort (tcp_socket_t *s)
 
 	mutex_lock (&ip->lock);
 	tcp_socket_remove (&ip->tcp_sockets, s);
-	if (s->unacked != 0) {
-		tcp_segments_free (s->unacked);
-	}
-	if (s->unsent != 0) {
-		tcp_segments_free (s->unsent);
-	}
+	tcp_socket_purge(s);
 
 	tcp_debug ("tcp_abort: sending RST\n");
-	tcp_rst (ip, seqno, ackno, local_ip, remote_ip,
+	tcp_rst (ip, seqno, ackno, ipref_as_ucs(s->local_ip), s->remote_ip.ucs,
 		local_port, remote_port);
 	mutex_unlock (&ip->lock);
+}
+
+int tcp_shutdown(ip_t *ip, unsigned mode){
+    tcp_socket_t *s;
+    //* TODO better RST all sockets once, and wait it output after
+
+    tcp_debug ("tcp_shutdown: mode $%x\n", mode);
+    for (s=ip->tcp_sockets; s; s=s->next) {
+        if ((mode & tsdm_Close) != 0){
+            tcp_close (s);
+        }
+        else {
+            tcp_abort (s);
+        }
+    }//for (s
+    return 0;
 }
 
 /*

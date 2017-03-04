@@ -492,7 +492,7 @@ regatom (compile_t *x, unsigned char *flagp)
 		*flagp |= HASWIDTH | SIMPLE;
 		break;
 	case '[': {
-			unsigned char class, classend;
+			unsigned char reg_class, classend;
 
 			if (*x->parse == '^') {	/* Complement of range. */
 				ret = regnode (x, ANYBUT);
@@ -507,14 +507,14 @@ regatom (compile_t *x, unsigned char *flagp)
 					if (*x->parse == ']' || *x->parse == '\0')
 						regc (x, '-');
 					else {
-						class = UCHARAT(x->parse-2);
+						reg_class = UCHARAT(x->parse-2);
 						classend = UCHARAT(x->parse);
-						if (class > classend) {
+						if (reg_class > classend) {
 							/* FAIL("invalid [] range"); */
 							return 0;
 						}
-						for (class++; class <= classend; class++)
-							regc (x, class);
+						for (reg_class++; reg_class <= classend; reg_class++)
+							regc (x, reg_class);
 						x->parse++;
 					}
 				} else

@@ -19,6 +19,8 @@
 #include <runtime/lib.h>
 #include <stream/stream.h>
 
+#ifndef NO_DEBUG_PRINT
+
 /*
  * Print stack backtrace.
  * Usage:
@@ -26,14 +28,14 @@
  *		__builtin_frame_address (1),
  *		__builtin_return_address (0));
  */
-void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
+void mips_debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 {
 	unsigned int *from, *to, *p, len;
 	char c;
 	bool_t callee_seen;
 
-	from = sp;
-	to = frame;
+	from = (unsigned int *)sp;
+	to = (unsigned int *)frame;
 	if (! uos_valid_memory_address (to) && uos_valid_memory_address (from))
 		to = from;
 	if (uos_valid_memory_address (to) && ! uos_valid_memory_address (from))
@@ -90,3 +92,5 @@ void debug_dump_stack (const char *caption, void *sp, void *frame, void *callee)
 		}
 	}
 }
+
+#endif //NO_DEBUG_PRINT

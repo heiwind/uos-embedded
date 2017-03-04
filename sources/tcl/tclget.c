@@ -36,11 +36,12 @@
  */
 
 int
-Tcl_GetInt(interp, string, intPtr)
-    Tcl_Interp *interp;		/* Interpreter to use for error reporting. */
-    unsigned char *string;	/* String containing a (possibly signed)
+Tcl_GetInt(
+    Tcl_Interp *interp		/* Interpreter to use for error reporting. */
+    , unsigned char *string	/* String containing a (possibly signed)
 				 * integer in a form acceptable to strtol. */
-    int *intPtr;		/* Place to store converted result. */
+    , int *intPtr		/* Place to store converted result. */
+    )
 {
     unsigned char *end;
     int i;
@@ -79,13 +80,14 @@ Tcl_GetInt(interp, string, intPtr)
  */
 
 int
-Tcl_GetBoolean(interp, string, boolPtr)
-    Tcl_Interp *interp;		/* Interpreter to use for error reporting. */
-    unsigned char *string;	/* String containing a boolean number
+Tcl_GetBoolean(
+    Tcl_Interp *interp		/* Interpreter to use for error reporting. */
+    , unsigned char *string	/* String containing a boolean number
 				 * specified either as 1/0 or true/false or
 				 * yes/no. */
-    int *boolPtr;		/* Place to store converted result, which
+    , int *boolPtr		/* Place to store converted result, which
 				 * will be 0 or 1. */
+    )
 {
     char c;
     unsigned char lowerCase[10];

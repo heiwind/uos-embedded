@@ -1,4 +1,4 @@
-#include <runtime/lib.h>
+#include <runtime/arch.h>
 
 #define	_U	0x01
 #define	_L	0x02

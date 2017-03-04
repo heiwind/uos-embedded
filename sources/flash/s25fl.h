@@ -1,8 +1,14 @@
-#ifndef __M25PXX_H__
-#define __M25PXX_H__
+#ifndef __S25PXX_H__
+#define __S25PXX_H__
 
 #include <flash/flash-interface.h>
 #include <spi/spi-master-interface.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 
 struct _s25fl_t
 {
@@ -14,5 +20,11 @@ struct _s25fl_t
 typedef struct _s25fl_t s25fl_t;
 
 void s25fl_init(s25fl_t *m, spimif_t *s, unsigned freq, unsigned mode);
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<MCProject>
+  <ProjectProperty id="MultiCoreProject.LinkScriptGen" value="false"/>
+  <ProjectProperty id="MultiCoreProject.EntryPoint" value="_start"/>
+  <ProjectProperty id="MultiCoreProject.HeapSize" value="0x0800"/>
+  <ProjectProperty id="MultiCoreProject.StackSize" value="0x1000"/>
+  <ProjectProperty id="MultiCoreProject.Align" value="8"/>
+  <ProjectProperty id="MultiCoreProject.Template" value="org.elvees.mcs4.projmanager.uOS_template"/>
+  <ProjectLayout>
+    <Section>
+      <File_Path>test-task.c</File_Path>
+      <Section_Name>text</Section_Name>
+      <Section_Type>0</Section_Type>
+      <Memory_Type>0</Memory_Type>
+      <Address>0x80001000</Address>
+      <CPU_Type>0</CPU_Type>
+    </Section>
+    <Section>
+      <File_Path>test-task.c</File_Path>
+      <Section_Name>data</Section_Name>
+      <Section_Type>1</Section_Type>
+      <Memory_Type>0</Memory_Type>
+      <Address>0x80001000</Address>
+      <CPU_Type>0</CPU_Type>
+    </Section>
+    <Section>
+      <File_Path>elf.c</File_Path>
+      <Section_Name>text</Section_Name>
+      <Section_Type>0</Section_Type>
+      <Memory_Type>0</Memory_Type>
+      <Address>0x80001000</Address>
+      <CPU_Type>0</CPU_Type>
+    </Section>
+    <Section>
+      <File_Path>elf.c</File_Path>
+      <Section_Name>data</Section_Name>
+      <Section_Type>1</Section_Type>
+      <Memory_Type>0</Memory_Type>
+      <Address>0x80001000</Address>
+      <CPU_Type>0</CPU_Type>
+    </Section>
+    <Section>
+      <File_Path>nvboot.c</File_Path>
+      <Section_Name>text</Section_Name>
+      <Section_Type>0</Section_Type>
+      <Memory_Type>0</Memory_Type>
+      <Address>0x80001000</Address>
+      <CPU_Type>0</CPU_Type>
+    </Section>
+    <Section>
+      <File_Path>nvboot.c</File_Path>
+      <Section_Name>data</Section_Name>
+      <Section_Type>1</Section_Type>
+      <Memory_Type>0</Memory_Type>
+      <Address>0x80001000</Address>
+      <CPU_Type>0</CPU_Type>
+    </Section>
+  </ProjectLayout>
+</MCProject>

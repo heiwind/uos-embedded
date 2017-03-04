@@ -26,11 +26,17 @@
 const char *
 task_name (task_t *t)
 {
+    if (t != 0)
+    UOS_STRICT( TASKS_MEM, )
+    if (uos_valid_memory_address(t))
+    {
 	small_uint_t n, c;
 	const unsigned char *p;
 
 	/* Task name could have up to 16 chars. */
 	p = (unsigned char*) t->name;
+    UOS_STRICT( TASKS_MEM, )
+    if (uos_valid_memory_address(p))
 	for (n=0; n<16; n++) {
 		/* On AVR, task name is stored in flash memory.
 		 * On other architectures, there is no difference.  */
@@ -42,6 +48,7 @@ task_name (task_t *t)
 		}
 		if (c < ' ' || c > '~')
 			break;
-	}
+	}//for
+    }
 	return "(damaged)";
 }

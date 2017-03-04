@@ -68,3 +68,7 @@ strrchr (const unsigned char *src, unsigned char c);
    If no '\0' terminator is found in that many characters, return MAXLEN.  */
 extern size_t
 strnlen (const unsigned char *string, size_t maxlen);
+
+unsigned char *strstr (const char *haystack, const unsigned char *needle);
+int strspn (const unsigned char *s, const unsigned char *accept);
+int strcspn (const unsigned char *s, const unsigned char *reject);

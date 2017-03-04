@@ -17,23 +17,34 @@
 #include <runtime/lib.h>
 #include <kernel/uos.h>
 #include <kernel/internal.h>
+#include <stddef.h> 
+
+#ifndef UOS_STRICTS
+#define UOS_STRICTS             0
+#define UOS_STRICT_MUTEX_LOCK   0
+#endif
 
 /*
  * Send the signal to the lock. All tasks waiting for the signal
  * on the lock are unblocked, possibly causing task switch.
  */
-void
+CODE_FAST 
+void 
 mutex_signal (mutex_t *m, void *message)
 {
+#if FASTER_LOCKS
+    if (!mutex_is_wait(m))
+        return;
+#endif
 	arch_state_t x;
 
 	arch_intr_disable (&x);
-	assert (STACK_GUARD (task_current));
+	assert_task_good_stack(task_current);
 	if (! m->item.next)
 		mutex_init (m);
 
 	if (! list_is_empty (&m->waiters) || ! list_is_empty (&m->groups)) {
-		mutex_activate (m, message);
+	    mutex_awake(m, message);
 		if (task_need_schedule)
 			task_schedule ();
 	}
@@ -48,7 +59,9 @@ mutex_signal (mutex_t *m, void *message)
 void *
 mutex_wait (mutex_t *m)
 {
-	arch_state_t x;
+#ifdef UOS_MUTEX_FASTER
+
+    arch_state_t x;
 #if RECURSIVE_LOCKS
 	small_int_t deep;
 #endif
@@ -60,20 +73,12 @@ mutex_wait (mutex_t *m)
 		mutex_init (m);
 
 	/* On pending irq, we must call fast handler. */
-	if (m->irq) {
-		if (m->irq->pending) {
-			m->irq->pending = 0;
-			if ((m->irq->handler) (m->irq->arg) == 0) {
-				/* Unblock all tasks, waiting for irq. */
-				mutex_activate (m, 0);
-				if (task_need_schedule)
-					task_schedule ();
-				arch_intr_restore (x);
-				return 0;
-			}
-		}
- 		arch_intr_allow (m->irq->irq);
-	}
+    if (mutex_check_pended_irq(m)){
+        if (task_need_schedule)
+            task_schedule ();
+        arch_intr_restore (x);
+        return 0;
+    }
 
 	task_current->wait = m;
 	list_append (&m->waiters, &task_current->item);
@@ -90,63 +95,151 @@ mutex_wait (mutex_t *m)
 	deep = m->deep;
 	m->deep = 0;
 #endif
-	list_unlink (&m->item);
-
-	/* Recalculate the value of task priority.
-	 * It must be the maximum of base priority,
-	 * and all slave lock priorities. */
-	if (task_current->prio <= m->prio && task_current->base_prio < m->prio)
-		task_recalculate_prio (task_current);
-
-	m->master = 0;
-	while (! list_is_empty (&m->slaves)) {
-		task_t *t = (task_t*) list_first (&m->slaves);
-		assert (t->lock == m);
-		t->lock = 0;
-		task_activate (t);
-	}
-	m->prio = 0;
+    mutex_do_unlock(m);
 	task_schedule ();
-
-	/* Acquire the lock again. */
-	while (m->master) {
-		/* Monitor is locked, block the task. */
-		assert (task_current->lock == 0);
+	mutex_lock_yiedling(m);
 #if RECURSIVE_LOCKS
-		assert (m->deep > 0);
+    m->deep = deep;
 #endif
-		task_current->lock = m;
-
-		/* Put this task into the list of lock slaves. */
-		list_append (&m->slaves, &task_current->item);
-
-		/* Update the value of lock priority.
-		 * It must be the maximum of all slave task priorities. */
-		if (m->prio < task_current->prio) {
-			m->prio = task_current->prio;
-
-			/* Increase the priority of master task. */
-			if (m->master->prio < m->prio)
-				m->master->prio = m->prio;
-		}
-
-		task_schedule ();
-	}
-
-	/* Put this lock into the list of task slaves. */
-	m->master = task_current;
-#if RECURSIVE_LOCKS
-	assert (m->deep == 0);
-	m->deep = deep;
-#endif
-	list_append (&task_current->slaves, &m->item);
-
-	/* Update the value of task priority.
-	 * It must be the maximum of base priority,
-	 * and all slave lock priorities. */
-	if (task_current->prio < m->prio)
-		task_current->prio = m->prio;
-
+	
 	arch_intr_restore (x);
-	return task_current->message;
+    return task_current->message;
+#else //UOS_MUTEX_FASTER
+    mutex_wait_until(m, (scheduless_condition)NULL, NULL);
+    return task_current->message;
+#endif //UOS_MUTEX_FASTER
+}
+
+bool_t mutex_wait_until (mutex_t *m
+        , scheduless_condition waitfor, void* waitarg
+        )
+{
+    arch_state_t x;
+#if RECURSIVE_LOCKS
+    small_int_t deep;
+#endif
+
+    arch_intr_disable (&x);
+
+    if (! m->item.next)
+        mutex_init (m);
+
+    assert_task_good_stack(task_current);
+    assert (task_current->wait == 0);
+
+    /* On pending irq, we must call fast handler. */
+    if (mutex_check_pended_irq(m)){
+        if (task_need_schedule)
+            task_schedule ();
+    }
+
+    if (waitfor != NULL) {
+        bool_t res = !(*waitfor)(waitarg);
+        if (!res){
+            arch_intr_restore (x);
+            return res;
+        }
+    }
+
+    if (m->irq){
+        //для ожидания на прерывании, форсирую разрешение прерывания
+        mutex_irq_t *   irq = m->irq;
+        if (irq->irq >= 0)
+            arch_intr_allow (irq->irq);
+    }
+
+    task_current->wait = m;
+    list_append (&m->waiters, &task_current->item);
+    if (m->master != task_current) {
+        /* We do not keep this lock, so just wait for a signal. */
+        bool_t res = 1;
+        do {
+            task_schedule ();
+            if (task_current->wait == 0)
+                break;
+            if (waitfor != NULL)
+                res = !(*waitfor)(waitarg);
+        } while (res >= 0);
+        arch_intr_restore (x);
+        return res;
+    }
+
+    /* The lock is hold by the current task - release it. */
+#if RECURSIVE_LOCKS
+    assert (m->deep > 0);
+    deep = m->deep;
+    m->deep = 0;
+#endif
+    mutex_do_unlock(m);
+
+#if UOS_SIGNAL_SMART > 0
+    if (waitfor == 0)
+        task_current->MUTEX_WANT = m;
+#endif
+
+    task_schedule ();
+
+#if UOS_SIGNAL_SMART > 0
+    task_current->MUTEX_WANT = 0;
+#endif
+
+    bool_t res = 1;
+    if (waitfor == 0)
+        res = mutex_lock_yiedling(m);
+    else {
+        res = !(*waitfor)(waitarg);
+        if (res)
+            res = mutex_lock_yiedling_until(m, waitfor, waitarg);
+        else
+            mutex_trylock_in(m);
+    }
+
+    //if (task_current->wait =! 0)
+        task_current->wait = 0;
+#if RECURSIVE_LOCKS
+    if (res > 0)
+        m->deep = deep;
+#endif
+    arch_intr_restore (x);
+#if ((UOS_STRICTS & UOS_STRICT_MUTEX_LOCK) != 0) && (NDEBUG <= 0)
+    assert2( ((m->master == task_current) || (waitfor))
+            , "mutex($%x) must by my $%x:%s but owned by $%x:%s\n"
+            , m
+            , task_current, task_name(task_current)
+            , m->master, task_name(m->master)
+           );
+#endif
+    return res;
+}
+
+// it is try to handle IRQ handler and then mutex_activate, if handler return true
+// \return 0 - no activation was pended
+// \return else - value of handler:
+CODE_ISR 
+bool_t mutex_awake (mutex_t *m, void *message)
+{
+    if (m->irq) {
+        mutex_irq_t *   irq = m->irq;
+        if (irq->handler) {
+            /* If the lock is free -- call fast handler. */
+            if (m->master) { //(irq->lock->master)
+                /* Lock is busy -- remember pending irq.
+                 * Call fast handler later, in mutex_unlock(). */
+                irq->pending = 1;
+            }
+            else {
+                bool_t res = (irq->handler) (irq->arg);
+                if (res != 0) {
+                    /* The fast handler returns 1 when it fully
+                     * serviced an interrupt. In this case
+                     * there is no need to wake up the interrupt
+                     * servicing task, stopped on mutex_wait.
+                     * Task switching is not performed. */
+                    return res;
+                }
+            }
+        }
+    }
+    mutex_activate (m, message);
+    return 0;
 }

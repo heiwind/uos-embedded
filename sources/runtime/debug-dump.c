@@ -1,6 +1,8 @@
 #include <runtime/lib.h>
 #include <stream/stream.h>
 
+#ifndef NO_DEBUG_PRINT
+
 void debug_dump (const char *caption, void* data, unsigned len)
 {
 	uint8_t *t, *h, i;
@@ -13,7 +15,7 @@ void debug_dump (const char *caption, void* data, unsigned len)
 			lot = 16;
 
 		debug_printf ("[+%04X]:", offset);
-		h = data; h += offset; t = h; offset += lot;
+		h = (uint8_t*)data; h += offset; t = h; offset += lot;
 
 		i = 17 * 3;
 		do {
@@ -45,3 +47,5 @@ void debug_dump (const char *caption, void* data, unsigned len)
 		debug_putc ('\n');
 	}
 }
+
+#endif //NO_DEBUG_PRINT

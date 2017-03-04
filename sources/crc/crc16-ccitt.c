@@ -166,7 +166,7 @@ crc16_ccitt (unsigned short sum, unsigned const char *buf, unsigned short len)
 unsigned short
 crc16_ccitt_byte (unsigned short sum, unsigned char byte)
 {
-#if __AVR__
+#ifdef __AVR__
 	const unsigned char *ptr = poly_tab;
 
 	asm volatile (

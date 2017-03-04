@@ -188,6 +188,13 @@
 #define SPI_MODE_GET_NB_BITS(x) (((x) >> 16) & 0xFF)
 
 
+
+#include <kernel/uos.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct _spimif_t spimif_t;
 typedef struct _spi_message_t spi_message_t;
 
@@ -239,5 +246,11 @@ int spim_trx(spimif_t *spi, spi_message_t *msg)
 {
     return spi->trx(spi, msg);
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

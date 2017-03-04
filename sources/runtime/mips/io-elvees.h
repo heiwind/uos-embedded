@@ -416,6 +416,44 @@
 #define MC_MASKR1_DMAMEM_CH1	(1 << 1)	/* от канала DMA MEM_CH1 */
 #define MC_MASKR1_DMAMEM_CH0	(1 << 0)	/* от канала DMA MEM_CH0 */
 
+#ifdef ELVEES_NVCOM02T
+
+#define MC_MASKR0_IRT0      (1 << 22)   /* от таймера IT0 */
+#define MC_MASKR0_IRT1      (1 << 21)   /* от таймера IT1 */
+
+#define MC_MASKR2_MFBSPn(flag, n) (flag << (n*8))
+#ifdef __STDC_VERSION__
+enum _MC_IRQ_MFBSP_Flag {
+      MC_MASKR2_SRQx          = (1 << 0)    //* Запрос обслуживания от порта MFBSPx
+    , MC_MASKR2_MFBSP_TXBUFx  = (1 << 1)  // Формируется, если порт включен на передачу данных
+    , MC_MASKR2_MFBSP_RXBUFx  = (1 << 2)  // Формируется, если порт включен на прием данных
+    , MC_MASKR2_DMA_MFBSP_TXx = (1 << 4)  // Прерывание от канала DMA порта MFBSPx при передаче данных
+    , MC_MASKR2_DMA_MFBSP_RXx = (1 << 5)  // Прерывание от канала DMA порта MFBSPx при приеме данных
+
+    , MC_MASKR2_DMA_MFBSP_RX3 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 3)
+    , MC_MASKR2_DMA_MFBSP_TX3 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 3)
+    , MC_MASKR2_MFBSP_RXBUF3  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 3)
+    , MC_MASKR2_MFBSP_TXBUF3  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 3)
+    , MC_MASKR2_SRQ3          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 3)
+    , MC_MASKR2_DMA_MFBSP_RX2 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 2)
+    , MC_MASKR2_DMA_MFBSP_TX2 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 2)
+    , MC_MASKR2_MFBSP_RXBUF2  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 2)
+    , MC_MASKR2_MFBSP_TXBUF2  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 2)
+    , MC_MASKR2_SRQ2          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 2)
+    , MC_MASKR2_DMA_MFBSP_RX1 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 1)
+    , MC_MASKR2_DMA_MFBSP_TX1 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 1)
+    , MC_MASKR2_MFBSP_RXBUF1  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 1)
+    , MC_MASKR2_MFBSP_TXBUF1  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 1)
+    , MC_MASKR2_SRQ1          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 1)
+    , MC_MASKR2_DMA_MFBSP_RX0 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_RXx, 0)
+    , MC_MASKR2_DMA_MFBSP_TX0 = MC_MASKR2_MFBSPn(MC_MASKR2_DMA_MFBSP_TXx, 0)
+    , MC_MASKR2_MFBSP_RXBUF0  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_RXBUFx, 0)
+    , MC_MASKR2_MFBSP_TXBUF0  = MC_MASKR2_MFBSPn(MC_MASKR2_MFBSP_TXBUFx, 0)
+    , MC_MASKR2_SRQ0          = MC_MASKR2_MFBSPn(MC_MASKR2_SRQx, 0)
+};
+#endif
+
+#else
 #define MC_MASKR2_DMA_MFBSP3	(1 << 15)	/* от канала DMA порта MFBSP3 */
 #define MC_MASKR2_MFBSP_TX3	(1 << 14)	/* готовность MFBSP3 к приёму по DMA */
 #define MC_MASKR2_MFBSP_RX3	(1 << 13)	/* готовность MFBSP3 к выдаче по DMA */
@@ -432,7 +470,8 @@
 #define MC_MASKR2_MFBSP_TX0	(1 << 2)	/* готовность MFBSP0 к приёму по DMA */
 #define MC_MASKR2_MFBSP_RX0	(1 << 1)	/* готовность MFBSP0 к выдаче по DMA */
 #define MC_MASKR2_SRQ0		(1 << 0)	/* Запрос обслуживания от порта MFBSP0 */
-#endif
+#endif //ELVEES_NVCOM02T
+#endif //ELVEES_NVCOM01
 
 #ifdef ELVEES_NVCOM02
 /* TODO */
@@ -1010,6 +1049,22 @@
 /*--------------------------------------
  * UART.
  */
+
+#define MC_UART_BASE        MC_RBR
+//declares register MC_XXX of MC_UARTn base
+//* example: MC_UART_REG(MC_UART1, MC_LCR)
+#define MC_UART_REG(ubase, ureg) (*( &(ubase) + (&(ureg)-&(MC_UART_BASE)) ))
+#define MC_UART_IO(n)       (*( &(MC_UART_BASE) + ((n)<<11) ))
+
+
+#define MC_UART_DIV_CALC(UART_BAUD_RATE,F_OSC) \
+    ( ( F_OSC + UART_BAUD_RATE*8UL ) / ( ( UART_BAUD_RATE ) * 16UL ) )
+
+#define MC_UART_BAUD_CALC(UART_BAUD_DIV, F_OSC) \
+    ( ( F_OSC ) / ( ( UART_BAUD_DIV ) * 16UL ) )
+
+//#define MC_RBR
+
 /*
  * Line control register
  */
@@ -1036,6 +1091,7 @@
 #define MC_FCR_TRIGGER_4	0x40	/* receive FIFO level: 4/16 bytes */
 #define MC_FCR_TRIGGER_8	0x80	/* receive FIFO level: 8/56 bytes */
 #define MC_FCR_TRIGGER_14	0xc0	/* receive FIFO level: 14/60 bytes */
+#define MC_FCR_TRIGGER_MASK 0xc0
 
 /*
  * Line status register
@@ -1741,6 +1797,24 @@
 #define MC_USB_EP_FULL64            (1 << 23)
 #define MC_USB_EP_EMPTY64           (1 << 24)
 
- 
+
+
+/*****************************************************************************
+ * \~russian карта сигналов (Event) уОС. обработчик прерываний их генерирует.
+ * ****************************************************************************/
+#define MC_IRQ_EVT_DSP              27
+#define MC_IRQ_EVT_SW0              28
+#define MC_IRQ_EVT_SW1              29
+#define MC_IRQ_EVT_COMPARE          30
+#define MC_IRQ_EVT_UART1            5
+#define MC_IRQ_EVT_UART0            4
+#define MC_IRQ_EVT_I2C              23
+#define MC_IRQ_EVT_DMAMEM_CHn(n)    (32+n)
+#define MC_IRQ_EVT_DMAMEM_CH0       MC_IRQ_EVT_DMAMEM_CHn(0)
+#define MC_IRQ_EVT_DMAMEM_CH1       MC_IRQ_EVT_DMAMEM_CHn(1)
+#define MC_IRQ_EVT_DMAMEM_CH2       MC_IRQ_EVT_DMAMEM_CHn(2)
+#define MC_IRQ_EVT_DMAMEM_CH3       MC_IRQ_EVT_DMAMEM_CHn(3)
+
+
 
 #endif /* _IO_ELVEES_H */

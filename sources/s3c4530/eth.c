@@ -3,6 +3,7 @@
 #include "stream/stream.h"
 #include "mem/mem.h"
 #include "buf/buf.h"
+#include <net/netif.h>
 #include "s3c4530/eth.h"
 #include "s3c4530/seeq80225.h"
 
@@ -241,6 +242,11 @@ transmit_enqueue (eth_t *c, buf_t *p)
 {
 	volatile eth_desc_t *desc;
 
+    netif_io_overlap* over = netif_is_overlaped(p);
+    if (over != 0){
+        over->asynco = nios_inprocess;
+    }
+
 	c->tbuf[c->te] = p;
 
 	/* Set up the tx descriptor. */
@@ -283,7 +289,7 @@ eth_output (eth_t *c, buf_t *p, small_uint_t prio)
 			p->tot_len);*/
 		++c->netif.out_errors;
 		++c->tx_big;
-		buf_free (p);
+		netif_free_buf (&c->netif, p);
 		if (c->callback_error)
 			c->callback_error (c);
 		return 0;
@@ -309,7 +315,7 @@ eth_output (eth_t *c, buf_t *p, small_uint_t prio)
 			c->te, c->tn);*/
 		++c->netif.out_errors;
 		++c->tx_qo;
-		buf_free (p);
+		netif_free_buf (&c->netif, p);
 		if (c->callback_error)
 			c->callback_error (c);
 		return 0;

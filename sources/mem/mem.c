@@ -27,13 +27,14 @@
  * Свободная память хранится в виде списка, упорядоченного по возрастанию адресов.
  * Выделяется первый сегмент, подходящий по размеру.
  */
+#include <uos-conf.h>
+#include <uos-conf-cpu.h>
 #include <runtime/lib.h>
 #include <mem/mem.h>
 
 /*
  * Debug configuration.
  */
-#define MEM_DEBUG		1
 
 #ifdef NDEBUG			/* Disable memory debugging on NDEBUG */
 #undef MEM_DEBUG
@@ -48,7 +49,18 @@
  * Align data on pointer-sized boundaries.
  */
 #define SIZEOF_POINTER		sizeof(void*)
-#define MEM_ALIGN(x)		(((x) + SIZEOF_POINTER-1) & -SIZEOF_POINTER)
+#define SIZEOF_DOUBLE       sizeof(double)
+
+#if defined(MIPS32) && defined(ARCH_HAVE_FPU)
+//!!! mips platform requires that all doubles be aligned on 8byte
+//  , so allocate always on this aligns
+#define SIZEOF_ALIGN    SIZEOF_DOUBLE
+#else
+#define SIZEOF_ALIGN    SIZEOF_POINTER
+#endif
+
+#define MASK_ALIGN      (SIZEOF_ALIGN-1)
+#define MEM_ALIGN(x)		((((size_t)x) + MASK_ALIGN) & ~MASK_ALIGN)
 
 /*
  * Every memory block has a header.
@@ -61,13 +73,44 @@ typedef struct {
 #define MEMORY_HOLE_MAGIC	0x4d48	/* Free memory block (hole) */
 #define MEMORY_BLOCK_MAGIC	0x4d42	/* Memory block in use */
 #endif
+	//mheader_t* next ;     //use macro NEXT instead!!! used by holes only
 } mheader_t;
 
 /*
  * In memory holes (free blocks), the space just after the header
  * is used as a pointer to the next hole (linked free list).
  */
+/*
+static inline
+mheader_t& NEXT(mheader_t* h){
+    return (*(mheader_t**) ((h) + 1));
+}
+*/
 #define NEXT(h)			(*(mheader_t**) ((h) + 1))
+
+static inline
+mheader_t* SUCC(mheader_t* h){
+    return ( (mheader_t*)((size_t)h + h->size) );
+}
+//#define SUCC(h)         ( (mheader_t*)((size_t)h + h->size) )
+
+#define MEM_HSIZE       MEM_ALIGN( sizeof(mheader_t) )
+static inline
+void* BLOCK_OF(mheader_t* h){
+    return ((void*)((size_t)h + MEM_HSIZE));
+}
+
+static inline
+mheader_t* H_OF(void* block){
+    return ((mheader_t*)((size_t)block - MEM_HSIZE));
+}
+//#define H_OF(block) ((mheader_t*)((size_t)block - MEM_HSIZE))
+
+#if MEM_DEBUG > 0
+void mem_validate_hole(mem_pool_t *m, mheader_t *h);
+#else
+#define mem_validate_hole(...)
+#endif
 
 /**
  * Allocate a block of memory.
@@ -79,7 +122,7 @@ void *mem_alloc (mem_pool_t *m, size_t required)
 
 	p = mem_alloc_dirty (m, required);
 	if (p && required > 0)
-		memset (p, 0, required);
+		memsetw (p, 0, required);
 	return p;
 }
 
@@ -98,7 +141,7 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
          * hole). */
 	if (required < SIZEOF_POINTER)
 		required = SIZEOF_POINTER;
-	required = MEM_ALIGN (required + sizeof(mheader_t));
+	required = MEM_ALIGN (required + MEM_HSIZE);
 
 	mutex_lock (&m->lock);
 
@@ -107,18 +150,7 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
 	h = (mheader_t*) m->free_list;
 	hprev = (mheader_t**) (void*) &m->free_list;
 	while (h) {
-#if MEM_DEBUG
-		if (h->magic != MEMORY_HOLE_MAGIC) {
-			debug_printf ("mem: bad hole magic at 0x%x\n", h);
-			debug_printf ("     size=%d, pool=%p\n", h->size, h->pool);
-			uos_halt(1);
-		}
-		if (h->pool != m) {
-			debug_printf ("mem: incorect pool pointer=%p, must be %p\n",
-				h->pool, m);
-			uos_halt(1);
-		}
-#endif
+	    mem_validate_hole(m, h);
         	if (h->size >= required)
         		break;
 
@@ -136,26 +168,26 @@ void *mem_alloc_dirty (mem_pool_t *m, size_t required)
         /* Remove a chunk of space and, if we can, release any of what's left
 	 * as a new hole.  If we can't release any then allocate more than was
 	 * requested and remove this hole from the hole list. */
-	if (h->size >= required + sizeof(mheader_t) + 2*SIZEOF_POINTER) {
+	if (h->size >= required + MEM_HSIZE + 2*SIZEOF_POINTER) {
 		newh = (mheader_t*) ((size_t)h + required);
 		newh->pool = h->pool;
 		newh->size = h->size - required;
-		h->size = required;
-		NEXT(newh) = NEXT(h);
-		*hprev = newh;
 #if MEM_DEBUG
-		newh->magic = MEMORY_HOLE_MAGIC;
+        newh->magic = MEMORY_HOLE_MAGIC;
 #endif
+        NEXT(newh) = NEXT(h);
+		h->size = required;
 	} else {
-		*hprev = NEXT(h);
+	    newh = NEXT(h);
 	}
+    *hprev = newh;
 #if MEM_DEBUG
 	h->magic = MEMORY_BLOCK_MAGIC;
 #endif
 	m->free_size -= h->size;
 	mutex_unlock (&m->lock);
 	/*debug_printf ("mem %d bytes returned 0x%x\n", h->size, h+1);*/
-	return h+1;
+	return BLOCK_OF(h);
 }
 
 /*
@@ -168,10 +200,10 @@ static void make_hole_locked (mheader_t *newh)
 	mem_pool_t *m;
 
 	m = newh->pool;
-	m->free_size += newh->size;
 #if MEM_DEBUG
 	newh->magic = MEMORY_HOLE_MAGIC;
 #endif
+    m->free_size += newh->size;
 	/*
 	 * Walk through the hole list and see if this newly freed block can
 	 * be merged with anything else to form a larger space.  Whatever
@@ -181,6 +213,7 @@ static void make_hole_locked (mheader_t *newh)
         h = (mheader_t*) m->free_list;
         hprev = (mheader_t**) (void*) &m->free_list;
 	for (;;) {
+        mem_validate_hole(m, h);
 		if (! h) {
 			/* At the end of free list */
         		*hprev = newh;
@@ -234,10 +267,12 @@ void mem_free (void *block)
 	block = (void*) ARM_CACHED (block);
 #endif
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF(block);
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
-		debug_printf ("free: bad block magic\n");
+		debug_printf ("free[$%x]: bad block[$%x*$%x pool $%x] magic $%2s=$%hx \n"
+		        , block, h, h->size, h->pool
+		        , &h->magic, h->magic);
 		uos_halt(1);
         }
 #endif
@@ -255,7 +290,7 @@ void *mem_realloc (void *old_block, size_t bytes)
 		return 0;
 
 	/* Make the header pointer. */
-	h = (mheader_t*) old_block - 1;
+	h = H_OF(old_block);
 #ifdef ARM_CACHED
 	/* Clear the non-cached bit. */
 	h = (mheader_t*) ARM_CACHED (h);
@@ -266,7 +301,7 @@ void *mem_realloc (void *old_block, size_t bytes)
 		uos_halt(1);
         }
 #endif
-	old_size = h->size - sizeof(mheader_t);
+	old_size = h->size - MEM_HSIZE;
 	if (old_size >= bytes)
 		return old_block;
 
@@ -299,10 +334,10 @@ void mem_truncate (void *block, size_t required)
 	/* Add the size of header. */
 	if (required < SIZEOF_POINTER)
 		required = SIZEOF_POINTER;
-	required = MEM_ALIGN (required + sizeof(mheader_t));
+	required = MEM_ALIGN (required + MEM_HSIZE);
 
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF( block );
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
 		debug_printf ("truncate: bad block magic\n");
@@ -310,11 +345,14 @@ void mem_truncate (void *block, size_t required)
         }
 #endif
 	/* Is there enough space to split? */
-	if (h->size >= required + sizeof(mheader_t) + 2*SIZEOF_POINTER) {
+	if (h->size >= required + MEM_HSIZE + 2*SIZEOF_POINTER) {
 		/* Split into two blocks. */
 		newh = (mheader_t*) ((size_t)h + required);
 		newh->pool = h->pool;
 		newh->size = h->size - required;
+#if MEM_DEBUG
+		newh->magic = MEMORY_HOLE_MAGIC;
+#endif
 
 		mutex_lock (&newh->pool->lock);
 		h->size = required;
@@ -347,14 +385,14 @@ size_t mem_size (void *block)
 		return 0;
 
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF(block);
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
 		debug_printf ("size: bad block magic\n");
 		uos_halt(1);
         }
 #endif
-	return h->size - sizeof(mheader_t);
+	return h->size - MEM_HSIZE;
 }
 
 /**
@@ -368,7 +406,7 @@ mem_pool_t *mem_pool (void *block)
 		return 0;
 
 	/* Make the header pointer. */
-	h = (mheader_t*) block - 1;
+	h = H_OF( block );
 #if MEM_DEBUG
 	if (h->magic != MEMORY_BLOCK_MAGIC) {
 		debug_printf ("pool: bad block magic\n");
@@ -383,14 +421,108 @@ void mem_print_free_list (mem_pool_t *m)
 {
 	mheader_t *h;
 
-	debug_printf ("free list:");
+	debug_puts ("free list:");
 	mutex_lock (&m->lock);
-	for (h=m->free_list; h; h=NEXT(h)) {
+	for (h=(mheader_t*)m->free_list; h; h=NEXT(h)) {
 		debug_printf (" %p-%p", h, (char*)h + h->size - 1);
         }
 	mutex_unlock (&m->lock);
-	debug_printf ("\n");
+	debug_puts ("\n");
 }
+
+void mem_dump(mem_pool_t *m){
+    mheader_t *h;
+
+    //mutex_lock (&m->lock);
+    debug_printf ("\npool $%x:", m);
+    mheader_t* limit = (mheader_t*)((size_t)m->store+m->size);
+    for (h=(mheader_t*)m->store; h<limit; h=SUCC(h)) {
+        if (h->pool != m){
+            debug_printf ("bad block $%x[$%x]:$%hx on pool[$%x]\n"
+                    , h, h->size
+                    , h->magic, h->pool);
+            break;
+        }
+
+        if (h->magic == MEMORY_BLOCK_MAGIC)
+            debug_printf ("$%x[$%x] ", h, h->size);
+        else if (h->magic == MEMORY_HOLE_MAGIC)
+            debug_printf ("$%x[$%x]:->$%x\n", h, h->size, NEXT(h));
+        else {
+            debug_printf ("$%x[$%x]:bad magic %2s=$%hx\n", h, h->size, &h->magic, (int)(h->magic));
+            break;
+        }
+        if ( (h->size != MEM_ALIGN(h->size))
+             || (h->size < (MEM_HSIZE+ SIZEOF_ALIGN))
+             || ( h->size > ((size_t)limit - (size_t)h) )
+           )
+        {
+            debug_printf ("bad block $%x size $%x\n", h, h->size);
+            break;
+        }
+    }
+    //mutex_unlock (&m->lock);
+}
+
+void mem_validate(mem_pool_t *m){
+    mheader_t *h;
+    //mutex_lock (&m->lock);
+    mheader_t* limit = (mheader_t*)((size_t)m->store+m->size);
+    for (h=(mheader_t*)m->store; h<limit; h=SUCC(h)) {
+        assert2( (h->pool == m)
+                , "bad block $%x[$%x]:$%hx on pool[$%x]\n"
+                , h, h->size
+                , h->magic, h->pool
+        );
+
+        assert2( (h->magic == MEMORY_BLOCK_MAGIC) || (h->magic == MEMORY_HOLE_MAGIC)
+                , "$%x[$%x]:bad magic %2s=$%hx\n"
+                , h, h->size, &h->magic, (int)(h->magic)
+                );
+        assert2( ( (h->size == MEM_ALIGN(h->size))
+                && (h->size >= (MEM_HSIZE+ SIZEOF_ALIGN))
+                && (h->size <= ((size_t)limit - (size_t)h) )
+                  )
+                , "bad block $%x size $%x\n"
+                , h, h->size
+                );
+    }
+    //mutex_unlock (&m->lock);
+}
+
+void mem_validate_block(void *p){
+    mheader_t *h;
+    if (! p)
+        return;
+
+    /* Make the header pointer. */
+    h = H_OF( p );
+    assert((size_t)h == MEM_ALIGN(h));
+    mem_pool_t *m = h->pool;
+    assert(uos_valid_memory_address(m));
+    assert( (size_t)h >= (size_t)m->store );
+    assert( ((size_t)h + h->size) <= ((size_t)m->store)+m->size );
+    assert(h->magic == MEMORY_BLOCK_MAGIC);
+           //, "mem block $%x have bad magic\n", p);
+}
+
+void mem_validate_hole(mem_pool_t *m, mheader_t *h){
+    assert( (size_t)h >= (size_t)m->store );
+    assert( ((size_t)h + h->size) <= (((size_t)m->store)+m->size) );
+    assert((size_t)h == MEM_ALIGN(h));
+
+    if (h->magic != MEMORY_HOLE_MAGIC) {
+        debug_printf ("mem: bad hole magic at 0x%x\n", h);
+        debug_printf ("     size=%d, pool=%p\n", h->size, h->pool);
+        uos_halt(1);
+    }
+    if (h->pool != m) {
+        debug_printf ("mem: incorect pool pointer=%p, must be %p\n",
+            h->pool, m);
+        uos_halt(1);
+    }
+}
+
 #endif
 
 /**
@@ -403,17 +535,20 @@ void mem_print_free_list (mem_pool_t *m)
  */
 void mem_init (mem_pool_t *m, size_t start, size_t stop)
 {
+    start = MEM_ALIGN(start);
 	mheader_t *h = (mheader_t*) start;
 
 /*debug_printf ("mem_init start=0x%x, size %d bytes\n", start, size);*/
 	assert (stop > start);
 	h->size = stop - start;
 	h->pool = m;
+    mutex_lock (&m->lock);
 #if MEM_DEBUG
 	h->magic = MEMORY_HOLE_MAGIC;
+	m->store = h;
+    m->size  = h->size;
 #endif
-	mutex_lock (&m->lock);
-	NEXT(h) = m->free_list;
+	NEXT(h) = (mheader_t *)(m->free_list);
 	m->free_list = h;
 	m->free_size += h->size;
 	mutex_unlock (&m->lock);

@@ -2,10 +2,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
+#include <getopt.h>
+#include <unistd.h>
+
 
 #define PORT        0xBBBB
 /* REPLACE with your server machine name*/
@@ -16,6 +20,12 @@
 char hostname[100];
 int buf[BUF_SIZE];
 
+static const struct option options_def[] = {
+      {"packets-limit", required_argument, NULL  , 'l'}
+    , { NULL, 0, NULL  , 0}
+};
+
+int
 main(argc, argv)
 int argc; char **argv;
 {
@@ -25,6 +35,7 @@ int argc; char **argv;
 	struct hostent *hp;
 	int count = 0;
 	int i, cycle = 0;
+	int cycles_limit = -1;
 	struct timeval start, end;
 	long elapsed, seconds, useconds;    
 
@@ -37,6 +48,19 @@ int argc; char **argv;
 		perror("gethostbyname");
 		exit(1);
 	}
+
+	int rez;
+    int longrez;
+    while ( (rez = getopt_long_only(argc,argv,"l:", options_def, &longrez)) != -1){
+        switch (rez){
+        case 'l': 
+            if (*optarg == '=')
+                optarg++;
+            cycles_limit = atoi(optarg);
+            break;
+        case '?': printf("Error found !\n");break;
+        };
+    };
 
 	/* fill in the socket structure with host information */
 	memset(&pin, 0, sizeof(pin));
@@ -60,6 +84,13 @@ int argc; char **argv;
 		exit(1);
 	}
 
+#ifdef TCP_SOCKET
+    int sockopt_flag = 1;
+    setsockopt(sd, IPPROTO_TCP, TCP_NODELAY
+                ,(char *)&sockopt_flag,sizeof(sockopt_flag)
+                );
+#endif
+	
 	printf("Connected to server\n");
 	
 	volatile unsigned cnt;
@@ -69,7 +100,7 @@ int argc; char **argv;
 		for (i = 0; i < BUF_SIZE; ++i) buf[i] = count++;
 
 		/* send a message to the server PORT on machine HOST */
-		if (send(sd, buf, sizeof(buf), 0) == -1) {
+		if (send(sd, buf, sizeof(buf), 0 /*| MSG_CONFIRM|MSG_NOSIGNAL*/) == -1) {
 			perror("send");
 			exit(1);
 		}
@@ -83,7 +114,10 @@ int argc; char **argv;
 			memcpy (&start, &end, sizeof (struct timeval));
 		}
 		++cycle;
-		
+
+		if (cycles_limit > 0)
+		if (cycles_limit <= cycle)
+		    break;
 		//for (cnt = 0; cnt < 50000; cnt++);
 	}
 

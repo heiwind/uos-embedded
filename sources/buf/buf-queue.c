@@ -7,12 +7,13 @@ buf_queue_get (buf_queue_t *q)
 {
 	buf_t *p;
 
-	assert (q->tail >= q->queue);
+    if (q->count == 0) {
+        /*debug_printf ("buf_queue_get: returned 0\n");*/
+        return 0;
+    }
+
+    assert (q->tail >= q->queue);
 	assert (q->tail < q->queue + q->size);
-	if (q->count == 0) {
-		/*debug_printf ("buf_queue_get: returned 0\n");*/
-		return 0;
-	}
 	assert (*q->tail != 0);
 
 	/* Get the first packet from queue. */
@@ -43,6 +44,7 @@ buf_queue_put (buf_queue_t *q, buf_t *p)
 		head += q->size;
 
 	/* Put the packet in. */
+    assert (p != 0);
 	*head = p;
 	++q->count;
 	/*debug_printf ("    on return count = %d, head = 0x%04x\n", q->count, q->head);*/

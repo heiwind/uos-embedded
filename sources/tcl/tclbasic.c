@@ -168,11 +168,11 @@ Tcl_CreateInterp (mem_pool_t *pool)
      * check for a pre-existing command by the same name).
      */
      for (ci = builtin_cmds; ci->name != 0; ci++) {
-	int new;
+	int isnew;
 	Tcl_HashEntry *he;
 
-	he = Tcl_CreateHashEntry (&iPtr->commandTable, ci->name, &new);
-	if (new) {
+	he = Tcl_CreateHashEntry (&iPtr->commandTable, ci->name, &isnew);
+	if (isnew) {
 	    c = (Command*) mem_alloc (pool, sizeof(Command));
 	    c->proc = ci->proc;
 	    c->clientData = (void*) 0;
@@ -205,9 +205,10 @@ Tcl_CreateInterp (mem_pool_t *pool)
  */
 
 void
-Tcl_DeleteInterp(interp)
-    Tcl_Interp *interp;		/* Token for command interpreter (returned
+Tcl_DeleteInterp(
+    Tcl_Interp *interp		/* Token for command interpreter (returned
 				 * by a previous call to Tcl_CreateInterp). */
+    )
 {
     Interp *iPtr = (Interp *) interp;
     Tcl_HashEntry *he;
@@ -317,24 +318,24 @@ Tcl_DeleteInterp(interp)
  */
 
 void
-Tcl_CreateCommand(interp, cmdName, proc, clientData, deleteProc)
-    Tcl_Interp *interp;		/* Token for command interpreter (returned
-				 * by a previous call to Tcl_CreateInterp). */
-    unsigned char *cmdName;	/* Name of command. */
-    Tcl_CmdProc *proc;		/* Command procedure to associate with
-				 * cmdName. */
-    void *clientData;		/* Arbitrary one-word value to pass to proc. */
-    Tcl_CmdDeleteProc *deleteProc;
+Tcl_CreateCommand(
+    Tcl_Interp *interp		/* Token for command interpreter 
+                      (returned by a previous call to Tcl_CreateInterp). */
+    , unsigned char *cmdName	/* Name of command. */
+    , Tcl_CmdProc *proc		/* Command procedure to associate with cmdName. */
+    , void *clientData		/* Arbitrary one-word value to pass to proc. */
+    , Tcl_CmdDeleteProc *deleteProc
 				/* If not NULL, gives a procedure to call when
 				 * this command is deleted. */
+    )
 {
     Interp *iPtr = (Interp *) interp;
     register Command *c;
     Tcl_HashEntry *he;
-    int new;
+    int isnew;
 
-    he = Tcl_CreateHashEntry(&iPtr->commandTable, cmdName, &new);
-    if (!new) {
+    he = Tcl_CreateHashEntry(&iPtr->commandTable, cmdName, &isnew);
+    if (!isnew) {
 	/*
 	 * Command already exists:  delete the old one.
 	 */
@@ -372,10 +373,11 @@ Tcl_CreateCommand(interp, cmdName, proc, clientData, deleteProc)
  */
 
 int
-Tcl_DeleteCommand(interp, cmdName)
-    Tcl_Interp *interp;		/* Token for command interpreter (returned
+Tcl_DeleteCommand(
+    Tcl_Interp *interp		/* Token for command interpreter (returned
 				 * by a previous call to Tcl_CreateInterp). */
-    unsigned char *cmdName;	/* Name of command to remove. */
+    , unsigned char *cmdName	/* Name of command to remove. */
+    )
 {
     Interp *iPtr = (Interp *) interp;
     Tcl_HashEntry *he;
@@ -417,16 +419,17 @@ Tcl_DeleteCommand(interp, cmdName)
  */
 
 int
-Tcl_Eval(interp, cmd, flags, termPtr)
-    Tcl_Interp *interp;		/* Token for command interpreter (returned
+Tcl_Eval(
+    Tcl_Interp *interp		/* Token for command interpreter (returned
 				 * by a previous call to Tcl_CreateInterp). */
-    unsigned char *cmd;		/* Pointer to TCL command to interpret. */
-    int flags;			/* OR-ed combination of flags like
+    , unsigned char *cmd		/* Pointer to TCL command to interpret. */
+    , int flags			/* OR-ed combination of flags like
 				 * TCL_BRACKET_TERM and TCL_RECORD_BOUNDS. */
-    unsigned char **termPtr;	/* If non-NULL, fill in the address it points
+    , unsigned char **termPtr	/* If non-NULL, fill in the address it points
 				 * to with the address of the char. just after
 				 * the last one that was part of cmd.  See
 				 * the man page for details on this. */
+    )
 {
     /*
      * The storage immediately below is used to generate a copy
@@ -836,13 +839,14 @@ Tcl_Eval(interp, cmd, flags, termPtr)
  */
 
 Tcl_Trace
-Tcl_CreateTrace(interp, level, proc, clientData)
-    Tcl_Interp *interp;		/* Interpreter in which to create the trace. */
-    int level;			/* Only call proc for commands at nesting level
+Tcl_CreateTrace(
+    Tcl_Interp *interp		/* Interpreter in which to create the trace. */
+    , int level			/* Only call proc for commands at nesting level
 				 * <= level (1 => top level). */
-    Tcl_CmdTraceProc *proc;	/* Procedure to call before executing each
+    , Tcl_CmdTraceProc *proc	/* Procedure to call before executing each
 				 * command. */
-    void *clientData;		/* Arbitrary one-word value to pass to proc. */
+    , void *clientData		/* Arbitrary one-word value to pass to proc. */
+    )
 {
     register Trace *tracePtr;
     register Interp *iPtr = (Interp *) interp;
@@ -875,10 +879,11 @@ Tcl_CreateTrace(interp, level, proc, clientData)
  */
 
 void
-Tcl_DeleteTrace(interp, trace)
-    Tcl_Interp *interp;		/* Interpreter that contains trace. */
-    Tcl_Trace trace;		/* Token for trace (returned previously by
+Tcl_DeleteTrace(
+    Tcl_Interp *interp		/* Interpreter that contains trace. */
+    , Tcl_Trace trace		/* Token for trace (returned previously by
 				 * Tcl_CreateTrace). */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
     register Trace *tracePtr = (Trace *) trace;
@@ -919,10 +924,11 @@ Tcl_DeleteTrace(interp, trace)
  */
 
 void
-Tcl_AddErrorInfo(interp, message)
-    Tcl_Interp *interp;		/* Interpreter to which error information
+Tcl_AddErrorInfo(
+    Tcl_Interp *interp		/* Interpreter to which error information
 				 * pertains. */
-    unsigned char *message;	/* Message to record. */
+    , unsigned char *message	/* Message to record. */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
 
@@ -1000,16 +1006,16 @@ Tcl_VarEval (Tcl_Interp *interp,/* Interpreter in which to execute command. */
 	}
 	length = strlen(string);
 	if ((spaceUsed + length) > spaceAvl) {
-	    unsigned char *new;
+	    unsigned char *asnew;
 
 	    spaceAvl = spaceUsed + length;
 	    spaceAvl += spaceAvl/2;
-	    new = mem_alloc (interp->pool, (unsigned) spaceAvl);
-	    memcpy ((void*) new, (void*) cmd, spaceUsed);
+	    asnew = (unsigned char *)mem_alloc (interp->pool, (unsigned) spaceAvl);
+	    memcpy ((void*) asnew, (void*) cmd, spaceUsed);
 	    if (cmd != fixedSpace) {
 		mem_free(cmd);
 	    }
-	    cmd = new;
+	    cmd = asnew;
 	}
 	strcpy(cmd + spaceUsed, string);
 	spaceUsed += length;
@@ -1023,7 +1029,7 @@ Tcl_VarEval (Tcl_Interp *interp,/* Interpreter in which to execute command. */
     }
     return result;
 }
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -1045,9 +1051,10 @@ Tcl_VarEval (Tcl_Interp *interp,/* Interpreter in which to execute command. */
  */
 
 int
-Tcl_GlobalEval(interp, command)
-    Tcl_Interp *interp;		/* Interpreter in which to evaluate command. */
-    unsigned char *command;	/* Command to evaluate. */
+Tcl_GlobalEval(
+    Tcl_Interp *interp		/* Interpreter in which to evaluate command. */
+    , unsigned char *command	/* Command to evaluate. */
+    )
 {
     register Interp *iPtr = (Interp *) interp;
     int result;

@@ -2,10 +2,20 @@
 #define __STDIO_H__
 
 #include <runtime/lib.h>
+#include <posix-port.h>
+#include <stream/stream.h>
+
+#ifndef INLINE_STDC
+//	когда сторонний	код требует линковаться процедурам заявленным как инлайн, и ему надо предоставить
+//	объект с экземплярами этих процедур.(контрибут POSIX генерирует свой врап stdlib чтобы подключить stdc++.)
+//	в коде объекта этот инлайн отключаю чтобы получить нормальный код, линкуемый извне
+#define INLINE_STDC INLINE
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #ifndef NULL
 #define NULL 0
@@ -23,117 +33,112 @@ extern "C" {
 #define SEEK_CUR	1	/* Seek from current position.  */
 #define SEEK_END	2	/* Seek from end of file.  */
 
+// <stream.h> declares this routines
+#if (!defined(to_stream))
 int sscanf (const char *buf, const char *fmt, ...);
 int snprintf (char *buf, int size, const char *fmt, ...);
 int vsnprintf (char *buf, int size, const char *fmt, va_list args);
+#endif
 
+//actualy this
+//#define FILE            stream_t
 #define FILE			int
 #define fpos_t			long
-#define stdin			0
-#define stdout			0
-#define stderr			0
 
-static inline FILE *fopen (const char *path, const char *mode)
+#define __UOS_STDIO_IS_NULL    0
+#define __UOS_STDIO_IS_STREAM  1
+
+#ifndef __UOS_STDIO__
+#define __UOS_STDIO__   __UOS_STDIO_IS_NULL
+#define stdin           0
+#define stdout          0
+#define stderr          0
+#endif
+
+INLINE_STDC
+FILE *freopen (const char *path, const char *mode, FILE *stream)
 	{ return 0; }
 
-static inline FILE *fdopen (int fildes, const char *mode)
-	{ return 0; }
-
-static inline FILE *freopen (const char *path, const char *mode, FILE *stream)
-	{ return 0; }
-
-static inline int fclose (FILE *file)
-	{ return 0; }
-
-static inline int fseek (FILE *stream, long offset, int whence)
+INLINE_STDC
+int fseek (FILE *stream, long offset, int whence)
 	{ return -1; }
 
-static inline long ftell (FILE *stream)
+INLINE_STDC
+long ftell (FILE *stream)
 	{ return 0L; }
 
-static inline void rewind (FILE *stream)
+INLINE_STDC
+void rewind (FILE *stream)
 	{}
 
-static inline int fgetpos (FILE *stream, fpos_t *pos)
+INLINE_STDC
+int fgetpos (FILE *stream, fpos_t *pos)
 	{ return -1; }
 
-static inline int fsetpos (FILE *stream, fpos_t *pos)
+INLINE_STDC
+int fsetpos (FILE *stream, fpos_t *pos)
 	{ return -1; }
 
-static inline size_t fread (void *ptr, size_t size, size_t nmemb, FILE *stream)
+INLINE_STDC
+size_t fread (void *ptr, size_t size, size_t nmemb, FILE *stream)
 	{ return 0; }
 
-static inline size_t fwrite (const void *ptr, size_t size, size_t nmemb,
+INLINE_STDC
+size_t fwrite (const void *ptr, size_t size, size_t nmemb,
     FILE *stream)
 	{ return 0; }
 
-static inline void clearerr (FILE *stream)
+INLINE_STDC
+void clearerr (FILE *stream)
 	{}
 
-static inline int feof (FILE *stream)
-	{ return 1; }
-
-static inline int ferror (FILE *stream)
+INLINE_STDC
+int ferror (FILE *stream)
 	{ return 0; }
 
-static inline int fileno (FILE *stream)
-	{ return 0; }
-
-static inline int fflush (FILE *stream)
-	{ return 0; }
-
-static inline void setbuf (FILE *stream, char *buf)
+INLINE_STDC
+void setbuf (FILE *stream, char *buf)
 	{}
 
-static inline void setbuffer (FILE *stream, char *buf, size_t size)
+INLINE_STDC
+void setbuffer (FILE *stream, char *buf, size_t size)
 	{}
 
-static inline void setlinebuf (FILE *stream)
+INLINE_STDC
+void setlinebuf (FILE *stream)
 	{}
 
-static inline int setvbuf (FILE *stream, char *buf, int mode, size_t size)
+INLINE_STDC
+int setvbuf (FILE *stream, char *buf, int mode, size_t size)
 	{ return 0; }
 
-static inline int fputc (int c, FILE *stream)
+INLINE_STDC
+int fputc (int c, FILE *stream)
 	{ return c; }
 
-static inline int fputs (const char *s, FILE *stream)
-	{ return 0; }
-
-static inline int putc (int c, FILE *stream)
+INLINE_STDC
+int putc (int c, FILE *stream)
 	{ return c; }
 
-static inline int putchar (int c)
-	{ return c; }
+INLINE_STDC
+int getc (FILE *stream)
+    { return -1; }
 
-static inline int puts (const char *s)
+INLINE_STDC
+int ungetc (int c, FILE *stream)
+    { return c; }
+
+INLINE_STDC
+int fgetc (FILE *stream)
+    { return -1; }
+
+INLINE_STDC
+int fscanf (FILE *fd, const char *fmt, ...)
 	{ return 0; }
 
-static inline int fgetc (FILE *stream)
-	{ return -1; }
-
-static inline char *fgets (char *s, int size, FILE *stream)
-	{ return 0; }
-
-static inline int getc (FILE *stream)
-	{ return -1; }
-
-static inline int getchar (void)
-	{ return -1; }
-
-static inline char *gets (char *s)
-	{ return 0; }
-
-static inline int ungetc (int c, FILE *stream)
-	{ return c; }
-
-static inline int vfprintf (FILE *stream, const char *format, va_list ap)
-	{ return 0; }
-
-static inline int fscanf (FILE *fd, const char *fmt, ...)
-	{ return 0; }
-
-static inline int fprintf (FILE *fd, const char *fmt, ...)
+INLINE_STDC
+__NOTHROW
+int fprintf (FILE *fd, const char *fmt, ...) __noexcept
 {
 	va_list args;
 	int err;
@@ -144,16 +149,161 @@ static inline int fprintf (FILE *fd, const char *fmt, ...)
 	return err;
 }
 
-static inline int printf (const char *fmt, ...)
-{
-	va_list args;
-	int err;
+#if (!defined(to_stream)) || defined(__cplusplus) 
+/** \~russian
+ * эти функции конфликтуют с макросами объявлеными в <stream/stream.h>
+ * для сохранения обратной совместимости со старым кодом, убираю их объявление
+ * в с++ - они доступны как перегруженые
+ * \ref stream/stream.h
+ * */
 
-	va_start (args, fmt);
-	err = debug_vprintf (fmt, args);
-	va_end (args);
-	return err;
+INLINE_STDC
+FILE *fopen (const char *path, const char *mode)
+    { return 0; }
+
+INLINE_STDC int fclose (FILE *file)
+    { return 0; }
+
+INLINE_STDC int feof (FILE *stream)
+    { return 1; }
+
+INLINE_STDC int fflush (FILE *stream)
+    { return 0; }
+
+INLINE_STDC
+__NOTHROW
+int fputs (const char *s, FILE *stream) __noexcept
+    { return 0; }
+
+INLINE_STDC char *fgets (char *s, int size, FILE *stream)
+    { return 0; }
+
+//freceiver
+
+INLINE_STDC int vfprintf (FILE *stream, const char *format, va_list ap)
+    { return 0; }
+
+//vscanf
+
+#endif //to_stream
+
+#if __UOS_STDIO__ ==__UOS_STDIO_IS_NULL
+
+INLINE_STDC
+FILE *fdopen (int fildes, const char *mode)
+    { return 0; }
+
+INLINE_STDC
+int fileno (FILE *stream)
+    { return 0; }
+
+#if (!defined(to_stream)) || defined(__cplusplus) 
+
+INLINE_STDC
+__NOTHROW
+int putchar (int c) __noexcept
+    { return c; }
+
+INLINE_STDC
+__NOTHROW
+int getchar (void) __noexcept
+    { return -1; }
+
+//peekchar
+
+INLINE_STDC
+__NOTHROW
+int puts (const char *s) __noexcept
+    { return 0; }
+
+INLINE_STDC
+__NOTHROW
+char *gets (char *s) __noexcept
+    { return 0; }
+
+INLINE_STDC
+__NOTHROW
+int printf (const char *fmt, ...) __noexcept
+{
+    va_list args;
+    int err;
+
+    va_start (args, fmt);
+    err = debug_vprintf (fmt, args);
+    va_end (args);
+    return err;
 }
+
+#endif //to_stream
+
+#elif __UOS_STDIO__ ==__UOS_STDIO_IS_STREAM
+
+FILE *fdopen (int fildes, const char *mode);
+int fileno (FILE *stream);
+
+
+#if (defined(to_stream))
+// remove stream.h wraps macros since used stdio
+#undef putchar
+#undef getchar
+#undef gets
+#undef puts
+#undef printf
+#endif
+
+INLINE_STDC
+__NOTHROW
+int putchar (int c) __noexcept
+    { stdout->interface->putc(stdout, c); return 0 ;}
+
+INLINE_STDC
+__NOTHROW
+int getchar (void) __noexcept
+    { return stdin->interface->getc(stdin); }
+
+//peekchar
+
+INLINE_STDC
+__NOTHROW
+int puts (const char *s) __noexcept
+    { return stream_puts (to_stream (stdout), s);}
+
+//this is posix-incompatible, use fgets better  
+INLINE_STDC
+__NOTHROW
+char *gets (char *s, int len) __noexcept
+    { return (char*) stream_gets(to_stream (stdin), (unsigned char*)s, len);}
+
+INLINE_STDC
+__NOTHROW
+int printf (const char *fmt, ...) __noexcept
+{
+    va_list args;
+    int err;
+
+    va_start (args, fmt);
+    err = stream_vprintf (to_stream (stdout), fmt, args);
+    va_end (args);
+    return err;
+}
+
+#elif UOS_POSIX_NEWLIB_IO > 0
+
+FILE *fdopen (int fildes, const char *mode);
+int fileno (FILE *stream);
+
+#endif  //__uos_have_stdio_stream__
+
+
+
+#include <limits.h>
+
+//* для совместимости с newlib как минимум надо реализовать этоти функции
+#define sprintf(buf, fmt, ...) 		snprintf(buf, INT_MAX, fmt, __VA_ARGS__)
+#define vsprintf(buf, fmt, args) 	vsnprintf(buf, INT_MAX, fmt, args)
+
+
+
 
 #ifdef __cplusplus
 }

@@ -73,7 +73,7 @@ bool_t trap_defer_init (small_uint_t max_delay_ds, small_uint_t links_count,
 	queue_size = 4				/* trap-старт, alarm-on/off, auth */
 		+ links_count + links_count	/* link-up/down */
 		+ ports_count + ports_count;	/* port-up/down */
-	trap_queue = mem_alloc (&pool,
+	trap_queue = (trap_t*)mem_alloc (&pool,
 		queue_size * sizeof (trap_t)	/* кольцевая очередь trap-ов */
 		+ ports_count + links_count	/* буфер для trap-countdown */
 		+ (ports_count + links_count)	/* буфер для флагов up/down */

@@ -1,26 +1,34 @@
 #ifndef __UDP_H_
 #define __UDP_H_ 1
 
+#include <kernel/uos.h>
+#include <buf/buf.h>
+#include <net/netif.h>
+#include <net/ip.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* UDP header length */
+#define UDP_HLEN    8
+#define UDP_CAPLEN       (UDP_HLEN + IP_HLEN + MAC_HLEN)
+#define UDP_HRESERVE     IP_ALIGNED(UDP_CAPLEN)
+
+
 #define UDP_SOCKET_QUEUE_SIZE	8
 
 typedef struct _udp_socket_queue_t {
 	struct _buf_t	*buf;
-	unsigned char	addr [4];
+	ip_addr         addr;
 	unsigned short	port;
 } udp_socket_queue_t;
 
-typedef struct _udp_socket_t {
-	mutex_t		lock;
-	struct _ip_t	*ip;
-	struct _udp_socket_t *next;
-
-	unsigned char	peer_ip [4];
-	unsigned short	peer_port;
-	unsigned short	local_port;
+typedef struct _udp_socket_t { //: base_socket_t
+    UOSIP_BASE_SOCKET(struct _udp_socket_t);
 
 	struct _netif_t	*netif;
-	unsigned char	*local_ip;
-	unsigned char	*gateway;
+	ip_addr_const   gateway;
 
 	/* queue of received packets */
 	udp_socket_queue_t queue [UDP_SOCKET_QUEUE_SIZE];
@@ -80,7 +88,7 @@ struct _buf_t *udp_peekfrom (udp_socket_t *s, unsigned char *from_addr,
  * Connected socket will receive packets only from the peer
  * with appropriate address/port.
  */
-void udp_connect (udp_socket_t *s, unsigned char *ipaddr, unsigned short port);
+void udp_connect (udp_socket_t *s, const unsigned char *ipaddr, unsigned short port);
 
 /*
  * Send the UDP packet to the connected socket.
@@ -107,5 +115,11 @@ udp_peek (udp_socket_t *s)
 {
 	return udp_peekfrom (s, 0, 0);
 }
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __UDP_H_ */
