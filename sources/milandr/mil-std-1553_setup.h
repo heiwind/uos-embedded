@@ -86,6 +86,7 @@ struct milandr_mil1553_t
     unsigned            nb_emergency_errors;
     unsigned            queue_len;
     unsigned            nb_transmits;
+    unsigned            nb_irq;
 };
 
 typedef struct milandr_mil1553_t milandr_mil1553_t;
