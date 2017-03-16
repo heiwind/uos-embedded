@@ -107,8 +107,14 @@ main (void)
 	assert (STACK_GUARD (task_idle));
 
 	/* Move stack pointer to task_idle stack area */
-#if __AVR__	
-	set_stack_pointer (&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ-1]); // последний элемент массива stack
+#if __AVR__
+    /* First push then decrement stack pointer */
+	set_stack_pointer (&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ-1]);
+#elif defined(MIPS32)
+    /* MIPS32 stack pointer must be 8-byte aligned */
+    unsigned long last_aligned_addr = (unsigned long) &task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ];
+    last_aligned_addr &= ~0x7;
+    set_stack_pointer ((void *) last_aligned_addr);
 #else
     set_stack_pointer (&task_idle->stack[ALIGNED_IDLE_TASK_STACKSZ]);
 #endif
