@@ -31,8 +31,6 @@
 
 #define ETH_STACKSZ      1500
 
-volatile unsigned int speed_out_counter, speed_in_counter, R_MISSED_F, R_OVF, R_SMB_ERR, STAT_COUNT;
-
 task_t *eth_task;
 mutex_t eth_interrupt_mutex;
 list_t  eth_interrupt_handlers;
@@ -629,7 +627,6 @@ uint16_t eth_get_phyreg(uint8_t addr, uint8_t num)
 
 void eth_send_processing(const void *buf, uint16_t frame_length)
 {
- speed_out_counter++;
  #ifdef ETH_USE_DMA
 	eth_send_frame_dma(buf,frame_length);	
  #else
@@ -639,8 +636,6 @@ void eth_send_processing(const void *buf, uint16_t frame_length)
 
 uint32_t eth_read_processing(void *buf)
 {
- speed_in_counter++;
- speed_in_counter++;
  #ifdef ETH_USE_DMA
 	return eth_read_frame_dma(buf);
  #else
@@ -1168,7 +1163,7 @@ uint8_t eth_receive_frame(eth_t *u)
     // Чтение кадра. Проводится до проверки переполнения входного буфера, т.к
 	// лучше освобождать буфер приёмника, чтобы уменьшить вероятность возникновения
 	// "ошибки буфера приёмника"
-    //eth_read_processing(u->rxbuf);
+    //eth_read_processing(u->rxbuf, frame_length);
     u->netif.in_packets++;
     u->netif.in_bytes += frame_length; 
         
