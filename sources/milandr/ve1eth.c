@@ -1175,7 +1175,7 @@ uint8_t eth_receive_frame(eth_t *u)
     // Чтение кадра. Проводится до проверки переполнения входного буфера, т.к
 	// лучше освобождать буфер приёмника, чтобы уменьшить вероятность возникновения
 	// "ошибки буфера приёмника"
-    //eth_read_processing(u->rxbuf, frame_length);
+    //eth_read_processing(u->rxbuf);
     u->netif.in_packets++;
     u->netif.in_bytes += frame_length; 
         
