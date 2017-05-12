@@ -29,8 +29,6 @@
 
 #include "ve1eth.h"
 
-#define ETH_STACKSZ      1500
-
 task_t *eth_task;
 mutex_t eth_interrupt_mutex;
 list_t  eth_interrupt_handlers;
@@ -172,21 +170,29 @@ void eth_led(void)
 	if(ETH_CRS_GPIO->DATA & (1 <<  PIN(ETH_CRS_LED))) {
 		ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED);
 	} else {
-		if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_CRS))	{ETH_CRS_GPIO->SETTX |= 1 << PIN(ETH_CRS_LED);} // наличие		
-		else                                            {ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED);} // отсутствие
+		if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_CRS))	
+			ETH_CRS_GPIO->SETTX |= 1 << PIN(ETH_CRS_LED); // наличие		
+		else                                            
+			ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED); // отсутствие
 	}
 
 	// индикация наличия Link сигнала
-	if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_LINK))	{ETH_LINK_GPIO->SETTX |= 1 << PIN(ETH_LINK_LED);} 	// наличие
-	else											{ETH_LINK_GPIO->CLRTX |= 1 << PIN(ETH_LINK_LED);} 	// отсутствие		
+	if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_LINK))	
+		ETH_LINK_GPIO->SETTX |= 1 << PIN(ETH_LINK_LED);   // наличие
+	else											
+		ETH_LINK_GPIO->CLRTX |= 1 << PIN(ETH_LINK_LED);   // отсутствие		
 	
 	// скорость 100 / 10 мбит
-    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_SPEED)){ETH_SPEED_GPIO->SETTX |= 1 << PIN(ETH_SPEED_LED);} //100 mbit			
-	else											{ETH_SPEED_GPIO->CLRTX |= 1 << PIN(ETH_SPEED_LED);} //10 mbit
+    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_SPEED))
+		ETH_SPEED_GPIO->SETTX |= 1 << PIN(ETH_SPEED_LED); //100 mbit			
+	else											
+		ETH_SPEED_GPIO->CLRTX |= 1 << PIN(ETH_SPEED_LED); //10 mbit
 	
 	// режим
-    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_HD))   {ETH_HD_GPIO->SETTX |= 1 << PIN(ETH_HD_LED);} 		// дуплекс			
-	else											{ETH_HD_GPIO->CLRTX |= 1 << PIN(ETH_HD_LED);} 		// полудуплекс
+    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_HD))   
+		ETH_HD_GPIO->SETTX |= 1 << PIN(ETH_HD_LED); 	  // дуплекс			
+	else											
+		ETH_HD_GPIO->CLRTX |= 1 << PIN(ETH_HD_LED); 	  // полудуплекс
 
 }
 
@@ -228,41 +234,47 @@ void eth_get_MAC_addr (uint8_t *value)
 
 void eth_debug (eth_t *u, struct _stream_t *stream)
 {
-	uint16_t basic_ctrl,basic_stat,id_phy1,id_phy2,auto_adj,opponent,
-			 ext_adj,ext_man,irq_flg,ext_state;
-
-	basic_ctrl = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 0);
-	basic_stat = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 1);
-	id_phy1 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 2);
-	id_phy2 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 3);
-    auto_adj = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 4);
-    opponent = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 5);
-    ext_adj = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 6);
-    ext_man = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 18);
-	irq_flg = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 29);
-	ext_state = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 31);
+	mutex_lock(&u->netif.lock);
+	uint16_t basic_ctrl = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 0);
+	uint16_t basic_stat = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 1);
+	uint16_t id_phy1 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 2);
+	uint16_t id_phy2 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 3);
+    uint16_t auto_adj = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 4);
+    uint16_t opponent = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 5);
+    uint16_t ext_adj = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 6);
+    uint16_t ext_man = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 18);
+	uint16_t irq_flg = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 29);
+	uint16_t ext_state = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 31);
+	uint16_t g_cfg_hi = ARM_ETH->G_CFG_HI;
+	uint16_t g_cfg_low= ARM_ETH->G_CFG_LOW;
+	uint16_t x_cfg = ARM_ETH->X_CFG;
+	uint16_t r_cfg = ARM_ETH->R_CFG;
+	uint16_t imr = ARM_ETH->IMR;
+	uint16_t ifr = ARM_ETH->IFR;
+	uint16_t stat= ARM_ETH->STAT;
+	uint16_t phy_ctrl = ARM_ETH->PHY_CTRL;
+	uint16_t phy_stat = ARM_ETH->PHY_STAT;
 	mutex_unlock (&u->netif.lock);
 
-	printf (stream, "G_CFG_HI = %b\n", ARM_ETH->G_CFG_HI);
-	printf (stream, "G_CFG_LOW = %b\n", ARM_ETH->G_CFG_LOW);
-	printf (stream, "X_CFG = %b\n", ARM_ETH->X_CFG);
-	printf (stream, "R_CFG = %b\n", ARM_ETH->R_CFG);
-	printf (stream, "R_CFG = %b\n", ARM_ETH->R_CFG);
-	printf (stream, "IMR = %b\n", ARM_ETH->IMR);
-	printf (stream, "IFR = %b\n", ARM_ETH->IFR);
-	printf (stream, "STAT = %b\n", ARM_ETH->STAT);
-	printf (stream, "PHY_CTRL = %b\n", ARM_ETH->PHY_CTRL);
-	printf (stream, "PHY_STAT = %b\n", ARM_ETH->PHY_STAT);
-	printf (stream, "PHY_BASIC_CTRL = %b\n", basic_ctrl);
-	printf (stream, "PHY_BASIC_STAT = %b\n", basic_stat);
-	printf (stream, "PHY_ID_1 = %b\n", id_phy1);
-	printf (stream, "PHY_ID_2 = %b\n", id_phy2);
-	printf (stream, "PHY_AUTO_ADJ = %b\n", auto_adj);
-	printf (stream, "PHY_OPPO_ADJ = %b\n", opponent);
-	printf (stream, "PHY_EXT_ADJ = %b\n", ext_adj);
-	printf (stream, "PHY_EXT_MODE = %b\n", ext_man);
-	printf (stream, "PHY_IRQ_FLAGS = %b\n", irq_flg);
-	printf (stream, "PHY_EXT_STAT = %b\n", ext_state);
+	printf (stream, "G_CFG_HI = 0x%04X\n", g_cfg_hi);
+	printf (stream, "G_CFG_LOW= 0x%04X\n", g_cfg_low);
+	printf (stream, "X_CFG = 0x%04X\n", x_cfg);
+	printf (stream, "R_CFG = 0x%04X\n", r_cfg);
+	printf (stream, "IMR = 0x%04X\n", imr);
+	printf (stream, "IFR = 0x%04X\n", ifr);
+	printf (stream, "STAT = 0x%04X\n", stat);
+	printf (stream, "PHY_CTRL = 0x%04X\n", phy_ctrl);
+	printf (stream, "PHY_STAT = 0x%04X\n", phy_stat);
+	printf (stream, "PHY_BASIC_CTRL = 0x%04X\n", basic_ctrl);
+	printf (stream, "PHY_BASIC_STAT = 0x%04X\n", basic_stat);
+	printf (stream, "PHY_ID_1 = 0x%04X\n", id_phy1);
+	printf (stream, "PHY_ID_2 = 0x%04X\n", id_phy2);
+	printf (stream, "PHY_AUTO_ADJ = 0x%04X\n", auto_adj);
+	printf (stream, "PHY_OPPO_ADJ = 0x%04X\n", opponent);
+	printf (stream, "PHY_EXT_ADJ  = 0x%04X\n", ext_adj);
+	printf (stream, "PHY_EXT_MODE = 0x%04X\n", ext_man);
+	printf (stream, "PHY_IRQ_FLAGS= 0x%04X\n", irq_flg);
+	printf (stream, "PHY_EXT_STAT = 0x%04X\n", ext_state);
 }
 
 void eth_restart_autonegotiation(eth_t *u)

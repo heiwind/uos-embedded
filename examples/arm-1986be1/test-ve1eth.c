@@ -17,8 +17,6 @@
 #include <net/arp.h>
 #include <buf/buf.h>
 
-volatile uint32_t frm_size=0;
-
 task_t *console_task, *test_task;
 extern task_t *eth_task;
 mem_pool_t pool;
@@ -85,7 +83,6 @@ void tcp_task (void *data)
 			if((sz < 0) || tcp_disconnect)
 				break;
 			
-			frm_size = sz;
 /*				TCP Duplicate Acknowledgement
 	When a sender sends a segment, information is also sent about the sequence number used. 
 	The receiver sends an acknowledgement(ACK) with the ACK flag set. This tells the sender 
@@ -145,9 +142,9 @@ void console (void *unused)
 		old_count = count;
 		start = end;
 		
-		//debug_printf("rcv rate: %llu (bytes/sec), errors: %u\n",  (bytes * 1000 / elapsed), errors);
-		debug_printf(" %3d: pool %d - tcp_task_stack %d - eth_task_stack %d - speed_in %d B/s - speed_out %d B/s - STATUS %08X    \r", st_con++, mem_available (&pool),
-					 task_stack_avail(test_task),task_stack_avail(eth_task), eth->netif.in_bytes, eth->netif.out_bytes, ARM_ETH->STAT);			 		
+		debug_printf("rcv rate: %llu (bytes/sec), errors: %u\n",  (bytes * 1000 / elapsed), errors);
+		//debug_printf(" %3d: pool %d - tcp_task_stack %d - eth_task_stack %d - speed_in %d B/s - speed_out %d B/s - STATUS %08X    \r", st_con++, mem_available (&pool),
+		//			 task_stack_avail(test_task),task_stack_avail(eth_task), eth->netif.in_bytes, eth->netif.out_bytes, ARM_ETH->STAT);			 		
 		eth->netif.in_bytes = eth->netif.out_bytes = 0;
 		
 		//task_set_priority (console_task, 120);
@@ -183,8 +180,7 @@ void uos_init(void)
 	mem_init(&pool, (unsigned) __hi_data_end, (unsigned) _hstack );
 #else
 	// Динамическая память в SRAM
-	extern unsigned __bss_end[];
-	extern unsigned _estack[];
+	extern unsigned _estack[], __bss_end[];
 	mem_init(&pool, (unsigned) __bss_end, (unsigned) _estack - 256);
 #endif
 
@@ -207,7 +203,7 @@ void uos_init(void)
 	uint8_t my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	uint8_t my_ip[] = { 11, 11, 11, 10 };
+	uint8_t my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
  
  	test_task = task_create(tcp_task, 0, "tcp_srv", 20, stack_tcp, sizeof(stack_tcp));	
@@ -270,7 +266,6 @@ void tcp_task (void *data)
 				debug_printf ("Disconnected\n");
 				break;
 			}
-			frm_size = sz;
 			
 			if(count % 1000000 == 0)
 		        mdelay (1);
@@ -304,8 +299,8 @@ void console (void *unused)
 		bytes = (count - old_count) << 2;
 		old_count = count;
 		start = end;
-		//debug_printf ("snd rate: %d (bytes/sec) counter %d\n", bytes * 1000 / elapsed);	 
-		debug_printf (" %3d: speed_in %d B/s - speed_out %d B/s - STATUS %08X   \r",st_con++,eth->netif.in_bytes,eth->netif.out_bytes, ARM_ETH->STAT);
+		debug_printf ("snd rate: %d (bytes/sec) counter %d\n", bytes * 1000 / elapsed);	 
+		//debug_printf (" %3d: speed_in %d B/s - speed_out %d B/s - STATUS %08X   \r",st_con++,eth->netif.in_bytes,eth->netif.out_bytes, ARM_ETH->STAT);
 		eth->netif.in_bytes = eth->netif.out_bytes = 0;
 		
 		if(peekchar(&debug) >= 0) { 
@@ -353,7 +348,7 @@ void uos_init (void)
 	unsigned char my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	unsigned char my_ip[] = { 11, 11, 11, 10 };
+	uint8_t my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
 	
 	task_create(tcp_task, 0, "tcp", 20, stack_tcp, sizeof(stack_tcp));	
@@ -463,7 +458,7 @@ void uos_init (void)
 	unsigned char my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	unsigned char my_ip[] = { 11, 11, 11, 10 };
+	uint8_t my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
 	
 	task_create (udp_task, 0, "udp", 65, stack_udp, sizeof (stack_udp));		
@@ -509,13 +504,13 @@ void udp_task (void *data)
 	debug_getchar ();
 	
 	udp_socket (&sock, &ip, UDP_PORT);
-	frm_size = sizeof(buf);
+
 	for (;;) {		
 		p = buf_alloc (&pool, BUF_SIZE * 4, 42);
 
 		for (i = 0; i < BUF_SIZE; ++i) 
 			buf[i] = count++;
-		memcpy (p->payload, buf, frm_size);
+		memcpy (p->payload, buf, sizeof(buf));
 
 		udp_sendto (&sock, p, server_ip, UDP_PORT);
 		
@@ -560,7 +555,7 @@ void uos_init (void)
 	unsigned char my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	unsigned char my_ip[] = { 11, 11, 11, 10 };
+	uint8_t my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
 	
 	task_create (udp_task, 0, "udp", 65, stack_udp, sizeof (stack_udp));

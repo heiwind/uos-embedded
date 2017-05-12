@@ -51,6 +51,10 @@ extern "C" {
 #define ARM_GFEN_MASK			(1 << (n))
 #define ARM_PD_MASK				((1 << (n)) | (1 << (n)*2))
 
+// Размер стека задачи-обработчика
+#ifndef ETH_STACKSZ
+#define ETH_STACKSZ      1500
+#endif
 
 // наличие данных в буфере
 #define R_Buff_Has_Eth_Frame()	(ARM_ETH->R_HEAD != ARM_ETH->R_TAIL)
