@@ -1,5 +1,5 @@
-
-
+// Для включения старого драйвера (Вакуленко) добавить  
+// ARM_1986BE1_OLD_ETH в target.cfg
 #define TCP_SERVER
 //#define TCP_CLIENT
 //#define UDP_SERVER
@@ -9,7 +9,11 @@
 #include <kernel/uos.h>
 #include <kernel/internal.h>
 #include <timer/timer.h>
-#include <milandr/ve1eth.h>
+#if (ARM_1986BE1_OLD_ETH && defined(TCP_SERVER))
+#	include <milandr/eth.h>
+#else
+#	include <milandr/ve1eth.h>
+#endif
 #include <stream/stream.h>
 #include <mem/mem.h>
 #include <net/route.h>
@@ -39,7 +43,9 @@ unsigned errors = 0;
 
 ARRAY (stack_con, 1000); 
 ARRAY (stack_tcp, 1200); 
-ARRAY (stack_drv, 2000); 
+#if !(ARM_1986BE1_OLD_ETH)
+ARRAY (stack_drv, 1500);
+#endif 
 ARRAY (group, sizeof(mutex_group_t) + 4 * sizeof(mutex_slot_t));
 ARRAY (arp_data, sizeof(arp_t) + 10 * sizeof(arp_entry_t));
 
@@ -56,9 +62,9 @@ void tcp_task (void *data)
 	int sz;
 	uint16_t i;
 	uint32_t *pMSG, cycle __attribute__((unused));
-	uint16_t blink=0;
+	uint16_t blink 		  __attribute__((unused));
 	
-	cycle = 0;
+	cycle = blink = 0;
 	pMSG = &msg[0];
 	lsock = tcp_listen (&ip, 0, PORT_IP);
 	
@@ -96,11 +102,12 @@ void tcp_task (void *data)
 	to the dropped/missing TCP segments. Once, 2 DUP ACKS(Dupilcate Acknowledgements), TCP performs 
 	a retransmission of that segment without waiting for the expiry of the retransmission timer. 
 	This is known as Fast Retransmit.	*/		
+
 			if(cycle % 5 == 0)
 				tcp_ack_now (user_socket); // Immediate ACK		
 			cycle++;	
-			sz >>= 2;
 
+			sz >>= 2;
 			for(i = 0; i < sz; ++i)  {
 				if (pMSG[i] != count) {
 					debug_printf("\nbad counter: %d, expected: %d\n", pMSG[i], count);
@@ -109,10 +116,12 @@ void tcp_task (void *data)
 					continue;
 				}
 				count++; 
-			}			
+			}
+			#if !(ARM_1986BE1_OLD_ETH)
 			blink++;
 			if(blink % 500 == 0)  
 				eth_led ();				
+			#endif
 		}	
 		tcp_close (user_socket);
 		mem_free (user_socket);
@@ -160,7 +169,11 @@ void console (void *unused)
 				task_print (&debug, 0);
 				task_print (&debug, (task_t*) stack_con);
 				task_print (&debug, (task_t*) stack_tcp);
+				#if (ARM_1986BE1_OLD_ETH)
+				task_print (&debug, (task_t*) eth->stack);
+				#else
 				task_print (&debug, (task_t*) stack_drv);
+				#endif
 				task_print (&debug, (task_t*) ip.stack);
 				printf (&debug, "mem(pool) %d\n", mem_available (&pool));
 				putchar (&debug, '\n');
@@ -180,12 +193,12 @@ void uos_init(void)
 	mem_init(&pool, (unsigned) __hi_data_end, (unsigned) _hstack );
 #else
 	// Динамическая память в SRAM
-	extern unsigned _estack[], __bss_end[];
+	extern unsigned __bss_end[], _estack[];
 	mem_init(&pool, (unsigned) __bss_end, (unsigned) _estack - 256);
 #endif
 
 	// системный таймер
-	timer_init (&timer, KHZ, 2);
+	timer_init (&timer, KHZ, 50);
 
 	// Create a group of two locks: timer and eth. 
 	mutex_group_t *g = mutex_group_init (group, sizeof(group));
@@ -195,17 +208,22 @@ void uos_init(void)
 	arp = arp_init(arp_data, sizeof(arp_data), &ip);
 	ip_init(&ip, &pool, 70, &timer, arp, g);
 		
+	uint8_t my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
+#if (ARM_1986BE1_OLD_ETH)
+	eth_init (eth, "eth0", 80, &pool, arp, my_macaddr);
+	debug_printf ("eth_driver: old driver\n");
+#else
 	// Инициализация обработчика прерываний 
 	create_eth_interrupt_task(eth, 100, stack_drv, sizeof(stack_drv)); 
-    debug_printf("TCP server, IRQ mode  \n");
- 
 	// Create interface eth0	 
-	uint8_t my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
-	
+	debug_printf ("eth_driver: ve1eth\n");
+#endif	
+   	debug_printf("TCP server, IRQ mode  \n");
+
 	uint8_t my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
- 
+
  	test_task = task_create(tcp_task, 0, "tcp_srv", 20, stack_tcp, sizeof(stack_tcp));	
     console_task = task_create(console, 0, "con", 25, stack_con, sizeof(stack_con)); 
    
@@ -234,7 +252,7 @@ task_t *console_task;
 #define PORT_IP 	0xBBBB
 #define BUF_SIZE	365
 int buf[BUF_SIZE];
-unsigned char server_ip[] = { 11, 11, 11, 9 };
+unsigned char server_ip[] = { 192, 168, 30, 6 };
 uint8_t tcp_disconnect=0;
 
 void tcp_task (void *data)
@@ -299,8 +317,8 @@ void console (void *unused)
 		bytes = (count - old_count) << 2;
 		old_count = count;
 		start = end;
-		debug_printf ("snd rate: %d (bytes/sec) counter %d\n", bytes * 1000 / elapsed);	 
-		//debug_printf (" %3d: speed_in %d B/s - speed_out %d B/s - STATUS %08X   \r",st_con++,eth->netif.in_bytes,eth->netif.out_bytes, ARM_ETH->STAT);
+		//debug_printf ("snd rate: %d (bytes/sec) counter %d\n", bytes * 1000 / elapsed);	 
+		debug_printf (" %3d: speed_in %d B/s - speed_out %d B/s - STATUS %08X   \r",st_con++,eth->netif.in_bytes,eth->netif.out_bytes, ARM_ETH->STAT);
 		eth->netif.in_bytes = eth->netif.out_bytes = 0;
 		
 		if(peekchar(&debug) >= 0) { 
@@ -348,7 +366,7 @@ void uos_init (void)
 	unsigned char my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	uint8_t my_ip[] = { 192, 168, 30, 5 };
+	unsigned char my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
 	
 	task_create(tcp_task, 0, "tcp", 20, stack_tcp, sizeof(stack_tcp));	
@@ -458,7 +476,7 @@ void uos_init (void)
 	unsigned char my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	uint8_t my_ip[] = { 192, 168, 30, 5 };
+	unsigned char my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
 	
 	task_create (udp_task, 0, "udp", 65, stack_udp, sizeof (stack_udp));		
@@ -482,7 +500,7 @@ udp_socket_t sock;
 #define UDP_PORT 		0xBBBB
 #define BUF_SIZE	    365
 uint32_t buf [BUF_SIZE];
-unsigned char server_ip[] = { 11, 11, 11, 9 };
+unsigned char server_ip[] = { 192, 168, 30, 6 };
 
 void udp_task (void *data)
 {
@@ -504,7 +522,6 @@ void udp_task (void *data)
 	debug_getchar ();
 	
 	udp_socket (&sock, &ip, UDP_PORT);
-
 	for (;;) {		
 		p = buf_alloc (&pool, BUF_SIZE * 4, 42);
 
@@ -555,7 +572,7 @@ void uos_init (void)
 	unsigned char my_macaddr[] = {0x01,0xBC,0x3D,0x17,0xA0,0x11};
 	eth_init(eth, "eth0", 80, &pool, arp, my_macaddr, ARM_ETH_PHY_FULL_AUTO);
 	
-	uint8_t my_ip[] = { 192, 168, 30, 5 };
+	unsigned char my_ip[] = { 192, 168, 30, 5 };
 	route_add_netif(&ip, &route, my_ip, 24, &eth->netif);
 	
 	task_create (udp_task, 0, "udp", 65, stack_udp, sizeof (stack_udp));
