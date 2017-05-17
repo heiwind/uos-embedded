@@ -147,8 +147,15 @@ void create_eth_interrupt_task (eth_t *u, int prio, void *stack, int stacksz);
 // Инициализация драйвера Ethernet
 // 
 // вызывается после create_eth_interrupt_task() 
-//  
-// 
+// возможные значения phy_mode:
+// ARM_ETH_PHY_10BASET_HD_NOAUTO
+// ARM_ETH_PHY_10BASET_FD_NOAUTO
+// ARM_ETH_PHY_100BASET_HD_NOAUTO
+// ARM_ETH_PHY_100BASET_FD_NOAUTO
+// ARM_ETH_PHY_100BASET_HD_AUTO
+// ARM_ETH_PHY_REPEATER
+// ARM_ETH_PHY_LOW_POWER
+// ARM_ETH_PHY_FULL_AUTO
 void eth_init (eth_t *u, const char *name, int prio, struct _mem_pool_t *pool,
 			   struct _arp_t *arp, const uint8_t *macaddr, uint8_t phy_mode);
 
