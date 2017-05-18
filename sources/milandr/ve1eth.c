@@ -464,7 +464,7 @@ void eth_phy_init (uint8_t addr, uint8_t mode)
 	while((ARM_ETH->PHY_STAT & ARM_ETH_PHY_READY) == 0);	//ждем пока модуль в состоянии сброса
 }
 
-void eth_mac_init (void)
+void eth_mac_init (uint8_t PHYMode)
 {	
 	// сброс приемника и передатчика RRST=1, XRST=1 автоматическое изменение указателей запрещено
 	ARM_ETH->IMR = 0;
@@ -475,10 +475,11 @@ void eth_mac_init (void)
 	//ARM_ETH->G_CFG_HI |=  ARM_ETH_DBG_XF_EN | ARM_ETH_DBG_RF_EN;  // разрешить автоматическую установку указателей приёмника и передатчика - lля FIFO
 	
 	ARM_ETH->G_CFG_LOW = ARM_ETH_BUFF_MODE(ARM_ETH_BUFF_LINEAL) | 	// буфферы в линейном режиме	
-	/*ARM_ETH_PAUSE_EN|*/											// режим автоматической обработки пакета PAUSE														
-	ARM_ETH_DTRM_EN |												// режим определенного времени доставки
+	/*ARM_ETH_PAUSE_EN|*/											// режим автоматической обработки пакета PAUSE																										
 	ARM_ETH_COLWND(128);											// размер окна коллизий (в битовых интервалах)
 																	// сброс флагов IRF производится записью в IRF	
+	if(PHYMode != ARM_ETH_PHY_100BASET_HD_AUTO)
+		ARM_ETH->G_CFG_LOW |= ARM_ETH_DTRM_EN;						// режим определенного времени доставки
 	
 	ARM_ETH->DELIMITER = ARM_ETH_BUF_SIZE_R; // регистр границы буферов приемника и передатчика (первый байт буффера передатчика)
 	ARM_ETH->R_HEAD = 0;					 // указывает на первое непустое слово в буфере приемника
@@ -491,14 +492,13 @@ void eth_mac_init (void)
 	
 	// Настройки формирования очереди пакетов (влияют при включенном ARM_ETH_DTRM_EN)
 	// межпакетный интервал для полнодуплексного режима
-	ARM_ETH->IPG = 16; //0x0060;
+	ARM_ETH->IPG = 96;  // (для 100 Мбит - 16);
 	// предделитель BAG и JitterWnd
-	ARM_ETH->PSC = 10; //0x0032;	  
-	// период следован ия пакетов
-	ARM_ETH->BAG = 50; //0x0064; 
+	ARM_ETH->PSC = 50;  // (для 100 Мбит - 10);;	  
+	// период следования пакетов
+	ARM_ETH->BAG = 100; // (для 100 Мбит - 50);; 
 	// джиттер при передачи пакетов
-	ARM_ETH->JITTER_WND = 0x0004;
-
+	ARM_ETH->JITTER_WND = 4;
 
 	// управление приемником 
 	ARM_ETH->R_CFG =
@@ -620,7 +620,7 @@ void eth_controller_init(const uint8_t *MACAddr, uint8_t PHYMode)
 	eth_port_init();
 	eth_clk_init();
 	eth_phy_init(ARM_ETH_PHY_ADDRESS, PHYMode);	//PHY address 0x1C
-	eth_mac_init();	
+	eth_mac_init(PHYMode);	
 	memcpy((void*)ARM_ETH->MAC_ADDR, MACAddr, 6);
  #ifdef ETH_USE_DMA
 	eth_dma_init();
