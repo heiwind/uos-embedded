@@ -475,7 +475,7 @@ void eth_mac_init (void)
 	//ARM_ETH->G_CFG_HI |=  ARM_ETH_DBG_XF_EN | ARM_ETH_DBG_RF_EN;  // разрешить автоматическую установку указателей приёмника и передатчика - lля FIFO
 	
 	ARM_ETH->G_CFG_LOW = ARM_ETH_BUFF_MODE(ARM_ETH_BUFF_LINEAL) | 	// буфферы в линейном режиме	
-	/*ARM_ETH_PAUSE_EN  |*/											// режим автоматической обработки пакета PAUSE														
+	/*ARM_ETH_PAUSE_EN|*/											// режим автоматической обработки пакета PAUSE														
 	ARM_ETH_DTRM_EN |												// режим определенного времени доставки
 	ARM_ETH_COLWND(0x80);											// размер окна коллизий (в битовых интервалах)
 																	// сброс флагов IRF производится записью в IRF	
@@ -489,6 +489,7 @@ void eth_mac_init (void)
 	ARM_ETH->HASH[4] = 0; 	 ARM_ETH->HASH[5] = 0;
 	ARM_ETH->HASH[6] = 0x80; ARM_ETH->HASH[7] = 0;
 	
+	// Настройки формирования очереди пакетов (влияют при включенном ARM_ETH_DTRM_EN)
 	// межпакетный интервал для полнодуплексного режима
 	ARM_ETH->IPG = 0x0060;
 	// предделитель BAG и JitterWnd
@@ -497,6 +498,7 @@ void eth_mac_init (void)
 	ARM_ETH->BAG = 0x0064; 
 	// джиттер при передачи пакетов
 	ARM_ETH->JITTER_WND = 0x0004;
+
 
 	// управление приемником 
 	ARM_ETH->R_CFG =
