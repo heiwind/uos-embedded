@@ -160,6 +160,10 @@ void eth_init (eth_t *u, const char *name, int prio, struct _mem_pool_t *pool,
 			   struct _arp_t *arp, const uint8_t *macaddr, uint8_t phy_mode);
 
 //
+// Инициализация выводов под светодиоды Ethernet (указаны в target.cfg)
+void eth_led_init(void);
+
+//
 // Вывод отладочной информации по драйверу Ethernet
 //
 //  u       указатель на структуру, описывающую интерфейс

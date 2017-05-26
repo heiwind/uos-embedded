@@ -41,10 +41,10 @@ unsigned errors = 0;
 #ifdef TCP_SERVER
 #include <net/tcp.h>
 
-ARRAY (stack_con, 1000); 
-ARRAY (stack_tcp, 1200); 
+ARRAY (stack_con, 800); 
+ARRAY (stack_tcp, 1000); 
 #if !(ARM_1986BE1_OLD_ETH)
-ARRAY (stack_drv, 1500);
+ARRAY (stack_drv, ETH_STACKSZ);
 #endif 
 ARRAY (group, sizeof(mutex_group_t) + 4 * sizeof(mutex_slot_t));
 ARRAY (arp_data, sizeof(arp_t) + 10 * sizeof(arp_entry_t));
@@ -227,6 +227,7 @@ void uos_init(void)
  	test_task = task_create(tcp_task, 0, "tcp_srv", 20, stack_tcp, sizeof(stack_tcp));	
     console_task = task_create(console, 0, "con", 25, stack_con, sizeof(stack_con)); 
    
+    eth_led_init ();
    //eth_restart_autonegotiation(eth);
 }
 

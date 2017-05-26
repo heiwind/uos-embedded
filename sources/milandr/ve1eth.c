@@ -433,8 +433,11 @@ void eth_clk_init (void)
 	ARM_BACKUP->BKP_REG_0E = temp | ARM_BKP_REG_0E_LOW | ARM_BKP_REG_0E_SELECT_RI;	// SelectRI = 0x7, LOW = 0x7; (for core frequency more then 80 MHz);																																
 																
 	//Настройка HSE2
-	ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON; //HSE2 - On, Oscillator mode;	
-	
+#ifdef ARM_EXT_GEN2
+    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_BYP | ARM_HS_CONTROL_HSE2_ON; // Generator mode
+#else
+	ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON; // Oscillator mode;
+#endif
 	while((ARM_RSTCLK->CLOCK_STATUS & ARM_CLOCK_STATUS_HSE_RDY2) == 0);
 	
 	temp = ARM_RSTCLK->ETH_CLOCK;	
@@ -459,6 +462,9 @@ void eth_phy_init (uint8_t addr, uint8_t mode)
 		debug_printf ("error parametr mode in eth_phy_init()\n");
 	}
 	
+    ARM_ETH->PHY_CTRL = 0;
+    volatile unsigned i;
+    for (i=0;i<KHZ*100/6;i++); 
 	ARM_ETH->PHY_CTRL = ARM_ETH_PHY_ADDR(addr) | ARM_ETH_PHY_MODE(mode) | ARM_ETH_PHY_NRST;
 	
 	while((ARM_ETH->PHY_STAT & ARM_ETH_PHY_READY) == 0);	//ждем пока модуль в состоянии сброса
@@ -583,16 +589,18 @@ void eth_pin_init (GPIO_t *gpio, unsigned port, unsigned pin, unsigned func, uns
 
 void eth_port_init (void)
 {
-//  EVAL_BOARD PB14 - жёлттый СИД на ethernet разъёме
-// 	EVAL_BOARD PB15 - зелёный СИД на ethernet разъёме
-			
-	eth_pin_init (ETH_CRS_GPIO, PORT(ETH_CRS_LED), PIN(ETH_CRS_LED), FUNC_PORT, 1);
-	eth_pin_init (ETH_LINK_GPIO, PORT(ETH_LINK_LED), PIN(ETH_LINK_LED), FUNC_PORT, 1);
-	eth_pin_init (ETH_SPEED_GPIO, PORT(ETH_SPEED_LED), PIN(ETH_SPEED_LED), FUNC_PORT, 1);
-	eth_pin_init (ETH_HD_GPIO, PORT(ETH_HD_LED), PIN(ETH_HD_LED), FUNC_PORT, 1);
-	
-	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOF;
-	//ARM_GPIOF->ANALOG &= ~(ARM_ANALOG_MASK(14) | ARM_ANALOG_MASK(15)); //Подключено к модулю тактирования ethernet по умолчанию
+    ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_GPIOF;
+    // ARM_GPIOF->ANALOG &= ~(ARM_ANALOG_MASK(14) | ARM_ANALOG_MASK(15)); //Подключено к модулю тактирования ethernet по умолчанию
+}
+
+void eth_led_init (void)
+{
+    //  EVAL_BOARD PB14 - жёлттый СИД на ethernet разъёме
+    // 	EVAL_BOARD PB15 - зелёный СИД на ethernet разъёме
+    eth_pin_init (ETH_CRS_GPIO, PORT(ETH_CRS_LED), PIN(ETH_CRS_LED), FUNC_PORT, 1);
+    eth_pin_init (ETH_LINK_GPIO, PORT(ETH_LINK_LED), PIN(ETH_LINK_LED), FUNC_PORT, 1);
+    eth_pin_init (ETH_SPEED_GPIO, PORT(ETH_SPEED_LED), PIN(ETH_SPEED_LED), FUNC_PORT, 1);
+    eth_pin_init (ETH_HD_GPIO, PORT(ETH_HD_LED), PIN(ETH_HD_LED), FUNC_PORT, 1);
 }
 
 #ifdef ETH_USE_DMA
