@@ -72,8 +72,8 @@ void udelay (unsigned usec)
 	}
     uint32_t arr = SYS_TIMER->TIM_ARR;
 
-    uint32_t prev_ticks;
     uint32_t ticks = __timer_ticks_uos;
+    uint32_t prev_ticks = ticks;
     uint32_t now;
 
     if (!ticks) {
@@ -86,7 +86,6 @@ void udelay (unsigned usec)
             now = SYS_TIMER->TIM_CNT;
         }
     } else {
-        prev_ticks = ticks;
         now = SYS_TIMER->TIM_CNT;
         ticks = __timer_ticks_uos;
         if (prev_ticks != ticks) {
@@ -125,10 +124,8 @@ void udelay (unsigned usec)
 #else
 
     uint32_t ctrl;
-    uint32_t prev_ticks;
     uint32_t ticks = __timer_ticks_uos;
-
-    prev_ticks = ticks;
+    uint32_t prev_ticks = ticks;
 
     if (!ticks) {
         ctrl = ARM_SYSTICK->CTRL;
@@ -152,7 +149,6 @@ void udelay (unsigned usec)
             now = ARM_SYSTICK->VAL & 0xFFFFFF;
         }
     } else {
-        prev_ticks = ticks;
         now = ARM_SYSTICK->VAL & 0xFFFFFF;
         ticks = __timer_ticks_uos;
         if (prev_ticks != ticks) {
