@@ -285,13 +285,13 @@ void eth_debug (eth_t *u, struct _stream_t *stream)
 void eth_restart_autonegotiation(eth_t *u)
 {
 	uint16_t tmp;
-    mutex_lock(&u->netif.lock);
+    //mutex_lock(&u->netif.lock);
     tmp = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL);
     eth_set_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL, tmp | (1<<9));
     while ((eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_EXT_CTRL) & EXT_CTRL_AUTODONE) == 0);
-    eth_get_speed(u, (uint8_t*)&tmp);
+    //eth_get_speed(u, (uint8_t*)&tmp);
     //eth_controller_init(macaddr, /*ARM_ETH_PHY_FULL_AUTO*/ARM_ETH_PHY_100BASET_HD_AUTO);
-    mutex_unlock(&u->netif.lock);
+    //mutex_unlock(&u->netif.lock);
 //  debug_printf("AUTONEG RST\n");
 }
 
