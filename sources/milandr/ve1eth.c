@@ -464,9 +464,9 @@ void eth_phy_init (uint8_t addr, uint8_t mode)
 	
     ARM_ETH->PHY_CTRL = 0;
     volatile unsigned i;
-    for (i=0;i<KHZ*100/6;i++); 
+    for (i=0;i<KHZ*100/6;i++);
 	ARM_ETH->PHY_CTRL = ARM_ETH_PHY_ADDR(addr) | ARM_ETH_PHY_MODE(mode) | ARM_ETH_PHY_NRST;
-	
+	for (i=0;i<KHZ*100/6;i++); // Ожидание 16 мс (по даташиту)
 	while((ARM_ETH->PHY_STAT & ARM_ETH_PHY_READY) == 0);	//ждем пока модуль в состоянии сброса
 }
 
@@ -484,9 +484,9 @@ void eth_mac_init (uint8_t PHYMode)
 	/*ARM_ETH_PAUSE_EN|*/											// режим автоматической обработки пакета PAUSE																										
 	ARM_ETH_COLWND(128);											// размер окна коллизий (в битовых интервалах)
 																	// сброс флагов IRF производится записью в IRF	
-	if(PHYMode != ARM_ETH_PHY_100BASET_HD_AUTO)
+#ifdef ETH_DTRM
 		ARM_ETH->G_CFG_LOW |= ARM_ETH_DTRM_EN;						// режим определенного времени доставки
-	
+#endif
 	ARM_ETH->DELIMITER = ARM_ETH_BUF_SIZE_R; // регистр границы буферов приемника и передатчика (первый байт буффера передатчика)
 	ARM_ETH->R_HEAD = 0;					 // указывает на первое непустое слово в буфере приемника
 	ARM_ETH->X_TAIL = ARM_ETH_BUF_SIZE_R; 	 // указывает на первое пустое слово в буффере передатчика, зависит от размера буффера приёмника
