@@ -57,7 +57,7 @@ void eth_interrupt_task(void *arg);
 void eth_nops(void);
 
 #ifndef ETH_CRS_LED
-#	define ETH_CRS_LED PB14
+#   define ETH_CRS_LED PB14
 #endif
 
 #if (PORT(ETH_CRS_LED)==PORT_A)
@@ -73,7 +73,7 @@ void eth_nops(void);
 #endif
 
 #ifndef ETH_LINK_LED
-#	define ETH_LINK_LED PB15
+#   define ETH_LINK_LED PB15
 #endif
 
 #if (PORT(ETH_LINK_LED)==PORT_A)
@@ -89,7 +89,7 @@ void eth_nops(void);
 #endif
 
 #ifndef ETH_SPEED_LED
-#	define ETH_SPEED_LED PD14
+#   define ETH_SPEED_LED PD14
 #endif
 
 #if (PORT(ETH_SPEED_LED)==PORT_A)
@@ -105,7 +105,7 @@ void eth_nops(void);
 #endif
 
 #ifndef ETH_HD_LED
-#	define ETH_HD_LED PD13
+#   define ETH_HD_LED PD13
 #endif
 
 #if (PORT(ETH_HD_LED)==PORT_A)
@@ -122,180 +122,187 @@ void eth_nops(void);
 
 bool_t buf_queue_count (buf_queue_t *q) 
 {
-	return q->count;
+    return q->count;
 }
 
 inline __attribute__((always_inline)) uint32_t buf_queue_size (buf_queue_t *q)
 {
-	buf_t *p;
-	uint32_t bq_len=0;
-	struct _buf_t **q_tail = q->tail;
-	struct _buf_t **q_queue = q->queue;
-	small_uint_t q_size = q->size;
-	small_uint_t q_count = q->count;
+    buf_t *p;
+    uint32_t bq_len=0;
+    struct _buf_t **q_tail = q->tail;
+    struct _buf_t **q_queue = q->queue;
+    small_uint_t q_size = q->size;
+    small_uint_t q_count = q->count;
 
-	while(q_count) {
-		assert (q_tail >= q_queue);
-		assert (q_tail < q_queue + q_size);
-		
-		if (q_count == 0) {
-			//debug_printf ("buf_queue_get: returned 0\n");
-			return 0;
-		}
-		assert (*q_tail != 0);
-		
-		// Get the first packet from queue. 
-		p = *q_tail;
-		bq_len += p->tot_len;
-		//debug_printf ("bq_len+=len %d\n",bq_len);
-		// Advance head pointer. 
-		if (--q_tail < q_queue)
-			q_tail += q_size;
-		--q_count;
-	}
-	/*debug_printf ("buf_queue_get: returned 0x%04x\n", p);*/
-	return 0;//bq_len;
+    while(q_count) {
+        assert (q_tail >= q_queue);
+        assert (q_tail < q_queue + q_size);
+
+        if (q_count == 0) {
+        //debug_printf ("buf_queue_get: returned 0\n");
+            return 0;
+        }
+        assert (*q_tail != 0);
+
+        // Get the first packet from queue. 
+        p = *q_tail;
+        bq_len += p->tot_len;
+        //debug_printf ("bq_len+=len %d\n",bq_len);
+        // Advance head pointer. 
+        if (--q_tail < q_queue)
+        q_tail += q_size;
+        --q_count;
+    }
+    /*debug_printf ("buf_queue_get: returned 0x%04x\n", p);*/
+    return 0;//bq_len;
 }
 
 // Индикация физического состояния линии, вызывается в задаче пользователя
 void eth_led(void)
-{	
-	/* Возможные варианты индикации 
-	 * ARM_ETH_PHY_LED_SPEED  10 или 100 Мбит
-	 * ARM_ETH_PHY_LED_LINK
-	 * ARM_ETH_PHY_LED_CRS    Наличие несущей
-	 * ARM_ETH_PHY_LED_HD     Дуплекс/полудуплекс
-	 */ 
-	
-	if(ETH_CRS_GPIO->DATA & (1 <<  PIN(ETH_CRS_LED))) {
-		ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED);
-	} else {
-		if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_CRS))	
-			ETH_CRS_GPIO->SETTX |= 1 << PIN(ETH_CRS_LED); // наличие		
-		else                                            
-			ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED); // отсутствие
-	}
+{
+    /* Возможные варианты индикации 
+    * ARM_ETH_PHY_LED_SPEED  10 или 100 Мбит
+    * ARM_ETH_PHY_LED_LINK
+    * ARM_ETH_PHY_LED_CRS    Наличие несущей
+    * ARM_ETH_PHY_LED_HD     Дуплекс/полудуплекс
+    */ 
 
-	// индикация наличия Link сигнала
-	if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_LINK))	
-		ETH_LINK_GPIO->SETTX |= 1 << PIN(ETH_LINK_LED);   // наличие
-	else											
-		ETH_LINK_GPIO->CLRTX |= 1 << PIN(ETH_LINK_LED);   // отсутствие		
-	
-	// скорость 100 / 10 мбит
+    if(ETH_CRS_GPIO->DATA & (1 <<  PIN(ETH_CRS_LED))) {
+        ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED);
+    } else {
+        if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_CRS))
+            ETH_CRS_GPIO->SETTX |= 1 << PIN(ETH_CRS_LED); // наличие
+        else                                            
+            ETH_CRS_GPIO->CLRTX |= 1 << PIN(ETH_CRS_LED); // отсутствие
+    }
+
+    // индикация наличия Link сигнала
+    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_LINK))	
+        ETH_LINK_GPIO->SETTX |= 1 << PIN(ETH_LINK_LED);   // наличие
+    else
+        ETH_LINK_GPIO->CLRTX |= 1 << PIN(ETH_LINK_LED);   // отсутствие
+
+    // скорость 100 / 10 мбит
     if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_SPEED))
-		ETH_SPEED_GPIO->SETTX |= 1 << PIN(ETH_SPEED_LED); // 100 mbit			
-	else											
-		ETH_SPEED_GPIO->CLRTX |= 1 << PIN(ETH_SPEED_LED); // 10 mbit
-	
-	// режим
+        ETH_SPEED_GPIO->SETTX |= 1 << PIN(ETH_SPEED_LED); // 100 mbit
+    else
+        ETH_SPEED_GPIO->CLRTX |= 1 << PIN(ETH_SPEED_LED); // 10 mbit
+
+    // режим
     if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_HD))   
-		ETH_HD_GPIO->SETTX |= 1 << PIN(ETH_HD_LED); 	  // дуплекс			
-	else											
-		ETH_HD_GPIO->CLRTX |= 1 << PIN(ETH_HD_LED); 	  // полудуплекс
+        ETH_HD_GPIO->SETTX |= 1 << PIN(ETH_HD_LED);       // дуплекс
+    else
+        ETH_HD_GPIO->CLRTX |= 1 << PIN(ETH_HD_LED);       // полудуплекс
 }
 
 void eth_set_HASH_table(eth_t *u, uint8_t *value)
 {
  #ifndef ETH_POLL_MODE 
-	mutex_lock (&eth_interrupt_mutex);
+    mutex_lock (&eth_interrupt_mutex);
  #endif
-	mutex_lock (&u->netif.lock);
-	memcpy ((uint8_t*)ARM_ETH->HASH, value, 8);
-	mutex_unlock (&u->netif.lock);
+    mutex_lock (&u->netif.lock);
+    memcpy ((uint8_t*)ARM_ETH->HASH, value, 8);
+    mutex_unlock (&u->netif.lock);
  #ifndef ETH_POLL_MODE
-	mutex_unlock (&eth_interrupt_mutex);
+    mutex_unlock (&eth_interrupt_mutex);
  #endif
 }
 
 void eth_get_HASH_table (uint8_t *value)
 {
-	memcpy (value, (uint8_t*)ARM_ETH->HASH, 8);
+    memcpy (value, (uint8_t*)ARM_ETH->HASH, 8);
 }
 
 void eth_set_MAC_addr (eth_t *u, uint8_t *value)
 {
  #ifndef ETH_POLL_MODE 
-	mutex_lock (&eth_interrupt_mutex);
+    mutex_lock (&eth_interrupt_mutex);
  #endif	
-	mutex_lock(&u->netif.lock);
-	memcpy((uint8_t*)ARM_ETH->MAC_ADDR, value, 6);
-	mutex_unlock(&u->netif.lock);
+    mutex_lock(&u->netif.lock);
+    memcpy((uint8_t*)ARM_ETH->MAC_ADDR, value, 6);
+    mutex_unlock(&u->netif.lock);
  #ifndef ETH_POLL_MODE
-	mutex_unlock (&eth_interrupt_mutex);
+    mutex_unlock (&eth_interrupt_mutex);
  #endif	
 }
 
 void eth_get_MAC_addr (uint8_t *value)
 {
-	memcpy(value, (uint8_t*)ARM_ETH->MAC_ADDR, 6);
+    memcpy(value, (uint8_t*)ARM_ETH->MAC_ADDR, 6);
 }
 
 void eth_debug (eth_t *u, struct _stream_t *stream)
 {
-	mutex_lock(&u->netif.lock);
-	uint16_t basic_ctrl = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 0);
-	uint16_t basic_stat = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 1);
-	uint16_t id_phy1 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 2);
-	uint16_t id_phy2 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 3);
+    mutex_lock(&u->netif.lock);
+    uint16_t basic_ctrl = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 0);
+    uint16_t basic_stat = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 1);
+    uint16_t id_phy1 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 2);
+    uint16_t id_phy2 = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 3);
     uint16_t auto_adj = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 4);
     uint16_t opponent = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 5);
     uint16_t ext_adj = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 6);
     uint16_t ext_man = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 18);
-	uint16_t irq_flg = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 29);
-	uint16_t ext_state = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 31);
-	uint16_t g_cfg_hi = ARM_ETH->G_CFG_HI;
-	uint16_t g_cfg_low= ARM_ETH->G_CFG_LOW;
-	uint16_t x_cfg = ARM_ETH->X_CFG;
-	uint16_t r_cfg = ARM_ETH->R_CFG;
-	uint16_t imr = ARM_ETH->IMR;
-	uint16_t ifr = ARM_ETH->IFR;
-	uint16_t stat= ARM_ETH->STAT;
-	uint16_t phy_ctrl = ARM_ETH->PHY_CTRL;
-	uint16_t phy_stat = ARM_ETH->PHY_STAT;
-	uint16_t rxbf_head = ARM_ETH->R_HEAD;
-	uint16_t rxbf_tail = ARM_ETH->R_TAIL;
-	uint16_t txbf_head = ARM_ETH->X_HEAD;
-	uint16_t txbf_tail = ARM_ETH->X_TAIL;
-	mutex_unlock (&u->netif.lock);
+    uint16_t irq_flg = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 29);
+    uint16_t irq_mask= eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 30);
+    uint16_t ext_state = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, 31);
+    uint16_t g_cfg_hi = ARM_ETH->G_CFG_HI;
+    uint16_t g_cfg_low= ARM_ETH->G_CFG_LOW;
+    uint16_t x_cfg = ARM_ETH->X_CFG;
+    uint16_t r_cfg = ARM_ETH->R_CFG;
+    uint16_t imr = ARM_ETH->IMR;
+    uint16_t ifr = ARM_ETH->IFR;
+    uint16_t stat= ARM_ETH->STAT;
+    uint16_t phy_ctrl = ARM_ETH->PHY_CTRL;
+    uint16_t phy_stat = ARM_ETH->PHY_STAT;
+    uint16_t rxbf_head = ARM_ETH->R_HEAD;
+    uint16_t rxbf_tail = ARM_ETH->R_TAIL;
+    uint16_t txbf_head = ARM_ETH->X_HEAD;
+    uint16_t txbf_tail = ARM_ETH->X_TAIL;
+    mutex_unlock (&u->netif.lock);
 
-	printf (stream, "G_CFG_HI = 0x%04X\n", g_cfg_hi);
-	printf (stream, "G_CFG_LOW= 0x%04X\n", g_cfg_low);
-	printf (stream, "X_CFG = 0x%04X\n", x_cfg);
-	printf (stream, "R_CFG = 0x%04X\n", r_cfg);
-	printf (stream, "IMR = 0x%04X\n", imr);
-	printf (stream, "IFR = 0x%04X\n", ifr);
-	printf (stream, "STAT = 0x%04X\n", stat);
-	printf(stream, "RXBF HEAD:TAIL = %04x:%04x\n", rxbf_head, rxbf_tail);
-	printf(stream, "TXBF HEAD:TAIL = %04x:%04x\n", txbf_head, txbf_tail);
-	printf (stream, "PHY_CTRL = 0x%04X\n", phy_ctrl);
-	printf (stream, "PHY_STAT = 0x%04X\n", phy_stat);
-	printf (stream, "PHY_BASIC_CTRL = 0x%04X\n", basic_ctrl);
-	printf (stream, "PHY_BASIC_STAT = 0x%04X\n", basic_stat);
-	printf (stream, "PHY_ID_1 = 0x%04X\n", id_phy1);
-	printf (stream, "PHY_ID_2 = 0x%04X\n", id_phy2);
-	printf (stream, "PHY_AUTO_ADJ = 0x%04X\n", auto_adj);
-	printf (stream, "PHY_OPPO_ADJ = 0x%04X\n", opponent);
-	printf (stream, "PHY_EXT_ADJ  = 0x%04X\n", ext_adj);
-	printf (stream, "PHY_EXT_MODE = 0x%04X\n", ext_man);
-	printf (stream, "PHY_IRQ_FLAGS= 0x%04X\n", irq_flg);
-	printf (stream, "PHY_EXT_STAT = 0x%04X\n", ext_state);
+    printf (stream, "G_CFG_HI = 0x%04X\n", g_cfg_hi);
+    printf (stream, "G_CFG_LOW= 0x%04X\n", g_cfg_low);
+    printf (stream, "X_CFG = 0x%04X\n", x_cfg);
+    printf (stream, "R_CFG = 0x%04X\n", r_cfg);
+    printf (stream, "IMR = 0x%04X\n", imr);
+    printf (stream, "IFR = 0x%04X\n", ifr);
+    printf (stream, "STAT = 0x%04X\n", stat);
+    printf(stream, "RXBF HEAD:TAIL = %04x:%04x\n", rxbf_head, rxbf_tail);
+    printf(stream, "TXBF HEAD:TAIL = %04x:%04x\n", txbf_head, txbf_tail);
+    printf (stream, "PHY_CTRL = 0x%04X\n", phy_ctrl);
+    printf (stream, "PHY_STAT = 0x%04X\n", phy_stat);
+    printf (stream, "PHY_BASIC_CTRL(0) = 0x%04X\n", basic_ctrl);
+    printf (stream, "PHY_BASIC_STAT(1) = 0x%04X\n", basic_stat);
+    printf (stream, "PHY_ID_1(2) = 0x%04X\n", id_phy1);
+    printf (stream, "PHY_ID_2(3) = 0x%04X\n", id_phy2);
+    printf (stream, "PHY_AUTO_ADJ(4) = 0x%04X\n", auto_adj);
+    printf (stream, "PHY_OPPO_ADJ(5) = 0x%04X\n", opponent);
+    printf (stream, "PHY_EXT_ADJ(6)  = 0x%04X\n", ext_adj);
+    printf (stream, "PHY_EXT_MODE(18) = 0x%04X\n", ext_man);
+    printf (stream, "PHY_IRQ_FLAGS(29)= 0x%04X\n", irq_flg);
+    printf (stream, "PHY_EXT_MASK(30) = 0x%04X\n", irq_mask);
+    printf (stream, "PHY_EXT_STAT(31) = 0x%04X\n", ext_state);
 }
 
-void eth_restart_autonegotiation(eth_t *u)
+void eth_waiting_autonegotiation (void)
 {
-	uint16_t tmp;
+   while ((eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_STAT) & (1<<5)) == 0); 
+}
+
+void eth_restart_autonegotiation (eth_t *u)
+{
+    uint16_t tmp;
     //mutex_lock(&u->netif.lock);
     tmp = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL);
     eth_set_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL, tmp | (1<<9));
-    while ((eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_EXT_CTRL) & EXT_CTRL_AUTODONE) == 0);
+    while ((eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_STAT) & (1<<5)) == 0);
     //eth_get_speed(u, (uint8_t*)&tmp);
     //eth_controller_init(macaddr, /*ARM_ETH_PHY_FULL_AUTO*/ARM_ETH_PHY_100BASET_HD_AUTO);
     //mutex_unlock(&u->netif.lock);
 //  debug_printf("AUTONEG RST\n");
 }
 
-uint16_t eth_get_carrier(eth_t *u)
+uint16_t eth_get_carrier (eth_t *u)
 {
     return (ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_CRS) == 0;
 }
@@ -337,53 +344,53 @@ uint32_t eth_get_speed(eth_t *u, uint8_t *duplex)
 
 void eth_set_loop(eth_t *u, int on)
 {
-	uint16_t control;
-	
+    uint16_t control;
+
     mutex_lock (&u->netif.lock);
-    
-	// Set PHY loop-back mode (hort circuit mode)
-	control = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL);				  
+
+    // Set PHY loop-back mode (hort circuit mode)
+    control = eth_get_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL);
     if(on) {
-		control |= EXT_CTRL_LPBK;
-	} else {
-		control &= ~EXT_CTRL_LPBK;
-	}
+        control |= EXT_CTRL_LPBK;
+    } else {
+        control &= ~EXT_CTRL_LPBK;
+    }
     eth_set_phyreg(ARM_ETH_PHY_ADDRESS, ARM_ETH_PHY_BASIC_CTRL, control);
     
     // Set MAC loop-back mode (hort circuit mode)
     // сброс приемника и передатчика RRST=1, XRST=1 
-	/*ARM_ETH->G_CFG_HI |= ARM_ETH_XRST | ARM_ETH_RRST;	
-	if(on)  {ARM_ETH->G_CFG_HI |= ARM_ETH_DLB;}
-	else    {ARM_ETH->G_CFG_HI &= ~ARM_ETH_DLB;}                             	
-	ARM_ETH->G_CFG_HI &= ~(ARM_ETH_XRST | ARM_ETH_RRST);	//RRST=0, XRST=0 штатный режим работы	
-	asm("nop");*/
+    /*ARM_ETH->G_CFG_HI |= ARM_ETH_XRST | ARM_ETH_RRST;
+    if(on)  {ARM_ETH->G_CFG_HI |= ARM_ETH_DLB;}
+    else    {ARM_ETH->G_CFG_HI &= ~ARM_ETH_DLB;}
+    ARM_ETH->G_CFG_HI &= ~(ARM_ETH_XRST | ARM_ETH_RRST);    //RRST=0, XRST=0 штатный режим работы
+    asm("nop");*/
     
     mutex_unlock (&u->netif.lock);
 }
 
 void eth_set_promisc (eth_t *u, uint8_t station, uint8_t group)
 {
-	uint16_t rx_frame_control;
+    uint16_t rx_frame_control;
     mutex_lock (&u->netif.lock);
     
     // сброс приемника и передатчика RRST=1, XRST=1 
-	ARM_ETH->G_CFG_HI |= ARM_ETH_XRST | ARM_ETH_RRST;
+    ARM_ETH->G_CFG_HI |= ARM_ETH_XRST | ARM_ETH_RRST;
     
     rx_frame_control = ARM_ETH->R_CFG;
     
     // очистка флагов разрешения приёма
     rx_frame_control &= ~(ARM_ETH_AC_EN | ARM_ETH_MCA_EN | ARM_ETH_UCA_EN | ARM_ETH_BCA_EN);
     if (station) {
-    	// Accept any unicast.
-		rx_frame_control |= ARM_ETH_UCA_EN |  // приём пакетов с MAC-адресом, указанным в регистреMAC_Address
-							ARM_ETH_BCA_EN;	  // Прием пакетов с широковещательным MAC-адресом.
+        // Accept any unicast.
+        rx_frame_control |= ARM_ETH_UCA_EN |  // приём пакетов с MAC-адресом, указанным в регистреMAC_Address
+                            ARM_ETH_BCA_EN;   // Прием пакетов с широковещательным MAC-адресом.
     } else if (group) {
         /* Accept any multicast. */       
         rx_frame_control |= ARM_ETH_MCA_EN | // Прием пакетов с групповым MAC-адресом с фильтрацией по HASH-таблице.
-							ARM_ETH_BCA_EN;	 // Прием пакетов с широковещательным MAC-адресом.
+                            ARM_ETH_BCA_EN;  // Прием пакетов с широковещательным MAC-адресом.
     }
     ARM_ETH->R_CFG = rx_frame_control;
-    ARM_ETH->G_CFG_HI &= ~(ARM_ETH_XRST | ARM_ETH_RRST);	//RRST=0, XRST=0 штатный режим работы
+    ARM_ETH->G_CFG_HI &= ~(ARM_ETH_XRST | ARM_ETH_RRST);    //RRST=0, XRST=0 штатный режим работы
     eth_nops();
     mutex_unlock (&u->netif.lock);
 }
@@ -405,171 +412,171 @@ void eth_poll(eth_t *u)
 
 void inline __attribute__((always_inline)) eth_nops(void)
 {  
-	asm volatile("nop");
-	asm volatile("nop");
-	asm volatile("nop");
-	asm volatile("nop");
-	asm volatile("nop");
+    asm volatile("nop");
+    asm volatile("nop");
+    asm volatile("nop");
+    asm volatile("nop");
+    asm volatile("nop");
 }
 
 void inline __attribute__((always_inline)) eth_err_0022_correction(void)
 {  
  //Ошибка 0022 шины AHB Ethernet контроллера, см errata
-	asm volatile("dsb");
-	asm volatile("nop");
-	asm volatile("nop");
-	asm volatile("nop");
-	asm volatile("nop");
+    asm volatile("dsb");
+    asm volatile("nop");
+    asm volatile("nop");
+    asm volatile("nop");
+    asm volatile("nop");
 }
 
 void eth_clk_init (void)
-{	
-	uint32_t temp;
-	
-	//Настройка стабилизатора 1.8 В на дополнительную нагруку (Частота ядра выше 80 МГц)
-	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_BKP;				//BKP Clock enable
-	temp = ARM_BACKUP->BKP_REG_0E;
-	temp &= 0xFFFFFFC0;	
-	ARM_BACKUP->BKP_REG_0E = temp | ARM_BKP_REG_0E_LOW | ARM_BKP_REG_0E_SELECT_RI;	// SelectRI = 0x7, LOW = 0x7; (for core frequency more then 80 MHz);																																
-																
-	//Настройка HSE2
+{   
+    uint32_t temp;
+    
+    //Настройка стабилизатора 1.8 В на дополнительную нагруку (Частота ядра выше 80 МГц)
+    ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_BKP;             //BKP Clock enable
+    temp = ARM_BACKUP->BKP_REG_0E;
+    temp &= 0xFFFFFFC0;	
+    ARM_BACKUP->BKP_REG_0E = temp | ARM_BKP_REG_0E_LOW | ARM_BKP_REG_0E_SELECT_RI;	// SelectRI = 0x7, LOW = 0x7; (for core frequency more then 80 MHz);
+
+    //Настройка HSE2
 #ifdef ARM_EXT_GEN2
     ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_BYP | ARM_HS_CONTROL_HSE2_ON; // Generator mode
 #else
-	ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON; // Oscillator mode;
+    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON; // Oscillator mode;
 #endif
-	while((ARM_RSTCLK->CLOCK_STATUS & ARM_CLOCK_STATUS_HSE_RDY2) == 0);
-	
-	temp = ARM_RSTCLK->ETH_CLOCK;	
-	temp &= ~(ARM_ETH_CLOCK_ETH_BRG(0xFF) | ARM_ETH_CLOCK_PHY_SEL(ARM_ETH_CLOCK_PHY_SEL_HSE2) | ARM_ETH_CLOCK_PHY_BRG(0xFF));
+    while((ARM_RSTCLK->CLOCK_STATUS & ARM_CLOCK_STATUS_HSE_RDY2) == 0);
 
-	//Соотв. источник тактирования HSE2, вкл тактирования физики, вкл тактирование MAC
-	temp |= ARM_ETH_CLOCK_ETH_BRG(0) | ARM_ETH_CLOCK_PHY_SEL(ARM_ETH_CLOCK_PHY_SEL_HSE2) | ARM_ETH_CLOCK_PHY_BRG(0) | ARM_ETH_CLOCK_PHY_EN | ARM_ETH_CLOCK_ETH_EN;
-	ARM_RSTCLK->ETH_CLOCK = temp;
-	eth_nops();
+    temp = ARM_RSTCLK->ETH_CLOCK;
+    temp &= ~(ARM_ETH_CLOCK_ETH_BRG(0xFF) | ARM_ETH_CLOCK_PHY_SEL(ARM_ETH_CLOCK_PHY_SEL_HSE2) | ARM_ETH_CLOCK_PHY_BRG(0xFF));
+
+    //Соотв. источник тактирования HSE2, вкл тактирования физики, вкл тактирование MAC
+    temp |= ARM_ETH_CLOCK_ETH_BRG(0) | ARM_ETH_CLOCK_PHY_SEL(ARM_ETH_CLOCK_PHY_SEL_HSE2) | ARM_ETH_CLOCK_PHY_BRG(0) | ARM_ETH_CLOCK_PHY_EN | ARM_ETH_CLOCK_ETH_EN;
+    ARM_RSTCLK->ETH_CLOCK = temp;
+    eth_nops();
 }
 
 // инициализация модуля PHY новыми значениями адреса и режима работы
 void eth_phy_init (uint8_t addr, uint8_t mode)
 {
-	// assertion
-	if(addr > 0x1F) {
-		addr = 0x1F;
-		debug_printf ("error parametr addr in eth_phy_init()\n");
-	}
-	if(mode > 0x07) {
-		mode = 0x07;
-		debug_printf ("error parametr mode in eth_phy_init()\n");
-	}
-	
+    // assertion
+    if(addr > 0x1F) {
+        addr = 0x1F;
+        debug_printf ("error parametr addr in eth_phy_init()\n");
+    }
+    if(mode > 0x07) {
+        mode = 0x07;
+        debug_printf ("error parametr mode in eth_phy_init()\n");
+    }
+
     ARM_ETH->PHY_CTRL = 0;
     volatile unsigned i;
     for (i=0;i<KHZ*100/6;i++);
-	ARM_ETH->PHY_CTRL = ARM_ETH_PHY_ADDR(addr) | ARM_ETH_PHY_MODE(mode) | ARM_ETH_PHY_NRST;
-	for (i=0;i<KHZ*100/6;i++); // Ожидание 16 мс (по даташиту)
-	while((ARM_ETH->PHY_STAT & ARM_ETH_PHY_READY) == 0);	//ждем пока модуль в состоянии сброса
+    ARM_ETH->PHY_CTRL = ARM_ETH_PHY_ADDR(addr) | ARM_ETH_PHY_MODE(mode) | ARM_ETH_PHY_NRST;
+    for (i=0;i<KHZ*100/6;i++); // Ожидание 16 мс (по даташиту)
+    while((ARM_ETH->PHY_STAT & ARM_ETH_PHY_READY) == 0);    //ждем пока модуль в состоянии сброса
 }
 
 void eth_mac_init (uint8_t PHYMode)
-{	
-	// сброс приемника и передатчика RRST=1, XRST=1 автоматическое изменение указателей запрещено
-	ARM_ETH->IMR = 0;
-	ARM_ETH->IFR = 0;
-	
-	ARM_ETH->G_CFG_HI = ARM_ETH_XRST | ARM_ETH_RRST; 				// Включение состояния сброса приёмника и передатчика
-	//memset((uint8_t*)ARM_ETH_BUF_BASE_R, 0, ARM_ETH_BUF_SIZE_R);
-	//ARM_ETH->G_CFG_HI |=  ARM_ETH_DBG_XF_EN | ARM_ETH_DBG_RF_EN;  // разрешить автоматическую установку указателей приёмника и передатчика - lля FIFO
-	
-	ARM_ETH->G_CFG_LOW = ARM_ETH_BUFF_MODE(ARM_ETH_BUFF_LINEAL) | 	// буфферы в линейном режиме	
-	/*ARM_ETH_PAUSE_EN|*/											// режим автоматической обработки пакета PAUSE																										
-	ARM_ETH_COLWND(128);											// размер окна коллизий (в битовых интервалах)
-																	// сброс флагов IRF производится записью в IRF	
+{
+    // сброс приемника и передатчика RRST=1, XRST=1 автоматическое изменение указателей запрещено
+    ARM_ETH->IMR = 0;
+    ARM_ETH->IFR = 0;
+    
+    ARM_ETH->G_CFG_HI = ARM_ETH_XRST | ARM_ETH_RRST;                // Включение состояния сброса приёмника и передатчика
+    //memset((uint8_t*)ARM_ETH_BUF_BASE_R, 0, ARM_ETH_BUF_SIZE_R);
+    //ARM_ETH->G_CFG_HI |=  ARM_ETH_DBG_XF_EN | ARM_ETH_DBG_RF_EN;  // разрешить автоматическую установку указателей приёмника и передатчика - lля FIFO
+    
+    ARM_ETH->G_CFG_LOW = ARM_ETH_BUFF_MODE(ARM_ETH_BUFF_LINEAL) |   // буфферы в линейном режиме
+    /*ARM_ETH_PAUSE_EN|*/                                           // режим автоматической обработки пакета PAUSE
+    ARM_ETH_COLWND(128);                                            // размер окна коллизий (в битовых интервалах)
+                                                                    // сброс флагов IRF производится записью в IRF
 #ifdef ETH_DTRM
-		ARM_ETH->G_CFG_LOW |= ARM_ETH_DTRM_EN;						// режим определенного времени доставки
+    ARM_ETH->G_CFG_LOW |= ARM_ETH_DTRM_EN;                          // режим определенного времени доставки
 #endif
-	ARM_ETH->DELIMITER = ARM_ETH_BUF_SIZE_R; // регистр границы буферов приемника и передатчика (первый байт буффера передатчика)
-	ARM_ETH->R_HEAD = 0;					 // указывает на первое непустое слово в буфере приемника
-	ARM_ETH->X_TAIL = ARM_ETH_BUF_SIZE_R; 	 // указывает на первое пустое слово в буффере передатчика, зависит от размера буффера приёмника
-	
-	ARM_ETH->HASH[0] = 0;	 ARM_ETH->HASH[1] = 0;
-	ARM_ETH->HASH[2] = 0;	 ARM_ETH->HASH[3] = 0;	
-	ARM_ETH->HASH[4] = 0; 	 ARM_ETH->HASH[5] = 0;
-	ARM_ETH->HASH[6] = 0x80; ARM_ETH->HASH[7] = 0;
-	
-	// Настройки формирования очереди пакетов (влияют при включенном ARM_ETH_DTRM_EN)
-	// межпакетный интервал для полнодуплексного режима
-	ARM_ETH->IPG = 96;  // (для 100 Мбит - 16);
-	// предделитель BAG и JitterWnd
-	ARM_ETH->PSC = 50;  // (для 100 Мбит - 10);;	  
-	// период следования пакетов
-	ARM_ETH->BAG = 100; // (для 100 Мбит - 50);; 
-	// джиттер при передачи пакетов
-	ARM_ETH->JITTER_WND = 4;
+    ARM_ETH->DELIMITER = ARM_ETH_BUF_SIZE_R; // регистр границы буферов приемника и передатчика (первый байт буффера передатчика)
+    ARM_ETH->R_HEAD = 0;                     // указывает на первое непустое слово в буфере приемника
+    ARM_ETH->X_TAIL = ARM_ETH_BUF_SIZE_R;    // указывает на первое пустое слово в буффере передатчика, зависит от размера буффера приёмника
 
-	// управление приемником 
-	ARM_ETH->R_CFG =
-	ARM_ETH_EN |	 								    /* разрешение работы приемника */
-	ARM_ETH_EVNT_MODE(ARM_ETH_EVNT_RX_DONE)|			/* событие -  прием пакета завершен	*/
-	ARM_ETH_CF_EN| 										/* разрешение приема управляющих пакетов */
-	ARM_ETH_UCA_EN |									/* прием пакетов с MAC указанном в регистре MAC_Address */
-	ARM_ETH_BCA_EN ;									/* прием широковещательных MAC */
-	/*ARM_ETH_AC_EN|;*/									/* прием без фильтрации */
-	/*ARM_ETH_MCA_EN;*/ 								/* прием c фильтрацией по HASN таблице */
+    ARM_ETH->HASH[0] = 0;    ARM_ETH->HASH[1] = 0;
+    ARM_ETH->HASH[2] = 0;    ARM_ETH->HASH[3] = 0;
+    ARM_ETH->HASH[4] = 0;    ARM_ETH->HASH[5] = 0;
+    ARM_ETH->HASH[6] = 0x80; ARM_ETH->HASH[7] = 0;
+    
+    // Настройки формирования очереди пакетов (влияют при включенном ARM_ETH_DTRM_EN)
+    // межпакетный интервал для полнодуплексного режима
+    ARM_ETH->IPG = 96;  // (для 100 Мбит - 16);
+    // предделитель BAG и JitterWnd
+    ARM_ETH->PSC = 50;  // (для 100 Мбит - 10); 
+    // период следования пакетов
+    ARM_ETH->BAG = 100; // (для 100 Мбит - 50); 
+    // джиттер при передачи пакетов
+    ARM_ETH->JITTER_WND = 4;
 
-	// управление передатчиком
-	ARM_ETH->X_CFG =
-	ARM_ETH_EN |	 									/* разрешение работы передатчика */
-	ARM_ETH_EVNT_MODE(ARM_ETH_EVNT_TX_DONE)| 			/* событие - отправка пакета завершена */
-	ARM_ETH_PAD_EN |									/* разрешено дополнение PAD'ми */
-	ARM_ETH_PRE_EN |									/* дополнение преамбулой */
-	ARM_ETH_CRC_EN | 									/* дополнение CRC */
-	ARM_ETH_IPG_EN |									/* выдержка паузы */
-	ARM_ETH_RTRYCNT(0x0F);								/* количество попыток обмена */
-	
-	ARM_ETH->G_CFG_HI &= ~(ARM_ETH_XRST | ARM_ETH_RRST);	//RRST=0, XRST=0 штатный режим работы	
+    // управление приемником 
+    ARM_ETH->R_CFG =
+    ARM_ETH_EN |                                        /* разрешение работы приемника */
+    ARM_ETH_EVNT_MODE(ARM_ETH_EVNT_RX_DONE)|            /* событие -  прием пакета завершен	*/
+    ARM_ETH_CF_EN|                                      /* разрешение приема управляющих пакетов */
+    ARM_ETH_UCA_EN |                                    /* прием пакетов с MAC указанном в регистре MAC_Address */
+    ARM_ETH_BCA_EN ;                                    /* прием широковещательных MAC */
+    /*ARM_ETH_AC_EN|;*/                                 /* прием без фильтрации */
+    /*ARM_ETH_MCA_EN;*/                                 /* прием c фильтрацией по HASN таблице */
+
+    // управление передатчиком
+    ARM_ETH->X_CFG =
+    ARM_ETH_EN |                                        /* разрешение работы передатчика */
+    ARM_ETH_EVNT_MODE(ARM_ETH_EVNT_TX_DONE)|            /* событие - отправка пакета завершена */
+    ARM_ETH_PAD_EN |                                    /* разрешено дополнение PAD'ми */
+    ARM_ETH_PRE_EN |                                    /* дополнение преамбулой */
+    ARM_ETH_CRC_EN |                                    /* дополнение CRC */
+    ARM_ETH_IPG_EN |                                    /* выдержка паузы */
+    ARM_ETH_RTRYCNT(0x0F);                              /* количество попыток обмена */
+
+    ARM_ETH->G_CFG_HI &= ~(ARM_ETH_XRST | ARM_ETH_RRST);//RRST=0, XRST=0 штатный режим работы	
 }
 
 void eth_restart_receiver(void)
 {
-	ARM_ETH->G_CFG_HI |= ARM_ETH_RRST;
-	memset((uint8_t*)ARM_ETH_BUF_BASE_R, 0, ARM_ETH_BUF_SIZE_R);
-	ARM_ETH->R_HEAD = 0;
-	ARM_ETH->STAT &= ~ARM_ETH_R_COUNT(7);
-	ARM_ETH->IFR |= 0x00FF;
-	eth_nops();
-	ARM_ETH->G_CFG_HI &= ~ ARM_ETH_RRST;
-	eth_err_0022_correction();
+    ARM_ETH->G_CFG_HI |= ARM_ETH_RRST;
+    memset((uint8_t*)ARM_ETH_BUF_BASE_R, 0, ARM_ETH_BUF_SIZE_R);
+    ARM_ETH->R_HEAD = 0;
+    ARM_ETH->STAT &= ~ARM_ETH_R_COUNT(7);
+    ARM_ETH->IFR |= 0x00FF;
+    eth_nops();
+    ARM_ETH->G_CFG_HI &= ~ ARM_ETH_RRST;
+    eth_err_0022_correction();
 }
 
 void eth_rx_buffer_clr(void)
 {
  // альтернатива eth_restart_receiver
-	ARM_ETH->R_HEAD = ARM_ETH->R_TAIL; 
-	ARM_ETH->STAT &= ~ARM_ETH_R_COUNT(7);
-	eth_err_0022_correction();
+    ARM_ETH->R_HEAD = ARM_ETH->R_TAIL; 
+    ARM_ETH->STAT &= ~ARM_ETH_R_COUNT(7);
+    eth_err_0022_correction();
 }
 
 void eth_restart_transmitter(void)
 {
-	ARM_ETH->X_TAIL = ARM_ETH->X_HEAD;
-	ARM_ETH->G_CFG_HI |= ARM_ETH_XRST;
-	eth_nops();
-	ARM_ETH->G_CFG_HI &= ~ARM_ETH_XRST;	
-	eth_err_0022_correction();
+    ARM_ETH->X_TAIL = ARM_ETH->X_HEAD;
+    ARM_ETH->G_CFG_HI |= ARM_ETH_XRST;
+    eth_nops();
+    ARM_ETH->G_CFG_HI &= ~ARM_ETH_XRST;	
+    eth_err_0022_correction();
 }
 
 uint16_t calc_R_filled_space(void)
 {
-	uint16_t data_start = ARM_ETH->R_HEAD;
-	uint16_t data_end = ARM_ETH->R_TAIL; 
-	uint16_t data_space=0;	
-	
-	if(data_start < data_end) { 
-		data_space = data_end - data_start;
-	} else if(data_start > data_end) {
-		data_space = ARM_ETH_BUF_SIZE_R - data_start + data_end; // ситуация когда буффер "закольцован". вычисляется кол-во байтов до ARM_ETH_BUF_SIZE_R
-	}	
-	return data_space;
+    uint16_t data_start = ARM_ETH->R_HEAD;
+    uint16_t data_end = ARM_ETH->R_TAIL; 
+    uint16_t data_space=0;	
+    
+    if(data_start < data_end) { 
+        data_space = data_end - data_start;
+    } else if(data_start > data_end) {
+        data_space = ARM_ETH_BUF_SIZE_R - data_start + data_end; // ситуация когда буффер "закольцован". вычисляется кол-во байтов до ARM_ETH_BUF_SIZE_R
+    }
+    return data_space;
 }
 
 void eth_pin_init (GPIO_t *gpio, unsigned port, unsigned pin, unsigned func, unsigned in)
@@ -584,7 +591,7 @@ void eth_pin_init (GPIO_t *gpio, unsigned port, unsigned pin, unsigned func, uns
     gpio->PWR = (gpio->PWR & ~ARM_PWR_MASK(pin)) | ARM_PWR_FASTEST(pin);
     // Выход
     if(in) 
-		gpio->OE |= ARM_GPIO_OUT(pin);
+        gpio->OE |= ARM_GPIO_OUT(pin);
 }
 
 void eth_port_init (void)
@@ -605,12 +612,12 @@ void eth_led_init (void)
 
 #ifdef ETH_USE_DMA
 void eth_dma_init(void)
-{	
-	// Для режима АВТО-ЗАПРОС
-	ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_DMA;   
-    ARM_DMA->CHNL_REQ_MASK_SET = ARM_DMA_DISABLE_ALL;	// disable all requests
-    ARM_DMA->CHNL_ENABLE_CLR = ARM_DMA_DISABLE_ALL;		// disable all channels
-    ARM_DMA->CHNL_PRI_ALT_CLR= ARM_DMA_DISABLE_ALL;		// !! all channel use primary management structure
+{
+    // Для режима АВТО-ЗАПРОС
+    ARM_RSTCLK->PER_CLOCK |= ARM_PER_CLOCK_DMA;   
+    ARM_DMA->CHNL_REQ_MASK_SET = ARM_DMA_DISABLE_ALL;   // disable all requests
+    ARM_DMA->CHNL_ENABLE_CLR = ARM_DMA_DISABLE_ALL;     // disable all channels
+    ARM_DMA->CHNL_PRI_ALT_CLR= ARM_DMA_DISABLE_ALL;     // !! all channel use primary management structure
     ARM_DMA->ERR_CLR = ARM_DMA_ERR_CLR;
     ARM_DMA->CTRL_BASE_PTR = (unsigned) dma_conf;
     ARM_DMA->CONFIG |= ARM_DMA_ENABLE;
@@ -622,16 +629,16 @@ void eth_dma_init(void)
 // Set values to Ethernet controller registers.
 void eth_controller_init(const uint8_t *MACAddr, uint8_t PHYMode)
 {
-	// отключение прерываний
-	ARM_ETH->IMR=0;
-	ARM_ETH->IFR=0xFFFF;
-	eth_port_init();
-	eth_clk_init();
-	eth_phy_init(ARM_ETH_PHY_ADDRESS, PHYMode);	//PHY address 0x1C
-	eth_mac_init(PHYMode);	
-	memcpy((void*)ARM_ETH->MAC_ADDR, MACAddr, 6);
+    // отключение прерываний
+    ARM_ETH->IMR=0;
+    ARM_ETH->IFR=0xFFFF;
+    eth_port_init();
+    eth_clk_init();
+    eth_phy_init(ARM_ETH_PHY_ADDRESS, PHYMode); //PHY address 0x1C
+    eth_mac_init(PHYMode);
+    memcpy((void*)ARM_ETH->MAC_ADDR, MACAddr, 6);
  #ifdef ETH_USE_DMA
-	eth_dma_init();
+    eth_dma_init();
  #endif
 }
 
@@ -641,11 +648,10 @@ void eth_controller_init(const uint8_t *MACAddr, uint8_t PHYMode)
 // data	- данные для записи
 void eth_set_phyreg(uint8_t addr, uint8_t num, uint16_t data)
 {
-	ARM_ETH->MDIO_DATA = data;
-	ARM_ETH->MDIO_CTRL = ARM_ETH_MDIO_RDY | ARM_ETH_MDIO_PRE_EN | ARM_ETH_MDIO_PHY_A(addr & 0x1F) |
-						 ARM_ETH_MDIO_DIV(1) | ARM_ETH_MDIO_RG_A(num & 0x1F);
-	
-	while((ARM_ETH->MDIO_CTRL & ARM_ETH_MDIO_RDY)==0);
+    ARM_ETH->MDIO_DATA = data;
+    ARM_ETH->MDIO_CTRL = ARM_ETH_MDIO_RDY | ARM_ETH_MDIO_PRE_EN | ARM_ETH_MDIO_PHY_A(addr & 0x1F) |
+                         ARM_ETH_MDIO_DIV(1) | ARM_ETH_MDIO_RG_A(num & 0x1F);
+    while((ARM_ETH->MDIO_CTRL & ARM_ETH_MDIO_RDY)==0);
 }
 
 // Функция для чтения регистров PHY модуля через MDIO интерфейс 
@@ -654,36 +660,35 @@ void eth_set_phyreg(uint8_t addr, uint8_t num, uint16_t data)
 // возвращает значение регистра по адресу Num в Addr модуле PHY.
 uint16_t eth_get_phyreg(uint8_t addr, uint8_t num)
 {
-	ARM_ETH->MDIO_CTRL = ARM_ETH_MDIO_RDY | ARM_ETH_MDIO_PRE_EN | ARM_ETH_MDIO_OP | ARM_ETH_MDIO_PHY_A(addr & 0x1F) |
-						 ARM_ETH_MDIO_DIV(1) | ARM_ETH_MDIO_RG_A(num & 0x1F);
-	
-	while((ARM_ETH->MDIO_CTRL & ARM_ETH_MDIO_RDY)==0); 
-	return	ARM_ETH->MDIO_DATA;
+    ARM_ETH->MDIO_CTRL = ARM_ETH_MDIO_RDY | ARM_ETH_MDIO_PRE_EN | ARM_ETH_MDIO_OP | ARM_ETH_MDIO_PHY_A(addr & 0x1F) |
+                         ARM_ETH_MDIO_DIV(1) | ARM_ETH_MDIO_RG_A(num & 0x1F);
+    while((ARM_ETH->MDIO_CTRL & ARM_ETH_MDIO_RDY)==0); 
+    return	ARM_ETH->MDIO_DATA;
 }
 
 void eth_send_processing(const void *buf, uint16_t frame_length)
 {
  #ifdef ETH_USE_DMA
-	eth_send_frame_dma(buf,frame_length);	
+    eth_send_frame_dma(buf,frame_length);
  #else
-	eth_send_frame(buf,frame_length);
+    eth_send_frame(buf,frame_length);
  #endif
 }
 
 uint32_t eth_read_processing(void *buf)
 {
  #ifdef ETH_USE_DMA
-	return eth_read_frame_dma(buf);
+    return eth_read_frame_dma(buf);
  #else
-	return eth_read_frame(buf);
+    return eth_read_frame(buf);
  #endif
 }
 
 // чтение статуса из буффера приемника
 uint32_t eth_rx_status(void)
-{		
-	// адрес поля статуса приёма пакета находится перед началом данных
-	return *(uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH->R_HEAD);
+{
+    // адрес поля статуса приёма пакета находится перед началом данных
+    return *(uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH->R_HEAD);
 }
 
 #ifdef ETH_USE_DMA
