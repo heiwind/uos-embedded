@@ -488,7 +488,7 @@ void eth_mac_init (uint8_t PHYMode)
     //ARM_ETH->G_CFG_HI |=  ARM_ETH_DBG_XF_EN | ARM_ETH_DBG_RF_EN;  // разрешить автоматическую установку указателей приёмника и передатчика - lля FIFO
     
     ARM_ETH->G_CFG_LOW = ARM_ETH_BUFF_MODE(ARM_ETH_BUFF_LINEAL) |   // буфферы в линейном режиме
-    /*ARM_ETH_PAUSE_EN|*/                                           // режим автоматической обработки пакета PAUSE
+    ARM_ETH_PAUSE_EN|                                               // режим автоматической обработки пакета PAUSE
     ARM_ETH_COLWND(128);                                            // размер окна коллизий (в битовых интервалах)
                                                                     // сброс флагов IRF производится записью в IRF
 #ifdef ETH_DTRM
@@ -694,360 +694,361 @@ uint32_t eth_rx_status(void)
 #ifdef ETH_USE_DMA
 // запись кадра в буффер передатчика. возвращает указатель на область куда будет записано пеле статуса
 void eth_send_frame_dma (const void *buf, uint16_t length_bytes) // size в байтах, buf мб 8-разрядным 
-{	
-	uint16_t data_space[2]={0,0};	
-	uint16_t length_words=0;
-	uint16_t data_start=0, data_end=0;	// адрес начала, области данных и первого пустого слова в буффере передатчика
-	uint32_t source=0, dest=0; 	
-	//uint32_t tx_status;           // статусы, устанавлюваются уже после попытки передачи пакета
-	
-	data_start = ARM_ETH->X_HEAD;
-	data_end = ARM_ETH->X_TAIL;		
-		
-	// количество свободных байт в буфере передатчика
-	if(data_start > data_end) {
-		// данные "закольцованы" и адрес начала данных больше адреса конца данных		
-		data_space[0] = data_start - data_end;
-		data_space[1] = 0;	
-	} else {
-		data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
-		data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
-	}					
-	length_words = (length_bytes+3)>>2;	// длина с в словах учётом выравнивания		
+{
+    uint16_t data_space[2]={0,0};
+    uint16_t length_words=0;
+    uint16_t data_start=0, data_end=0;// адрес начала, области данных и первого пустого слова в буффере передатчика
+    uint32_t source=0, dest=0; 	
+    //uint32_t tx_status;             // статусы, устанавлюваются уже после попытки передачи пакета
 
-	// если места в буфере меньше, чем кол-во байт данных (+2 - учет 2х 32-разрядных информационных полей см даташит)
-	if(((data_space[0]+data_space[1])>>2) >= (length_words +2)) {
-		source = (uint32_t)buf;
-		dest = (uint32_t)(ARM_ETH_BUF_BASE + data_end); // адрес в буфере для записи нового пакета данных		
-	
-		*(uint32_t*)dest = length_bytes; // заполнение поля управления передачи пакета (кол-во байт в пакете)
-		eth_err_0022_correction();
-		
-		dest += 4;
-		data_space[0] -= 4;     // соотв. свободное место буффера уменьшилось на 32-разрядное слово.
-	
-		if(dest >= (uint32_t)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка" 
-			dest = (uint32_t)ARM_ETH_BUF_BASE_X;
-		}	
-		length_bytes = length_words << 2;
-		
-		if(length_bytes <= data_space[0]) {
-			// кадр не надо "закольцовывать"											
-			dma_conf[ETH_TX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
-			//debug_printf ("DMA SOURCE_END_POINTER = 0x%08X\n",dma_conf[ARM_DMA_CHN_1].SOURCE_END_POINTER);
-			dma_conf[ETH_TX_DMA_CHN].DEST_END_POINTER = dest + length_bytes-4;
-			dma_conf[ETH_TX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;                       
-			ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
-			ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_TX_DMA_CHN);						
-		} else {
-			// кадр закольцован	
-			dma_conf[ETH_TX_DMA_CHN].SOURCE_END_POINTER = source + data_space[0]-4;
-			dma_conf[ETH_TX_DMA_CHN].DEST_END_POINTER = dest + data_space[0]-4;
-						
-			source += data_space[0];
-			data_space[0] >>= 2; // делим на 4 (кол-во 32-разрядных слов)
-			
-			dma_conf[ETH_TX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(data_space[0]) | ARM_DMA_AUTOREQ;                       			
-			ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
-			ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
-			
-			eth_err_0022_correction();
-			while ((dma_conf[ETH_TX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0); 
-						
-			// считывание области 0....(frame_length)	
-			dest = (uint32_t)ARM_ETH_BUF_BASE_X; 			
-			length_words -= data_space[0];
-			length_bytes = length_words << 2;
-		
-			dma_conf[ETH_TX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
-			dma_conf[ETH_TX_DMA_CHN].DEST_END_POINTER = dest + length_bytes - 4;
-			dma_conf[ETH_TX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;                       			
-			ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
-			ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_TX_DMA_CHN);					
-		}
-		eth_err_0022_correction();	
-		while ((dma_conf[ETH_TX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);		
-		
-		dest+=length_bytes;
-		if(dest >= (uint32_t)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"	 
-			dest = (uint32_t)ARM_ETH_BUF_BASE_X;
-		}
-		//tx_status = dest;
-		*(uint32_t*)dest = 0;	// обнуление слова за данными, в это слово записывается поле состояния передачи пакета(см даташит)
-		eth_err_0022_correction();		
-		dest += 4;
-	
-		if(dest >= (uint32_t)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"
-			dest = (uint32_t)ARM_ETH_BUF_BASE_X;
-		}
-		ARM_ETH->X_TAIL = (uint16_t)dest; 
-		eth_err_0022_correction();						
-	}
-	// можно сохранять адрес tx_status, чтобы после отсыла пакета считать статус.	
+    data_start = ARM_ETH->X_HEAD;
+    data_end = ARM_ETH->X_TAIL;
+
+    // количество свободных байт в буфере передатчика
+    if(data_start > data_end) {
+        // данные "закольцованы" и адрес начала данных больше адреса конца данных
+        data_space[0] = data_start - data_end;
+        data_space[1] = 0;	
+    } else {
+        data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
+        data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
+    }
+    length_words = (length_bytes+3)>>2;	// длина с в словах учётом выравнивания
+
+    // если места в буфере меньше, чем кол-во байт данных (+2 - учет 2х 32-разрядных информационных полей см даташит)
+    if(((data_space[0]+data_space[1])>>2) >= (length_words +2)) {
+        source = (uint32_t)buf;
+        dest = (uint32_t)(ARM_ETH_BUF_BASE + data_end); // адрес в буфере для записи нового пакета данных
+    
+        *(uint32_t*)dest = length_bytes; // заполнение поля управления передачи пакета (кол-во байт в пакете)
+        eth_err_0022_correction();
+    
+        dest += 4;
+        data_space[0] -= 4;     // соотв. свободное место буффера уменьшилось на 32-разрядное слово.
+
+        if(dest >= (uint32_t)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка" 
+            dest = (uint32_t)ARM_ETH_BUF_BASE_X;
+        }
+        length_bytes = length_words << 2;
+        
+        if(length_bytes <= data_space[0]) {
+            // кадр не надо "закольцовывать"
+            dma_conf[ETH_TX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
+            //debug_printf ("DMA SOURCE_END_POINTER = 0x%08X\n",dma_conf[ARM_DMA_CHN_1].SOURCE_END_POINTER);
+            dma_conf[ETH_TX_DMA_CHN].DEST_END_POINTER = dest + length_bytes-4;
+            dma_conf[ETH_TX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;
+            ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
+            ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
+        } else {
+            // кадр закольцован	
+            dma_conf[ETH_TX_DMA_CHN].SOURCE_END_POINTER = source + data_space[0]-4;
+            dma_conf[ETH_TX_DMA_CHN].DEST_END_POINTER = dest + data_space[0]-4;
+                    
+            source += data_space[0];
+            data_space[0] >>= 2; // делим на 4 (кол-во 32-разрядных слов)
+            
+            dma_conf[ETH_TX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(data_space[0]) | ARM_DMA_AUTOREQ;
+            ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
+            ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
+            
+            eth_err_0022_correction();
+            while ((dma_conf[ETH_TX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0); 
+   
+            // считывание области 0....(frame_length)
+            dest = (uint32_t)ARM_ETH_BUF_BASE_X; 
+            length_words -= data_space[0];
+            length_bytes = length_words << 2;
+
+            dma_conf[ETH_TX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
+            dma_conf[ETH_TX_DMA_CHN].DEST_END_POINTER = dest + length_bytes - 4;
+            dma_conf[ETH_TX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;
+            ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
+            ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_TX_DMA_CHN);
+        }
+        eth_err_0022_correction();
+        while ((dma_conf[ETH_TX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
+        
+        dest+=length_bytes;
+        if(dest >= (uint32_t)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"
+            dest = (uint32_t)ARM_ETH_BUF_BASE_X;
+        }
+        //tx_status = dest;
+        *(uint32_t*)dest = 0;    // обнуление слова за данными, в это слово записывается поле состояния передачи пакета(см даташит)
+        eth_err_0022_correction();
+        dest += 4;
+
+        if(dest >= (uint32_t)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"
+            dest = (uint32_t)ARM_ETH_BUF_BASE_X;
+        }
+        ARM_ETH->X_TAIL = (uint16_t)dest; 
+        eth_err_0022_correction();
+    }
+    // можно сохранять адрес tx_status, чтобы после отсыла пакета считать статус.
 }
 
 
 // чтение кадра из буффера приемника, для режима АВТО-ЗАПРОС
 uint32_t eth_read_frame_dma(void *buf)
-{		
-	uint16_t data_start=0, data_end=0;	// start - адрес первого байта данных / end - адрес байта, следующего за последним байтом данных		
-	uint16_t data_space=0;				
-	uint16_t length_words=0;	// кол-во несчитанных байт кадра в словах
-	uint16_t length_bytes=0;		// кол-во несчитанных байт кадра в байтах
-	uint32_t source=0;				// источник данных
-	uint32_t dest=0;
-	uint32_t rx_status=0;			// поле состояния приема пакета
-	
-	// если нет принятых (еще не обработанных пакетов)
-	if(ARM_ETH->R_HEAD != ARM_ETH->R_TAIL) {
-		data_start = ARM_ETH->R_HEAD;	 
-		data_end   = ARM_ETH->R_TAIL;	
-		// R_TAIL меняется автоматически, в зависимости от длины данных,
-		// указывает на пустую ячейку, следующую за данными(которые могут содержать несколько кадров).		
-		
-		// количество байт данных в пакете, расчитанно из адреса начала данных и начала пустой области
-		if(data_start < data_end) {
-			data_space = data_end - data_start; // общее кол-во байтов (может включать несколько кадров) 
-		} else {
-			data_space = ARM_ETH_BUF_SIZE_R - data_start; // ситуация когда буффер "закольцован". вычисляется кол-во байтов до ARM_ETH_BUF_SIZE_R
-		}			
-		source = (uint32_t)(ARM_ETH_BUF_BASE + data_start);
-		dest = (uint32_t)buf;	
-		rx_status = *(uint32_t*)source;  // поле состояния приема кадра (количество байт данных в кадре, включая заголовок и FCS и статус)		
-		source += 4;
-		length_bytes = (uint16_t)rx_status;
-		
-		// размер data_space может быть боольше чем frame_length из-за выравнивания по слову.
-		
-		data_start += 4;  // установка адреса на начало ещё не прочитанных данных.
-		data_space -= 4;  // отнимаются 4 считанных байта поля состояния приема пакета. остаётся "чистый" кадр;
-		
-		//debug_printf ("\n(uint32_t)source & 0x0000FFFF) = %08X\n",(uint32_t)source & 0x0000FFFF);
-		
-		if((source & 0x0000FFFF) > (ARM_ETH_BUF_SIZE_R-1)) { // закольцовка буффера
-			source = (uint32_t)ARM_ETH_BUF_BASE;
-		}
-		length_words = (length_bytes+3)>>2;	// длина с в словах учётом выравнивания.
-		length_bytes = length_words << 2; 
-		
-		if(length_bytes <= data_space) { 	
-			ARM_DMA->CHNL_PRI_ALT_CLR = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
-			// считывание области R_HEAD....конец кадра					
-			dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
-			dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + length_bytes-4;
-			dma_conf[ETH_RX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;                       
-			ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
-			ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
-		} else {	
-			ARM_DMA->CHNL_PRI_ALT_CLR = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
-			// требуются два подхода в считывании (условие, когда кадр "закольцован" в буффере)
-			// считывание области R_HEAD....ARM_ETH_BUF_SIZE_R			
-			dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + data_space-4;
-			dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + data_space-4;
-			
-			dest += data_space;
-			data_space >>= 2;
-			
-			dma_conf[ETH_RX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(data_space) | ARM_DMA_AUTOREQ;                       
-			ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
-			ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+{
+    uint16_t data_start=0, data_end=0;  // start - адрес первого байта данных / end - адрес байта, следующего за последним байтом данных
+    uint16_t data_space=0;
+    uint16_t length_words=0;    // кол-во несчитанных байт кадра в словах
+    uint16_t length_bytes=0;    // кол-во несчитанных байт кадра в байтах
+    uint32_t source=0;          // источник данных
+    uint32_t dest=0;
+    uint32_t rx_status=0;       // поле состояния приема пакета
 
-			eth_err_0022_correction();
-			while ((dma_conf[ETH_RX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);			
-						
-			// считывание области 0....(frame_length)	
-			source = (uint32_t)ARM_ETH_BUF_BASE; 			
-			length_words -= data_space;
-			length_bytes = length_words << 2;
-	
-			dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
-			dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + length_bytes - 4;
-			dma_conf[ETH_RX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
-											   ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;                       
-			ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
-			ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_RX_DMA_CHN);					
-		}
-		eth_err_0022_correction();
-		while ((dma_conf[ETH_RX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
-		
-		source+=length_bytes;
+    // если нет принятых (еще не обработанных пакетов)
+    if(ARM_ETH->R_HEAD != ARM_ETH->R_TAIL) {
+        data_start = ARM_ETH->R_HEAD;
+        data_end   = ARM_ETH->R_TAIL;
+        // R_TAIL меняется автоматически, в зависимости от длины данных,
+        // указывает на пустую ячейку, следующую за данными(которые могут содержать несколько кадров).
 
-		if((source & 0x0000FFFF) > ((uint32_t)(ARM_ETH_BUF_SIZE_R-1))) {
-			source = (uint32_t)ARM_ETH_BUF_BASE;
-		}
-		ARM_ETH->R_HEAD = (uint16_t)source; // указание свободной для приёма области (первая пустая ячейка после данного пакета)
-		eth_err_0022_correction();
-	}	
-	if(ARM_ETH->STAT & ARM_ETH_R_COUNT(7)) {
-		ARM_ETH->STAT -= ARM_ETH_R_COUNT(1);	// минус один кадр	
-	}
-	eth_err_0022_correction();
-	return rx_status;		
+        // количество байт данных в пакете, расчитанно из адреса начала данных и начала пустой области
+        if(data_start < data_end) {
+            data_space = data_end - data_start; // общее кол-во байтов (может включать несколько кадров) 
+        } else {
+            data_space = ARM_ETH_BUF_SIZE_R - data_start; // ситуация когда буффер "закольцован". вычисляется кол-во байтов до ARM_ETH_BUF_SIZE_R
+        }
+        source = (uint32_t)(ARM_ETH_BUF_BASE + data_start);
+        dest = (uint32_t)buf;
+        rx_status = *(uint32_t*)source;  // поле состояния приема кадра (количество байт данных в кадре, включая заголовок и FCS и статус)
+        source += 4;
+        length_bytes = (uint16_t)rx_status;
+        
+        // размер data_space может быть боольше чем frame_length из-за выравнивания по слову.
+
+        data_start += 4;  // установка адреса на начало ещё не прочитанных данных.
+        data_space -= 4;  // отнимаются 4 считанных байта поля состояния приема пакета. остаётся "чистый" кадр;
+        
+        //debug_printf ("\n(uint32_t)source & 0x0000FFFF) = %08X\n",(uint32_t)source & 0x0000FFFF);
+
+        if((source & 0x0000FFFF) > (ARM_ETH_BUF_SIZE_R-1)) { // закольцовка буффера
+            source = (uint32_t)ARM_ETH_BUF_BASE;
+        }
+        length_words = (length_bytes+3)>>2;	// длина с в словах учётом выравнивания.
+        length_bytes = length_words << 2; 
+
+        if(length_bytes <= data_space) {
+            ARM_DMA->CHNL_PRI_ALT_CLR = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+            // считывание области R_HEAD....конец кадра
+            dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
+            dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + length_bytes-4;
+            dma_conf[ETH_RX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;                       
+            ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+            ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+        } else {
+            ARM_DMA->CHNL_PRI_ALT_CLR = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+            // требуются два подхода в считывании (условие, когда кадр "закольцован" в буффере)
+            // считывание области R_HEAD....ARM_ETH_BUF_SIZE_R			
+            dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + data_space-4;
+            dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + data_space-4;
+
+            dest += data_space;
+            data_space >>= 2;
+
+            dma_conf[ETH_RX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(data_space) | ARM_DMA_AUTOREQ;                       
+            ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+            ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+
+            eth_err_0022_correction();
+            while ((dma_conf[ETH_RX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
+
+            // считывание области 0....(frame_length)
+            source = (uint32_t)ARM_ETH_BUF_BASE;
+            length_words -= data_space;
+            length_bytes = length_words << 2;
+
+            dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + length_bytes-4;
+            dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + length_bytes - 4;
+            dma_conf[ETH_RX_DMA_CHN].CONTROL = ARM_DMA_DST_INC(ARM_DMA_WORD) | ARM_DMA_DST_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_SRC_INC(ARM_DMA_WORD) | ARM_DMA_SRC_SIZE(ARM_DMA_WORD) |
+                                               ARM_DMA_RPOWER(1) | ARM_DMA_TRANSFERS(length_words) | ARM_DMA_AUTOREQ;                       
+            ARM_DMA->CHNL_ENABLE_SET = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+            ARM_DMA->CHNL_SW_REQUEST = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
+        }
+        eth_err_0022_correction();
+        while ((dma_conf[ETH_RX_DMA_CHN].CONTROL & (ARM_DMA_TRANSFERS(1024) | ARM_DMA_AUTOREQ)) != 0);
+        
+        source+=length_bytes;
+
+        if((source & 0x0000FFFF) > ((uint32_t)(ARM_ETH_BUF_SIZE_R-1))) {
+            source = (uint32_t)ARM_ETH_BUF_BASE;
+        }
+        ARM_ETH->R_HEAD = (uint16_t)source; // указание свободной для приёма области (первая пустая ячейка после данного пакета)
+        eth_err_0022_correction();
+    }
+    if(ARM_ETH->STAT & ARM_ETH_R_COUNT(7)) {
+        ARM_ETH->STAT -= ARM_ETH_R_COUNT(1);    // минус один кадр
+    }
+    eth_err_0022_correction();
+    return rx_status;
 }       
 #else
 
 // запись кадра в буффер передатчика. возвращает указатель на область куда будет записано пеле статуса
 void eth_send_frame(const void *buf, uint16_t length_bytes) // size в байтах, buf мб 8-разрядным 
-{		
-	uint16_t i=0;
-	uint16_t data_space[2]={0,0};
-	uint16_t data_start=0, data_end=0;	// адрес начала, области данных и первого пустого слова в буффере передатчика
-	uint32_t length_words=0;  
-	uint32_t *source=0, *dest=0; 
-	//uint32_t *tx_status;			// статусы, устанавлюваются уже после попытки передачи пакета
-	
-	data_start = ARM_ETH->X_HEAD;
-	data_end = ARM_ETH->X_TAIL;		
-		
-	// количество свободных байт в буфере передатчика
-	if(data_start > data_end) {
-		// данные "закольцованы" и адрес начала данных больше адреса конца данных		
-		data_space[0] = data_start - data_end;
-		data_space[1] = 0;	
-	} else {	
-		data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
-		data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
-	}					
+{
+    uint16_t i=0;
+    uint16_t data_space[2]={0,0};
+    uint16_t data_start=0, data_end=0;  // адрес начала, области данных и первого пустого слова в буффере передатчика
+    uint32_t length_words=0;  
+    uint32_t *source=0, *dest=0; 
+    //uint32_t *tx_status;              // статусы, устанавлюваются уже после попытки передачи пакета
 
-	length_words = (length_bytes+3)>>2;	// длина с в словах учётом выравнивания.
-	//length_bytes = length_words<<2; 	// длина в байтах с выравниванием
+    data_start = ARM_ETH->X_HEAD;
+    data_end = ARM_ETH->X_TAIL;
 
-	// если места в буфере больше, чем кол-во байт данных (+2 - учет 2х 32-разрядных информационных полей см даташит)
-	if(((data_space[0]+data_space[1])>>2) >= (length_words +2)) {
-		source = (uint32_t*)buf;
-		dest = (uint32_t*)(ARM_ETH_BUF_BASE + data_end); // адрес в буфере для записи нового пакета данных		
-	
-		*dest++ = (uint32_t)length_bytes; // заполнение поля управления передачи пакета (кол-во байт в пакете)
-		eth_err_0022_correction();
-		
-		data_space[0] -= 4;     // соотв. свободное место буффера уменьшилось на 32-разрядное слово.
-	
-		if(dest >= (uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка" 
-			dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
-		}			
-		if(length_bytes <= data_space[0]) {
-			// кадр не надо "закольцовывать"	
-			for(i = 0; i < length_words; i++) {
-				*dest++ = *source++;
-			}
-		} else {
-			// кадр закольцован						
-			data_space[0] >>= 2;	// делим на 4 (кол-во 32-разрядных слов)		
-			for(i = 0; i < data_space[0]; i++) 
-				{*dest++ = *source++;}
-			
-			eth_err_0022_correction();
-			
-			length_words -= data_space[0];	
-			dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
-			
-			for(i = 0; i < length_words; i++) { 
-				*dest++ = *source++;
-			}
-		}	
-		eth_err_0022_correction();
-		
-		if(dest >= (uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"	 
-			dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
-		}	
-		//tx_status = dest;
-		*dest++ = 0;	// обнуление слова за данными, в это слово записывается поле состояния передачи пакета(см даташит)
-						// теперь пакет заполнен 
-		eth_err_0022_correction();
-	
-		if(dest >= (uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"
-			dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
-		}
-		ARM_ETH->X_TAIL = (uint16_t)((unsigned)dest); 	
-		eth_err_0022_correction();				
-	}
-	// можно сохранять адрес tx_status, чтобы после отсыла пакета считать статус. 
+    // количество свободных байт в буфере передатчика
+    if(data_start > data_end) {
+        // данные "закольцованы" и адрес начала данных больше адреса конца данных
+        data_space[0] = data_start - data_end;
+        data_space[1] = 0;
+    } else {
+        data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
+        data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
+    }
+
+    length_words = (length_bytes+3)>>2; // длина с в словах учётом выравнивания.
+    //length_bytes = length_words<<2;   // длина в байтах с выравниванием
+
+    // если места в буфере больше, чем кол-во байт данных (+2 - учет 2х 32-разрядных информационных полей см даташит)
+    if(((data_space[0]+data_space[1])>>2) >= (length_words +2)) {
+        source = (uint32_t*)buf;
+        dest = (uint32_t*)(ARM_ETH_BUF_BASE + data_end); // адрес в буфере для записи нового пакета данных
+
+        *dest++ = (uint32_t)length_bytes; // заполнение поля управления передачи пакета (кол-во байт в пакете)
+        eth_err_0022_correction();
+        
+        data_space[0] -= 4;     // соотв. свободное место буффера уменьшилось на 32-разрядное слово.
+
+        if(dest >= (uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка" 
+            dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
+        }
+        if(length_bytes <= data_space[0]) {
+            // кадр не надо "закольцовывать"
+            for(i = 0; i < length_words; i++) {
+                *dest++ = *source++;
+            }
+        } else {
+            // кадр закольцован
+            data_space[0] >>= 2;    // делим на 4 (кол-во 32-разрядных слов)
+            for(i = 0; i < data_space[0]; i++) {
+                *dest++ = *source++;
+            }
+            eth_err_0022_correction();
+            
+            length_words -= data_space[0];
+            dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
+            
+            for(i = 0; i < length_words; i++) { 
+                *dest++ = *source++;
+            }
+        }
+        eth_err_0022_correction();
+        
+        if(dest >= (uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"
+            dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
+        }
+        //tx_status = dest;
+        *dest++ = 0;    // обнуление слова за данными, в это слово записывается поле состояния передачи пакета(см даташит)
+                        // теперь пакет заполнен 
+        eth_err_0022_correction();
+
+        if(dest >= (uint32_t*)(ARM_ETH_BUF_BASE + ARM_ETH_BUF_FULL_SIZE)) { // "закольцовка буффера"
+            dest = (uint32_t*)ARM_ETH_BUF_BASE_X;
+        }
+        ARM_ETH->X_TAIL = (uint16_t)((unsigned)dest);
+        eth_err_0022_correction();
+    }
+    // можно сохранять адрес tx_status, чтобы после отсыла пакета считать статус. 
 }
 
 // чтение кадра из буффера приемника          
 uint32_t eth_read_frame(void *buf)
-{		
-	uint16_t data_start=0, data_end=0;	// start - адрес первого байта данных / end - адрес байта, следующего за последним байтом данных		
-	uint16_t data_space=0;				
-	uint16_t i=0, frame_length=0;		// кол-во несчитанных байт кадра
-	uint32_t *source=0;					// источник данных
-	uint32_t *dest=0; 	 				// приемник данных	
-	uint32_t rx_status=0;				// поле состояния приема пакета
-	
-	if(ARM_ETH->R_HEAD != ARM_ETH->R_TAIL) {
-		data_start = ARM_ETH->R_HEAD;	 
-		data_end   = ARM_ETH->R_TAIL;	
-		// R_TAIL меняется автоматически, в зависимости от длины данных,
-		// указывает на пустую ячейку, следующую за данными(которые могут содержать несколько кадров).		
-		
-		// количество байт данных в пакете, расчитанно из адреса начала данных и начала пустой области	
-		if(data_start < data_end) {
-			data_space = data_end - data_start; // общее кол-во байтов (может включать несколько кадров) 				
-		} else { 
-			data_space = ARM_ETH_BUF_SIZE_R - data_start; // ситуация когда буффер "закольцован". вычисляется кол-во байтов до ARM_ETH_BUF_SIZE_R	
-		}
-		source = (uint32_t*)(ARM_ETH_BUF_BASE + data_start);
-		dest = ((uint32_t*)buf);
-			
-		rx_status = *source++;  // поле состояния приема кадра (количество байт данных в кадре, включая заголовок и FCS и статус)
-		frame_length = (uint16_t)rx_status;
-		
-		// размер data_space может быть боольше чем frame_length из-за выравнивания по слову.
-		
-		data_start += 4;  // установка адреса на начало ещё не прочитанных данных.
-		data_space -= 4;  // отнимаются 4 считанных байта поля состояния приема пакета. остаётся "чистый" кадр;		
-		
-		if(((uint32_t)source & 0x0000FFFF) > (ARM_ETH_BUF_SIZE_R-1)) { // "кольцевание" буффера
-			source = (uint32_t*)ARM_ETH_BUF_BASE;
-		}
-		
-		frame_length = (frame_length+3)>>2;	// +3 учёт выравнивания									
-		data_space >>= 2; 
-		
-		if(frame_length <= data_space) {
-		 	// считывание области R_HEAD....конец кадра
-			for(i = 0; i < frame_length; i++)	
-				{*dest++ = *source++;}									
-		} else {
-			// требуются два подхода в считывании (условие, когда кадр "закольцован" в буффере)
-			// считывание области R_HEAD....ARM_ETH_BUF_SIZE_R
-			for(i = 0; i < data_space ; i++) { 
-				*dest++ = *source++;
-			}				
-			eth_err_0022_correction();
-			
-			// считывание области 0....(frame_length)	
-			source = (uint32_t*)ARM_ETH_BUF_BASE; 			
-			frame_length -= data_space;
-			for(i = 0; i < frame_length; i++) { 
-				*dest++ = *source++;
-			}							
-		}		
-		eth_err_0022_correction();
-		
-		if(((uint32_t)source & 0x0000FFFF) > ((uint32_t)(ARM_ETH_BUF_SIZE_R-1))) {
-			source = (uint32_t*)ARM_ETH_BUF_BASE;
-		}		
-		ARM_ETH->R_HEAD = (uint16_t)((unsigned)source);  // указание свободной для приёма области (первая пустая ячейка после данного пакета)		
-		eth_err_0022_correction();
-	}
-	if(ARM_ETH->STAT & ARM_ETH_R_COUNT(7)) {
-		ARM_ETH->STAT -= ARM_ETH_R_COUNT(1);	// минус один кадр		
-	}
-	eth_err_0022_correction();
-			
-	return rx_status;		
+{
+    uint16_t data_start=0, data_end=0;  // start - адрес первого байта данных / end - адрес байта, следующего за последним байтом данных
+    uint16_t data_space=0;
+    uint16_t i=0, frame_length=0;       // кол-во несчитанных байт кадра
+    uint32_t *source=0;                 // источник данных
+    uint32_t *dest=0;                   // приемник данных
+    uint32_t rx_status=0;               // поле состояния приема пакета
+
+    if(ARM_ETH->R_HEAD != ARM_ETH->R_TAIL) {
+        data_start = ARM_ETH->R_HEAD;
+        data_end   = ARM_ETH->R_TAIL;
+        // R_TAIL меняется автоматически, в зависимости от длины данных,
+        // указывает на пустую ячейку, следующую за данными(которые могут содержать несколько кадров).
+        
+        // количество байт данных в пакете, расчитанно из адреса начала данных и начала пустой области
+        if(data_start < data_end) {
+            data_space = data_end - data_start; // общее кол-во байтов (может включать несколько кадров)
+        } else { 
+            data_space = ARM_ETH_BUF_SIZE_R - data_start; // ситуация когда буффер "закольцован". вычисляется кол-во байтов до ARM_ETH_BUF_SIZE_R
+        }
+        source = (uint32_t*)(ARM_ETH_BUF_BASE + data_start);
+        dest = ((uint32_t*)buf);
+        
+        rx_status = *source++;  // поле состояния приема кадра (количество байт данных в кадре, включая заголовок и FCS и статус)
+        frame_length = (uint16_t)rx_status;
+
+        // размер data_space может быть боольше чем frame_length из-за выравнивания по слову.
+
+        data_start += 4;  // установка адреса на начало ещё не прочитанных данных.
+        data_space -= 4;  // отнимаются 4 считанных байта поля состояния приема пакета. остаётся "чистый" кадр;
+
+        if(((uint32_t)source & 0x0000FFFF) > (ARM_ETH_BUF_SIZE_R-1)) { // "кольцевание" буффера
+            source = (uint32_t*)ARM_ETH_BUF_BASE;
+        }
+
+        frame_length = (frame_length+3)>>2; // +3 учёт выравнивания
+        data_space >>= 2; 
+
+        if(frame_length <= data_space) {
+            // считывание области R_HEAD....конец кадра
+            for(i = 0; i < frame_length; i++) {
+                *dest++ = *source++;
+            }
+        } else {
+            // требуются два подхода в считывании (условие, когда кадр "закольцован" в буффере)
+            // считывание области R_HEAD....ARM_ETH_BUF_SIZE_R
+            for(i = 0; i < data_space ; i++) { 
+                *dest++ = *source++;
+            }
+            eth_err_0022_correction();
+
+            // считывание области 0....(frame_length)
+            source = (uint32_t*)ARM_ETH_BUF_BASE;
+            frame_length -= data_space;
+            for(i = 0; i < frame_length; i++) { 
+                *dest++ = *source++;
+            }
+        }
+        eth_err_0022_correction();
+        
+        if(((uint32_t)source & 0x0000FFFF) > ((uint32_t)(ARM_ETH_BUF_SIZE_R-1))) {
+            source = (uint32_t*)ARM_ETH_BUF_BASE;
+        }
+        ARM_ETH->R_HEAD = (uint16_t)((unsigned)source);  // указание свободной для приёма области (первая пустая ячейка после данного пакета)
+        eth_err_0022_correction();
+    }
+    if(ARM_ETH->STAT & ARM_ETH_R_COUNT(7)) {
+        ARM_ETH->STAT -= ARM_ETH_R_COUNT(1);    // минус один кадр
+    }
+    eth_err_0022_correction();
+
+    return rx_status;
 }                               
 #endif
 
@@ -1101,22 +1102,22 @@ bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio)
     }
 //debug_printf ("eth_output: transmit %d bytes\n", p->tot_len);
 
-	uint16_t data_space[2], words[2];		
-	uint16_t data_start = ARM_ETH->X_HEAD;
-	uint16_t data_end = ARM_ETH->X_TAIL;					
-	// количество свободных байт в буфере передатчика
-	if(data_start > data_end) {
-		// данные "закольцованы" и адрес начала данных больше адреса конца данных		
-		data_space[0] = data_start - data_end;
-		data_space[1] = 0;	
-	} else {
-	
-		data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
-		data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
-	}	
-	words[0] = (data_space[0]+data_space[1]) >> 2;
-	words[1] = ((p->tot_len+3)>>2) +2; 	
-	if(buf_queue_is_empty(&u->outq) && (words[0] >= words[1])) {
+    uint16_t data_space[2], words[2];
+    uint16_t data_start = ARM_ETH->X_HEAD;
+    uint16_t data_end = ARM_ETH->X_TAIL;
+    // количество свободных байт в буфере передатчика
+    if(data_start > data_end) {
+        // данные "закольцованы" и адрес начала данных больше адреса конца данных
+        data_space[0] = data_start - data_end;
+        data_space[1] = 0;
+    } else {
+    
+        data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
+        data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
+    }
+    words[0] = (data_space[0]+data_space[1]) >> 2;
+    words[1] = ((p->tot_len+3)>>2) +2; 	
+    if(buf_queue_is_empty(&u->outq) && (words[0] >= words[1])) {
         // Отправка кадра.
         eth_chip_transmit_packet(u, p); 
         buf_free(p);
@@ -1130,22 +1131,22 @@ bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio)
        mutex_wait(&u->tx_lock);
  #else 
 
- 	/* Занято, ставим в очередь. */
-	#if 0
+    /* Занято, ставим в очередь. */
+    #if 0
     if(buf_queue_is_full(&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) { 
-		// Нет места в очереди: теряем пакет. 
-		u->netif.out_discards++;		
-		debug_printf("eth_output: overflow\n"); 
-		buf_free(p);
-		mutex_unlock(&u->tx_lock);
-		return 0;
-	}
-	#else
-	while (buf_queue_is_full (&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) {
-	    mutex_wait (&u->tx_lock); 
-	    //debug_printf("while\n"); 
-	}
-	#endif
+        // Нет места в очереди: теряем пакет. 
+        u->netif.out_discards++;		
+        debug_printf("eth_output: overflow\n"); 
+        buf_free(p);
+        mutex_unlock(&u->tx_lock);
+        return 0;
+    }
+    #else
+    while (buf_queue_is_full (&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) {
+        mutex_wait (&u->tx_lock); 
+        //debug_printf("while\n"); 
+    }
+    #endif
  #endif
  
 //debug_printf("put in tx buf\n", p->tot_len);
@@ -1169,29 +1170,29 @@ void eth_set_address (eth_t *u, uint8_t *addr)
 {
     mutex_lock (&u->netif.lock);
     memcpy (&u->netif.ethaddr, addr, 6);
-	memcpy ((void*)ARM_ETH->MAC_ADDR, addr, 6);
+    memcpy ((void*)ARM_ETH->MAC_ADDR, addr, 6);
 //debug_printf ("UCADDR=%02x:%08x\n", MC_MAC_UCADDR_H, MC_MAC_UCADDR_L);
-	eth_err_0022_correction();
+    eth_err_0022_correction();
     mutex_unlock (&u->netif.lock);
 }
 
 // Fetch the received packet from the network controller.
 // Put it to input queue.
 uint8_t eth_receive_frame(eth_t *u)
-{		
-	uint32_t frame_status = eth_rx_status();
-	uint16_t frame_length = (uint16_t)frame_status; // длина кадра = два мак адреса + тип кадра(длина) + поле данных + crc
+{
+    uint32_t frame_status = eth_rx_status();
+    uint16_t frame_length = (uint16_t)frame_status; // длина кадра = два мак адреса + тип кадра(длина) + поле данных + crc
 
-	//если есть ошибки и длина больше стандарта и буффера
-	if((frame_length < 18) || (frame_length > ETH_MTU)) { //|| (frame_status & ARM_ETH_R_CRC_ERR))// 18 - заголовки + crc с нулевым полем данных 
-//		debug_printf ("eth_receive_data: failed, frame_status = %#08x, frame_length = %d\n",frame_status,frame_length);
-		u->netif.in_errors++; 
-		//eth_rx_buffer_clr(); 
-		//eth_restart_receiver();
-		debug_printf("r_rst\n");
-		return 0; 
-	}
-	eth_read_processing(u->rxbuf);  
+    //если есть ошибки и длина больше стандарта и буффера
+    if((frame_length < 18) || (frame_length > ETH_MTU)) { //|| (frame_status & ARM_ETH_R_CRC_ERR))// 18 - заголовки + crc с нулевым полем данных 
+//      debug_printf ("eth_receive_data: failed, frame_status = %#08x, frame_length = %d\n",frame_status,frame_length);
+        u->netif.in_errors++; 
+        //eth_rx_buffer_clr(); 
+        //eth_restart_receiver();
+        debug_printf("r_rst\n");
+        return 0; 
+    }
+    eth_read_processing(u->rxbuf);  
 //debug_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, frame_length);
 
     if(buf_queue_is_full(&u->inq) || ((buf_queue_size(&u->inq)+frame_length) >= ETH_INQ_SBYTES)) {
@@ -1202,8 +1203,8 @@ uint8_t eth_receive_frame(eth_t *u)
     }
     
     // Чтение кадра. Проводится до проверки переполнения входного буфера, т.к
-	// лучше освобождать буфер приёмника, чтобы уменьшить вероятность возникновения
-	// "ошибки буфера приёмника"
+    // лучше освобождать буфер приёмника, чтобы уменьшить вероятность возникновения
+    // "ошибки буфера приёмника"
     //eth_read_processing(u->rxbuf);
     u->netif.in_packets++;
     u->netif.in_bytes += frame_length; 
@@ -1220,8 +1221,8 @@ uint8_t eth_receive_frame(eth_t *u)
 //debug_printf ("receive %08x <- %08x, %d bytes\n", p->payload, u->rxbuf, frame_length);
     memcpy (p->payload, u->rxbuf, frame_length);
     buf_queue_put(&u->inq, p);
-	mutex_signal(&u->netif.lock, 0);
-	return 1; 
+    mutex_signal(&u->netif.lock, 0);
+    return 1; 
 //debug_printf ("[%d]", p->tot_len); buf_print_ethernet (p);
 }
 
@@ -1239,26 +1240,26 @@ uint16_t eth_handle_receive_interrupt (eth_t *u)
     eth_err_0022_correction();
  #endif
    
-	if((status_ifr & (ARM_ETH_OVF)) || (ARM_ETH->STAT & ARM_ETH_R_FULL)) {
-		u->netif.in_discards++; 
+    if((status_ifr & (ARM_ETH_OVF)) || (ARM_ETH->STAT & ARM_ETH_R_FULL)) {
+        u->netif.in_discards++; 
 //debug_printf("ethernet RX buffer FULL or OVER FULL: IFR %08X STAT %08X\n",ARM_ETH->IFR,ARM_ETH->STAT);
-	}
+    }
 
-	//todo	//не очень понятно помогает восстановлению контроль кол-ва кадров или мешает	
-	//WHILE затыкается быстрее если параллельно с основным тестом сыпать короткими очередями(500 посылок по 1500 байт)
-	// на 90 Мбит/с, но дольше работает если слать поток на 8 Мбит/с, с IF всё наоборот 
-	//while(R_Buff_Has_Eth_Frame()) 
-	/*if(R_Buff_Has_Eth_Frame()) {  // если очереди урезаны до 1го буфера	
-		eth_receive_frame(u);	    // декрементирует ARM_ETH_R_COUNT
-		active++;
-	}*/
+    //todo	//не очень понятно помогает восстановлению контроль кол-ва кадров или мешает
+    //WHILE затыкается быстрее если параллельно с основным тестом сыпать короткими очередями(500 посылок по 1500 байт)
+    // на 90 Мбит/с, но дольше работает если слать поток на 8 Мбит/с, с IF всё наоборот 
+    //while(R_Buff_Has_Eth_Frame()) 
+    /*if(R_Buff_Has_Eth_Frame()) {  // если очереди урезаны до 1го буфера
+        eth_receive_frame(u);    // декрементирует ARM_ETH_R_COUNT
+        active++;
+    }*/
     while(R_Buff_Has_Eth_Frame()) { // если очередь достаточно длиная (в т.ч. внешнее ОЗУ) 
-		eth_receive_frame(u);
-		active++;
-	}
- 	/*while(R_Buff_Has_Eth_Frame() && eth_receive_frame(u))
-		active++;*/
-	return active;
+        eth_receive_frame(u);
+        active++;
+    }
+    /*while(R_Buff_Has_Eth_Frame() && eth_receive_frame(u))
+        active++;*/
+    return active;
 }
 
 // Process a transmit interrupt: fast handler.
@@ -1267,52 +1268,52 @@ void eth_handle_transmit_interrupt(eth_t *u)
 {  // В некоторых случаях прерывание пропускается
    // uint16_t status_ifr = ARM_ETH->IFR & 0x1F00; // только флаги передачи 
     uint16_t status_phy = ARM_ETH->PHY_STAT;
-	uint16_t status_ifr = ARM_ETH->IFR;
+    uint16_t status_ifr = ARM_ETH->IFR;
  
- #ifdef ETH_POLL_MODE	// при использовании быстрого обработчика 
+ #ifdef ETH_POLL_MODE   // при использовании быстрого обработчика 
     status_ifr = status_ifr & 0x1F00;
-	ARM_ETH->IFR |= status_ifr; // сброс флагов
-	eth_err_0022_correction();
+    ARM_ETH->IFR |= status_ifr; // сброс флагов
+    eth_err_0022_correction();
  #endif
-	
-	// подсчёт коллизии. 
+
+    // подсчёт коллизии. 
     if((status_ifr & ARM_ETH_LC) || (status_phy & ARM_ETH_PHY_COL))
         u->netif.out_collisions++;
-	
-	if(status_ifr & ARM_ETH_XF_ERR) {
-		u->netif.out_errors++;
-		eth_restart_transmitter(); 
-	}
+
+    if(status_ifr & ARM_ETH_XF_ERR) {
+        u->netif.out_errors++;
+        eth_restart_transmitter(); 
+    }
  
-	// Проверка есть ли место в буфере передатчика для нового пакета, 
-	// сделано до извлечения нового пакета из очереди
-	uint16_t data_space[2];
-	uint16_t data_start = ARM_ETH->X_HEAD;
-	uint16_t data_end = ARM_ETH->X_TAIL;	
-	if(data_start > data_end) {
-		// данные "закольцованы" и адрес начала данных больше адреса конца данных		
-		data_space[0] = data_start - data_end;
-		data_space[1] = 0;	
-	} else {
-		
-		data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
-		data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
-	}							   		
-	if((data_space[0]+data_space[1]) <= (ETH_MTU+8)) {
-//		debug_printf("data_space is unacceptably reduced %d\n", (data_space[0]+data_space[1]));
-		return;
-	}
-  	  	
-	mutex_signal (&eth_interrupt_mutex, 0);
-	 
-	// Извлекаем следующий пакет из очереди. 
-	buf_t *p = buf_queue_get (&u->outq);
-	if(! p) {
-	//debug_printf ("eth tx irq: done, STATUS_PHY = %08x\n", status_phy);
-		return;
-	}
-	eth_chip_transmit_packet(u, p);
-	buf_free (p);
+    // Проверка есть ли место в буфере передатчика для нового пакета, 
+    // сделано до извлечения нового пакета из очереди
+    uint16_t data_space[2];
+    uint16_t data_start = ARM_ETH->X_HEAD;
+    uint16_t data_end = ARM_ETH->X_TAIL;
+    if(data_start > data_end) {
+        // данные "закольцованы" и адрес начала данных больше адреса конца данных
+        data_space[0] = data_start - data_end;
+        data_space[1] = 0;	
+    } else {
+
+        data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
+        data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
+    }
+    if((data_space[0]+data_space[1]) <= (ETH_MTU+8)) {
+//      debug_printf("data_space is unacceptably reduced %d\n", (data_space[0]+data_space[1]));
+        return;
+    }
+
+    mutex_signal (&eth_interrupt_mutex, 0);
+
+    // Извлекаем следующий пакет из очереди. 
+    buf_t *p = buf_queue_get (&u->outq);
+    if(! p) {
+    //debug_printf ("eth tx irq: done, STATUS_PHY = %08x\n", status_phy);
+        return;
+    }
+    eth_chip_transmit_packet(u, p);
+    buf_free (p);
     // Передаётся следующий пакет.
 //debug_printf ("eth tx irq: send next packet, STATUS_PHY = %08x\n", status_phy);
 }
@@ -1320,19 +1321,19 @@ void eth_handle_transmit_interrupt(eth_t *u)
 netif_interface_t eth_interface = {
     (bool_t (*) (netif_t*, buf_t*, small_uint_t))   eth_output,
     (buf_t *(*) (netif_t*))                         eth_input,
-    (void (*) (netif_t*, uint8_t*))           		eth_set_address
+    (void (*)   (netif_t*, uint8_t*))               eth_set_address
 };
 
 // Set up the network interface.
-void eth_init(eth_t *u, const char *name, int prio, mem_pool_t *pool, struct _arp_t *arp, const uint8_t *macaddr, uint8_t phy_mode)		  
-{	
+void eth_init(eth_t *u, const char *name, int prio, mem_pool_t *pool, struct _arp_t *arp, const uint8_t *macaddr, uint8_t phy_mode)
+{
     u->netif.interface = &eth_interface;
     u->netif.name = name;
     u->netif.arp = arp;
     u->netif.mtu = 1500;
     u->netif.type = NETIF_ETHERNET_CSMACD;
-    //u->netif.bps = 100000000;	
-    u->netif.out_bytes = 0;					
+    //u->netif.bps = 100000000;
+    u->netif.out_bytes = 0;
     memcpy (&u->netif.ethaddr, macaddr, 6);
 
     u->pool = pool;
@@ -1343,20 +1344,20 @@ void eth_init(eth_t *u, const char *name, int prio, mem_pool_t *pool, struct _ar
     u->phy = ARM_ETH_PHY_ADDRESS;
     buf_queue_init(&u->inq, u->inqdata, sizeof (u->inqdata));
     buf_queue_init(&u->outq, u->outqdata, sizeof (u->outqdata));
-	u->ifr_reg = 0;
-	
+    u->ifr_reg = 0;
+
     // Initialize hardware. Для работы с режимом NO AUTO требуется настройка сети(сетевой карты на соотв режим)
     // sudo ethtool -s eth1 duplex full speed 10 autoneg off
     // где eth1-сетевой интерфейс для BE1
-    eth_controller_init(macaddr, phy_mode);		     					
+    eth_controller_init(macaddr, phy_mode);
  
  #ifndef ETH_POLL_MODE
     // Enable interrupts
-    memset(&u->irq_rx, 0, sizeof(u->irq_rx)); 					
-    u->irq_rx.mask1 = ARM_ETH_RF_OK | ARM_ETH_OVF | ARM_ETH_MISSED_F;  	//todo				   					
-    u->irq_rx.handler_arg = u;					   					
-    u->irq_rx.handler_lock = &u->netif.lock;       				   	
-    ARM_ETH->IMR |= u->irq_rx.mask1;				
+    memset(&u->irq_rx, 0, sizeof(u->irq_rx));
+    u->irq_rx.mask1 = ARM_ETH_RF_OK | ARM_ETH_OVF | ARM_ETH_MISSED_F; 
+    u->irq_rx.handler_arg = u;
+    u->irq_rx.handler_lock = &u->netif.lock;
+    ARM_ETH->IMR |= u->irq_rx.mask1;
     
     memset (&u->irq_tx, 0, sizeof(u->irq_tx));
     u->irq_tx.mask1 = ARM_ETH_XF_OK | ARM_ETH_XF_ERR | ARM_ETH_XF_UNDF;
@@ -1382,21 +1383,21 @@ void eth_interrupt_task (void *arg)
     mutex_lock_irq (&eth_interrupt_mutex, ETHERNET_IRQn, 0, 0);  
     for (;;)
     {
-		mutex_wait (&eth_interrupt_mutex);  
+        mutex_wait (&eth_interrupt_mutex);  
        
         u->ifr_reg = ARM_ETH->IFR;
         
         if((u->ifr_reg & u->irq_rx.mask1) || R_Buff_Has_Eth_Frame ()) { 
-			mutex_lock (&u->netif.lock);
-			eth_handle_receive_interrupt (u);
-			mutex_unlock (&u->netif.lock);
-		}	
+            mutex_lock (&u->netif.lock);
+            eth_handle_receive_interrupt (u);
+            mutex_unlock (&u->netif.lock);
+        }
         if((u->ifr_reg & u->irq_tx.mask1)) {
-			mutex_lock (&u->tx_lock); 
-			eth_handle_transmit_interrupt (u);
-			mutex_signal (&u->tx_lock, 0);
-			mutex_unlock (&u->tx_lock);
-		}		
-		ARM_ETH->IFR = u->ifr_reg;
+            mutex_lock (&u->tx_lock); 
+            eth_handle_transmit_interrupt (u);
+            mutex_signal (&u->tx_lock, 0);
+            mutex_unlock (&u->tx_lock);
+        }
+        ARM_ETH->IFR = u->ifr_reg;
     }
 }
