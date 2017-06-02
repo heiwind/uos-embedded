@@ -468,12 +468,13 @@ void eth_phy_init (uint8_t addr, uint8_t mode)
         mode = 0x07;
         debug_printf ("error parametr mode in eth_phy_init()\n");
     }
-
     ARM_ETH->PHY_CTRL = 0;
     volatile unsigned i;
-    for (i=0;i<KHZ*100/6;i++);
+    //ARM_GPIOD->SETTX = (1 << 14);
+    for (i=0;i<KHZ*10/5;i++); // 24 мс
+    //ARM_GPIOD->CLRTX = (1 << 14);
     ARM_ETH->PHY_CTRL = ARM_ETH_PHY_ADDR(addr) | ARM_ETH_PHY_MODE(mode) | ARM_ETH_PHY_NRST;
-    for (i=0;i<KHZ*100/6;i++); // Ожидание 16 мс (по даташиту)
+    for (i=0;i<KHZ*10/6;i++); // Ожидание 20 мс (по даташиту 16 мс)
     while((ARM_ETH->PHY_STAT & ARM_ETH_PHY_READY) == 0);    //ждем пока модуль в состоянии сброса
 }
 
