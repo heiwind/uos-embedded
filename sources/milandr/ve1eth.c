@@ -36,7 +36,7 @@ uint8_t eth_interrupt_task_created = 0;
 
 
 #ifdef ETH_USE_DMA
-DMA_Data_t dma_conf[32]    __attribute__((aligned(1024)))	__attribute__((section(".data_hi")));
+DMA_Data_t dma_conf[32]    __attribute__((aligned(1024)))   __attribute__((section(".data_hi")));
 uint32_t eth_rx_buf[384]   __attribute__((section(".data_hi")));
 uint32_t eth_tx_buf[384]   __attribute__((section(".data_hi")));
 #else
@@ -177,7 +177,7 @@ void eth_led(void)
     }
 
     // индикация наличия Link сигнала
-    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_LINK))	
+    if(!(ARM_ETH->PHY_STAT & ARM_ETH_PHY_LED_LINK))
         ETH_LINK_GPIO->SETTX |= 1 << PIN(ETH_LINK_LED);   // наличие
     else
         ETH_LINK_GPIO->CLRTX |= 1 << PIN(ETH_LINK_LED);   // отсутствие
@@ -699,7 +699,7 @@ void eth_send_frame_dma (const void *buf, uint16_t length_bytes) // size в ба
     uint16_t data_space[2]={0,0};
     uint16_t length_words=0;
     uint16_t data_start=0, data_end=0;// адрес начала, области данных и первого пустого слова в буффере передатчика
-    uint32_t source=0, dest=0; 	
+    uint32_t source=0, dest=0;
     //uint32_t tx_status;             // статусы, устанавлюваются уже после попытки передачи пакета
 
     data_start = ARM_ETH->X_HEAD;
@@ -709,7 +709,7 @@ void eth_send_frame_dma (const void *buf, uint16_t length_bytes) // size в ба
     if(data_start > data_end) {
         // данные "закольцованы" и адрес начала данных больше адреса конца данных
         data_space[0] = data_start - data_end;
-        data_space[1] = 0;	
+        data_space[1] = 0;
     } else {
         data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
         data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
@@ -834,7 +834,7 @@ uint32_t eth_read_frame_dma(void *buf)
         if((source & 0x0000FFFF) > (ARM_ETH_BUF_SIZE_R-1)) { // закольцовка буффера
             source = (uint32_t)ARM_ETH_BUF_BASE;
         }
-        length_words = (length_bytes+3)>>2;	// длина с в словах учётом выравнивания.
+        length_words = (length_bytes+3)>>2;     // длина с в словах учётом выравнивания.
         length_bytes = length_words << 2; 
 
         if(length_bytes <= data_space) {
@@ -850,7 +850,7 @@ uint32_t eth_read_frame_dma(void *buf)
         } else {
             ARM_DMA->CHNL_PRI_ALT_CLR = ARM_DMA_SELECT(ETH_RX_DMA_CHN);
             // требуются два подхода в считывании (условие, когда кадр "закольцован" в буффере)
-            // считывание области R_HEAD....ARM_ETH_BUF_SIZE_R			
+            // считывание области R_HEAD....ARM_ETH_BUF_SIZE_R
             dma_conf[ETH_RX_DMA_CHN].SOURCE_END_POINTER = source + data_space-4;
             dma_conf[ETH_RX_DMA_CHN].DEST_END_POINTER = dest + data_space-4;
 
@@ -1117,7 +1117,7 @@ bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio)
         data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
     }
     words[0] = (data_space[0]+data_space[1]) >> 2;
-    words[1] = ((p->tot_len+3)>>2) +2; 	
+    words[1] = ((p->tot_len+3)>>2) +2; 
     if(buf_queue_is_empty(&u->outq) && (words[0] >= words[1])) {
         // Отправка кадра.
         eth_chip_transmit_packet(u, p); 
@@ -1129,14 +1129,14 @@ bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio)
     //debug_printf("tr %d\n",buf_queue_size(&u->outq)+p->tot_len);   
  #ifdef ETH_POLL_MODE
     while(buf_queue_is_full(&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES))
-       mutex_wait(&u->tx_lock);
+        mutex_wait(&u->tx_lock);
  #else 
 
     /* Занято, ставим в очередь. */
     #if 0
     if(buf_queue_is_full(&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) { 
         // Нет места в очереди: теряем пакет. 
-        u->netif.out_discards++;		
+        u->netif.out_discards++;
         debug_printf("eth_output: overflow\n"); 
         buf_free(p);
         mutex_unlock(&u->tx_lock);
@@ -1235,7 +1235,7 @@ uint16_t eth_handle_receive_interrupt (eth_t *u)
     uint16_t active = 0;
     uint16_t status_ifr = ARM_ETH->IFR; //только флаги приёма  //помимо IFR можно прочитать поле статуса eth_rx_status
 
- #ifdef ETH_POLL_MODE	// при использовании быстрого обработчика 
+ #ifdef ETH_POLL_MODE   // при использовании быстрого обработчика 
     status_ifr = status_ifr & 0x00FF;
     ARM_ETH->IFR |= status_ifr; // сброс флагов в регистре
     eth_err_0022_correction();
