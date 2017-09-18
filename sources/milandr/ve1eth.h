@@ -51,23 +51,25 @@ extern "C" {
 #define ARM_GFEN_MASK           (1 << (n))
 #define ARM_PD_MASK             ((1 << (n)) | (1 << (n)*2))
 
-// Размер стека задачи-обработчика
-#ifndef ETH_STACKSZ
-#define ETH_STACKSZ      1500
-#endif
-
 // наличие данных в буфере
 #define R_Buff_Has_Eth_Frame()  (ARM_ETH->R_HEAD != ARM_ETH->R_TAIL)
 #define X_Buff_Is_Empty()       (ARM_ETH->X_TAIL == ARM_ETH->X_HEAD)
 
 // полный размер ethernet-буффера
 #define ARM_ETH_BUF_FULL_SIZE   8192
+
 // половина буффера
 #define ARM_ETH_BUF_HALF        (ARM_ETH_BUF_FULL_SIZE >> 1)
+
 // размер буффера приемника
-#define ARM_ETH_BUF_SIZE_R      ARM_ETH_BUF_HALF
+#ifndef ETH_BUF_SIZE_R
+#   define ETH_BUF_SIZE_R       ARM_ETH_BUF_HALF
+#endif
+#define ARM_ETH_BUF_SIZE_R      ETH_BUF_SIZE_R
+
 // размер буффера передатчика
-#define ARM_ETH_BUF_SIZE_X      ARM_ETH_BUF_HALF
+#define ARM_ETH_BUF_SIZE_X      (ARM_ETH_BUF_FULL_SIZE-ARM_ETH_BUF_SIZE_R)//ARM_ETH_BUF_HALF
+
 // адреса начала буферов приемника и передатчика
 #define ARM_ETH_BUF_BASE_R      ARM_ETH_BUF_BASE
 #define ARM_ETH_BUF_BASE_X      (ARM_ETH_BUF_BASE + ARM_ETH_BUF_SIZE_R)
@@ -84,12 +86,27 @@ extern "C" {
 // размер окна коллизий
 #define COLL_WND         ((uint32_t)(1 << 7))
 
-#define ETH_INQ_SIZE     TCP_SOCKET_QUEUE_SIZE
-#define ETH_INQ_SBYTES   2048 //ARM_ETH_BUF_SIZE_R  // допустимое кол-во байт в очереди
-#define ETH_OUTQ_SIZE    TCP_SND_QUEUELEN
-#define ETH_OUTQ_SBYTES  2048 //ARM_ETH_BUF_SIZE_X  // допустимое кол-во байт в очереди
+//#define ETH_INQ_SIZE     TCP_SOCKET_QUEUE_SIZE
+//#define ETH_INQ_SBYTES   2048 //ARM_ETH_BUF_SIZE_R  // допустимое кол-во байт в очереди
+//#define ETH_OUTQ_SIZE    TCP_SND_QUEUELEN
+//#define ETH_OUTQ_SBYTES  2048 //ARM_ETH_BUF_SIZE_X  // допустимое кол-во байт в очереди     
 
-#define ETH_MTU          1518 // максимальная длина ethernet-включая заголовки и CRC (без преамбулы и сепаратора)
+#ifndef ETH_STACKSZ
+#   define ETH_STACKSZ      1000  // Размер стека задачи-обработчика
+#endif
+
+#ifndef ETH_INQ_SIZE
+#   define ETH_INQ_SIZE     16
+#endif
+
+#ifndef ETH_OUTQ_SIZE
+#   define ETH_OUTQ_SIZE    8
+#endif
+
+#ifndef ETH_MTU
+#   define ETH_MTU          1518  // максимальная длина ethernet-включая заголовки и CRC (без преамбулы и сепаратора)
+#endif
+
 
 extern task_t *eth_task;
 
@@ -133,6 +150,9 @@ typedef struct _eth_t {
     
     intr_handler_t irq_rx;
     intr_handler_t irq_tx;
+    
+    uint32_t rx_ovf;
+    
 } eth_t;
 
 void eth_led(void);

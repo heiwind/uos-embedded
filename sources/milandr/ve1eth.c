@@ -441,9 +441,10 @@ void eth_clk_init (void)
 
     //Настройка HSE2
 #ifdef ARM_EXT_GEN2
-    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_BYP | ARM_HS_CONTROL_HSE2_ON; // Generator mode
+    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_BYP;  // Generator mode
+    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON;
 #else
-    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON; // Oscillator mode;
+    ARM_RSTCLK->HS_CONTROL |= ARM_HS_CONTROL_HSE2_ON;   // Oscillator mode;
 #endif
     while((ARM_RSTCLK->CLOCK_STATUS & ARM_CLOCK_STATUS_HSE_RDY2) == 0);
 
@@ -553,6 +554,7 @@ void eth_rx_buffer_clr(void)
 {
  // альтернатива eth_restart_receiver
     ARM_ETH->R_HEAD = ARM_ETH->R_TAIL; 
+    memset((uint8_t*)ARM_ETH_BUF_BASE_R, 0, ARM_ETH_BUF_SIZE_R);
     ARM_ETH->STAT &= ~ARM_ETH_R_COUNT(7);
     eth_err_0022_correction();
 }
@@ -563,6 +565,13 @@ void eth_restart_transmitter(void)
     ARM_ETH->G_CFG_HI |= ARM_ETH_XRST;
     eth_nops();
     ARM_ETH->G_CFG_HI &= ~ARM_ETH_XRST;	
+    eth_err_0022_correction();
+}
+
+void eth_tx_buffer_clr(void)
+{
+    ARM_ETH->X_HEAD = ARM_ETH->X_TAIL; 
+    memset((uint8_t*)ARM_ETH_BUF_BASE_X, 0, ARM_ETH_BUF_SIZE_X);
     eth_err_0022_correction();
 }
 
@@ -924,8 +933,10 @@ void eth_send_frame(const void *buf, uint16_t length_bytes) // size в байт�
     length_words = (length_bytes+3)>>2; // длина с в словах учётом выравнивания.
     //length_bytes = length_words<<2;   // длина в байтах с выравниванием
 
+    // Информация о доступности места в буфере должна передаваться на TCP-уровень(инициатору передачи пакета)
+    // либо необходима местная логика обработки данной ситуации.
     // если места в буфере больше, чем кол-во байт данных (+2 - учет 2х 32-разрядных информационных полей см даташит)
-    if(((data_space[0]+data_space[1])>>2) >= (length_words +2)) {
+    //  if(((data_space[0]+data_space[1])>>2) >= (length_words +2)) {
         source = (uint32_t*)buf;
         dest = (uint32_t*)(ARM_ETH_BUF_BASE + data_end); // адрес в буфере для записи нового пакета данных
 
@@ -972,7 +983,7 @@ void eth_send_frame(const void *buf, uint16_t length_bytes) // size в байт�
         }
         ARM_ETH->X_TAIL = (uint16_t)((unsigned)dest);
         eth_err_0022_correction();
-    }
+//    }
     // можно сохранять адрес tx_status, чтобы после отсыла пакета считать статус. 
 }
 
@@ -1103,22 +1114,7 @@ bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio)
     }
 //debug_printf ("eth_output: transmit %d bytes\n", p->tot_len);
 
-    uint16_t data_space[2], words[2];
-    uint16_t data_start = ARM_ETH->X_HEAD;
-    uint16_t data_end = ARM_ETH->X_TAIL;
-    // количество свободных байт в буфере передатчика
-    if(data_start > data_end) {
-        // данные "закольцованы" и адрес начала данных больше адреса конца данных
-        data_space[0] = data_start - data_end;
-        data_space[1] = 0;
-    } else {
-    
-        data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
-        data_space[1] = data_start - ARM_ETH_BUF_SIZE_X;
-    }
-    words[0] = (data_space[0]+data_space[1]) >> 2;
-    words[1] = ((p->tot_len+3)>>2) +2; 
-    if(buf_queue_is_empty(&u->outq) && (words[0] >= words[1])) {
+    if(buf_queue_is_empty(&u->outq)) {
         // Отправка кадра.
         eth_chip_transmit_packet(u, p); 
         buf_free(p);
@@ -1136,14 +1132,15 @@ bool_t eth_output(eth_t *u, buf_t *p, small_uint_t prio)
     #if 0
     if(buf_queue_is_full(&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) { 
         // Нет места в очереди: теряем пакет. 
-        u->netif.out_discards++;
-        debug_printf("eth_output: overflow\n"); 
+        u->netif.out_discards++; 1
+        //debug_printf("eth_output: overflow\n"); 
         buf_free(p);
         mutex_unlock(&u->tx_lock);
         return 0;
     }
     #else
-    while (buf_queue_is_full (&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) {
+    //while (buf_queue_is_full (&u->outq) || ((buf_queue_size(&u->outq)+p->tot_len) > ETH_OUTQ_SBYTES)) {
+    while (buf_queue_is_full (&u->outq)) {
         mutex_wait (&u->tx_lock); 
         //debug_printf("while\n"); 
     }
@@ -1196,22 +1193,24 @@ uint8_t eth_receive_frame(eth_t *u)
     eth_read_processing(u->rxbuf);  
 //debug_printf ("eth_receive_data: ok, frame_status=%#08x, length %d bytes\n", frame_status, frame_length);
 
-    if(buf_queue_is_full(&u->inq) || ((buf_queue_size(&u->inq)+frame_length) >= ETH_INQ_SBYTES)) {
+    //if(buf_queue_is_full(&u->inq) || ((buf_queue_size(&u->inq)+frame_length) >= ETH_INQ_SBYTES)) {
+    if(buf_queue_is_full(&u->inq)) {
 //debug_printf ("eth_receive_data: input overflow\n");
         u->netif.in_discards++;
         mutex_signal(&u->netif.lock, 0);
         return 0;
     }
     
-    // Чтение кадра. Проводится до проверки переполнения входного буфера, т.к
+    // Чтение кадра. Проводится до проверки переполнения очереди, т.к
     // лучше освобождать буфер приёмника, чтобы уменьшить вероятность возникновения
     // "ошибки буфера приёмника"
     //eth_read_processing(u->rxbuf);
+    
     u->netif.in_packets++;
     u->netif.in_bytes += frame_length; 
         
     // Allocate a buf chain with total length 'len' 
-    buf_t *p = buf_alloc(u->pool, frame_length, 2);
+    buf_t *p = buf_alloc(u->pool, frame_length, /*2*/0);
     if(! p) {
         // Could not allocate a buf - skip received frame
 //debug_printf ("eth_receive_data: ignore packet - out of memory\n");
@@ -1233,17 +1232,18 @@ uint16_t eth_handle_receive_interrupt (eth_t *u)
 {
 //debug_printf ("handle_receive_interrupt\n");
     uint16_t active = 0;
-    uint16_t status_ifr = ARM_ETH->IFR; //только флаги приёма  //помимо IFR можно прочитать поле статуса eth_rx_status
+    //помимо IFR можно прочитать поле статуса eth_rx_status
 
  #ifdef ETH_POLL_MODE   // при использовании быстрого обработчика 
-    status_ifr = status_ifr & 0x00FF;
-    ARM_ETH->IFR |= status_ifr; // сброс флагов в регистре
+    u->ifr_reg = ARM_ETH->IFR & 0x00FF;
+    ARM_ETH->IFR |= u->ifr_reg; // сброс флагов в регистре
     eth_err_0022_correction();
  #endif
    
-    if((status_ifr & (ARM_ETH_OVF)) || (ARM_ETH->STAT & ARM_ETH_R_FULL)) {
-        u->netif.in_discards++; 
-//debug_printf("ethernet RX buffer FULL or OVER FULL: IFR %08X STAT %08X\n",ARM_ETH->IFR,ARM_ETH->STAT);
+    //if((status_ifr & (ARM_ETH_OVF)) || (ARM_ETH->STAT & ARM_ETH_R_FULL)) {
+    if(u->ifr_reg & ARM_ETH_OVF) {
+        u->rx_ovf++; 
+//debug_printf("ethernet RX buffer overfull: IFR %08X STAT %08X\n", u->ifr_reg, ARM_ETH->STAT);
     }
 
     //todo	//не очень понятно помогает восстановлению контроль кол-ва кадров или мешает
@@ -1253,8 +1253,9 @@ uint16_t eth_handle_receive_interrupt (eth_t *u)
     /*if(R_Buff_Has_Eth_Frame()) {  // если очереди урезаны до 1го буфера
         eth_receive_frame(u);    // декрементирует ARM_ETH_R_COUNT
         active++;
-    }*/
-    while(R_Buff_Has_Eth_Frame()) { // если очередь достаточно длиная (в т.ч. внешнее ОЗУ) 
+    }*/ 
+    //if(R_Buff_Has_Eth_Frame()) {    // если очереди урезаны 
+    while(R_Buff_Has_Eth_Frame()) { // если очередь достаточно длиная (в т.ч. внешнее ОЗУ)         
         eth_receive_frame(u);
         active++;
     }
@@ -1267,21 +1268,19 @@ uint16_t eth_handle_receive_interrupt (eth_t *u)
 // Return 1 when we are expecting the hardware interrupt.
 void eth_handle_transmit_interrupt(eth_t *u)
 {  // В некоторых случаях прерывание пропускается
-   // uint16_t status_ifr = ARM_ETH->IFR & 0x1F00; // только флаги передачи 
     uint16_t status_phy = ARM_ETH->PHY_STAT;
-    uint16_t status_ifr = ARM_ETH->IFR;
  
  #ifdef ETH_POLL_MODE   // при использовании быстрого обработчика 
-    status_ifr = status_ifr & 0x1F00;
-    ARM_ETH->IFR |= status_ifr; // сброс флагов
+    u->ifr_reg = ARM_ETH->IFR & 0x1F00;
+    ARM_ETH->IFR |= u->ifr_reg; // сброс флагов
     eth_err_0022_correction();
  #endif
 
     // подсчёт коллизии. 
-    if((status_ifr & ARM_ETH_LC) || (status_phy & ARM_ETH_PHY_COL))
+    if((u->ifr_reg & ARM_ETH_LC) || (status_phy & ARM_ETH_PHY_COL))
         u->netif.out_collisions++;
 
-    if(status_ifr & ARM_ETH_XF_ERR) {
+    if(u->ifr_reg & ARM_ETH_XF_ERR) {
         u->netif.out_errors++;
         eth_restart_transmitter(); 
     }
@@ -1294,7 +1293,7 @@ void eth_handle_transmit_interrupt(eth_t *u)
     if(data_start > data_end) {
         // данные "закольцованы" и адрес начала данных больше адреса конца данных
         data_space[0] = data_start - data_end;
-        data_space[1] = 0;	
+        data_space[1] = 0;
     } else {
 
         data_space[0] = ARM_ETH_BUF_FULL_SIZE - data_end;
@@ -1305,7 +1304,7 @@ void eth_handle_transmit_interrupt(eth_t *u)
         return;
     }
 
-    mutex_signal (&eth_interrupt_mutex, 0);
+//  mutex_signal (&eth_interrupt_mutex, 0);
 
     // Извлекаем следующий пакет из очереди. 
     buf_t *p = buf_queue_get (&u->outq);
@@ -1351,20 +1350,24 @@ void eth_init(eth_t *u, const char *name, int prio, mem_pool_t *pool, struct _ar
     // sudo ethtool -s eth1 duplex full speed 10 autoneg off
     // где eth1-сетевой интерфейс для BE1
     eth_controller_init(macaddr, phy_mode);
+    eth_err_0022_correction();
  
  #ifndef ETH_POLL_MODE
     // Enable interrupts
     memset(&u->irq_rx, 0, sizeof(u->irq_rx));
-    u->irq_rx.mask1 = ARM_ETH_RF_OK | ARM_ETH_OVF | ARM_ETH_MISSED_F; 
+    //u->irq_rx.mask1 = ARM_ETH_RF_OK | ARM_ETH_OVF | ARM_ETH_MISSED_F; 
+    u->irq_rx.mask1 = ARM_ETH_RF_OK | ARM_ETH_OVF; 
     u->irq_rx.handler_arg = u;
     u->irq_rx.handler_lock = &u->netif.lock;
     ARM_ETH->IMR |= u->irq_rx.mask1;
     
     memset (&u->irq_tx, 0, sizeof(u->irq_tx));
     u->irq_tx.mask1 = ARM_ETH_XF_OK | ARM_ETH_XF_ERR | ARM_ETH_XF_UNDF;
+    //u->irq_tx.mask1 = ARM_ETH_XF_OK;
     u->irq_tx.handler_arg = u;
     u->irq_tx.handler_lock = &u->tx_lock;
     ARM_ETH->IMR |= u->irq_tx.mask1;  
+    eth_err_0022_correction();
  #endif
 }
 
@@ -1385,8 +1388,9 @@ void eth_interrupt_task (void *arg)
     for (;;)
     {
         mutex_wait (&eth_interrupt_mutex);  
-       
         u->ifr_reg = ARM_ETH->IFR;
+        ARM_ETH->IFR = u->ifr_reg;
+        eth_err_0022_correction();
         
         if((u->ifr_reg & u->irq_rx.mask1) || R_Buff_Has_Eth_Frame ()) { 
             mutex_lock (&u->netif.lock);
@@ -1399,6 +1403,6 @@ void eth_interrupt_task (void *arg)
             mutex_signal (&u->tx_lock, 0);
             mutex_unlock (&u->tx_lock);
         }
-        ARM_ETH->IFR = u->ifr_reg;
+        
     }
 }
