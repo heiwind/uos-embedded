@@ -37,10 +37,18 @@ extern "C" {
 #include <net/netif.h>
 #include <buf/buf-queue.h>
 
-// Функции для работы с буффером ethernet-контроллера используют DMA
-//#define ETH_USE_DMA
-#define ETH_TX_DMA_CHN          ARM_DMA_CHN_30
-#define ETH_RX_DMA_CHN          ARM_DMA_CHN_31
+// Для использования DMA доступны только программные запросы
+// Выдержка из форума АО "ПКК Миландр":
+// heiwind:
+// Тогда, раз аппаратных запросов на цикл DMA блок Ethernet не устанавливает, не очень понятно как пользоваться EVNT[1] и EVNT[0], 
+// описанных в параграфе 30.8 События приемника и передатчика, вы могли бы вкратце пояснить?
+// Petr (АО "ПКК Миландр"):
+// К сожалению, никак.
+// В блоке Ethernet_MAC возможность подключения к DMA есть, поэтому описаны настройки событий для генерирования запросов на
+// выполнение цикл DMA, но к самому блоку DMA данные выводы не подключены (сигналы не доходят)...
+// http://forum.milandr.ru/viewtopic.php?p=14732#p14732
+#define ETH_DMA_CHN_TX           0  // Функции для работы с буффером ethernet-контроллера используют DMA
+#define ETH_DMA_CHN_RX           1
 
 //Для работы без прерываний с poll-функциями
 //#define ETH_POLL_MODE 
@@ -62,51 +70,60 @@ extern "C" {
 #define ARM_ETH_BUF_HALF        (ARM_ETH_BUF_FULL_SIZE >> 1)
 
 // размер буффера приемника
-#ifndef ETH_BUF_SIZE_R
-#   define ETH_BUF_SIZE_R       ARM_ETH_BUF_HALF
+#if defined (ETH_BUFTYPE_FIFO) || (! ETH_BUF_SIZE_R)
+#   undef  ETH_BUF_SIZE_R
+#   define ETH_BUF_SIZE_R       ARM_ETH_BUF_HALF 
 #endif
 #define ARM_ETH_BUF_SIZE_R      ETH_BUF_SIZE_R
 
 // размер буффера передатчика
-#define ARM_ETH_BUF_SIZE_X      (ARM_ETH_BUF_FULL_SIZE-ARM_ETH_BUF_SIZE_R)//ARM_ETH_BUF_HALF
+#define ARM_ETH_BUF_SIZE_X      (ARM_ETH_BUF_FULL_SIZE-ARM_ETH_BUF_SIZE_R)
 
 // адреса начала буферов приемника и передатчика
 #define ARM_ETH_BUF_BASE_R      ARM_ETH_BUF_BASE
 #define ARM_ETH_BUF_BASE_X      (ARM_ETH_BUF_BASE + ARM_ETH_BUF_SIZE_R)
 
 // значение регистра задания предделителя шага изменения BAG и JitterWnd в мкс
-#define PSC_VAL(v)      (KHZ * (v) - 1)
+#define PSC_VAL(v)              (KHZ * (v) - 1)
 // значение для регистра периода следования пакетов в мкс
-#define BAG_PERIOD(t)   (KHZ * (t))
+#define BAG_PERIOD(t)           (KHZ * (t))
 // значение для регистра джиттера при передачи пакетов в мкс
-#define JITTER_WND(t)   (KHZ * (t) - 1)
+#define JITTER_WND(t)           (KHZ * (t) - 1)
 
 // количество попыток обмена
-#define EXCH_ATTEMPT     10
+#define EXCH_ATTEMPT            10
 // размер окна коллизий
-#define COLL_WND         ((uint32_t)(1 << 7))
+#define COLL_WND                ((uint32_t)(1 << 7))
 
-//#define ETH_INQ_SIZE     TCP_SOCKET_QUEUE_SIZE
-//#define ETH_INQ_SBYTES   2048 //ARM_ETH_BUF_SIZE_R  // допустимое кол-во байт в очереди
-//#define ETH_OUTQ_SIZE    TCP_SND_QUEUELEN
-//#define ETH_OUTQ_SBYTES  2048 //ARM_ETH_BUF_SIZE_X  // допустимое кол-во байт в очереди     
+//#define ETH_INQ_SIZE          TCP_SOCKET_QUEUE_SIZE
+//#define ETH_INQ_SBYTES        2048 //ARM_ETH_BUF_SIZE_R  // допустимое кол-во байт в очереди
+//#define ETH_OUTQ_SIZE         TCP_SND_QUEUELEN
+//#define ETH_OUTQ_SBYTES       2048 //ARM_ETH_BUF_SIZE_X  // допустимое кол-во байт в очереди     
 
 #ifndef ETH_STACKSZ
-#   define ETH_STACKSZ      1000  // Размер стека задачи-обработчика
+#   define ETH_STACKSZ          1000  // Размер стека задачи-обработчика
 #endif
 
 #ifndef ETH_INQ_SIZE
-#   define ETH_INQ_SIZE     16
+#   define ETH_INQ_SIZE         16
 #endif
 
 #ifndef ETH_OUTQ_SIZE
-#   define ETH_OUTQ_SIZE    8
+#   define ETH_OUTQ_SIZE        8
 #endif
 
 #ifndef ETH_MTU
-#   define ETH_MTU          1518  // максимальная длина ethernet-включая заголовки и CRC (без преамбулы и сепаратора)
+#   define ETH_MTU              1518  // максимальная длина ethernet-включая заголовки и CRC (без преамбулы и сепаратора)
 #endif
 
+// Если размер буфера передатчика не вмещает IP-пакет(TCP_MSS+60) и два служебных слова(+8)
+#if (ARM_ETH_BUF_SIZE_X < (TCP_MSS + 60 + 8))
+#error "ARM_ETH_BUF_SIZE_X must be greater than or equal (TCP_MSS + 60 + 8), to reduce ETH_BUF_SIZE_R"
+#endif
+
+#if (ARM_ETH_BUF_SIZE_R < (TCP_MSS * 2))
+#error "ARM_ETH_BUF_SIZE_R must be greater than or equal (TCP_MSS * 2), to increase ETH_BUF_SIZE_R"
+#endif
 
 extern task_t *eth_task;
 
