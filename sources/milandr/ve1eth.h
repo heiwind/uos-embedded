@@ -47,8 +47,14 @@ extern "C" {
 // В блоке Ethernet_MAC возможность подключения к DMA есть, поэтому описаны настройки событий для генерирования запросов на
 // выполнение цикл DMA, но к самому блоку DMA данные выводы не подключены (сигналы не доходят)...
 // http://forum.milandr.ru/viewtopic.php?p=14732#p14732
-#define ETH_DMA_CHN_TX           0  // Функции для работы с буффером ethernet-контроллера используют DMA
-#define ETH_DMA_CHN_RX           1
+
+#ifndef ETH_DMA_CHN_TX
+#define ETH_DMA_CHN_TX           7//31//30//0
+#endif
+
+#ifndef ETH_DMA_CHN_RX
+#define ETH_DMA_CHN_RX           1//29//1
+#endif
 
 //Для работы без прерываний с poll-функциями
 //#define ETH_POLL_MODE 
